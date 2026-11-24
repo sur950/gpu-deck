@@ -1,0 +1,565 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: rgb(var(--background));
+  --color-foreground: rgb(var(--foreground));
+  --color-card: rgb(var(--card));
+  --color-card-foreground: rgb(var(--card-foreground));
+  --color-popover: rgb(var(--popover));
+  --color-popover-foreground: rgb(var(--popover-foreground));
+  --color-primary: rgb(var(--primary));
+  --color-primary-foreground: rgb(var(--primary-foreground));
+  --color-secondary: rgb(var(--secondary));
+  --color-secondary-foreground: rgb(var(--secondary-foreground));
+  --color-muted: rgb(var(--muted));
+  --color-muted-foreground: rgb(var(--muted-foreground));
+  --color-accent: rgb(var(--accent));
+  --color-accent-foreground: rgb(var(--accent-foreground));
+  --color-destructive: rgb(var(--destructive));
+  --color-destructive-foreground: rgb(var(--destructive-foreground));
+  --color-border: rgb(var(--border));
+  --color-input: rgb(var(--input));
+  --color-ring: rgb(var(--ring));
+  --color-brand: rgb(var(--brand));
+  --color-brand-foreground: rgb(var(--brand-foreground));
+  --color-brand-strong: rgb(var(--brand-strong));
+  --color-brand-text: rgb(var(--brand-text));
+  --color-surface: rgb(var(--surface));
+  --color-chart-1: rgb(var(--chart-1));
+  --color-chart-2: rgb(var(--chart-2));
+  --color-chart-3: rgb(var(--chart-3));
+  --color-chart-4: rgb(var(--chart-4));
+  --color-chart-5: rgb(var(--chart-5));
+  --color-inverse: rgb(var(--inverse));
+  --color-inverse-foreground: rgb(var(--inverse-foreground));
+  --color-inverse-muted-foreground: rgb(var(--inverse-muted-foreground));
+  --color-inverse-border: rgb(var(--inverse-border));
+
+  /* Semantic colors from theme - as Tailwind utilities.
+     NOTE: each references a DIFFERENTLY-NAMED raw variable (--success-rgb,
+     not --color-success-rgb) — referencing itself here (as this block
+     previously did) makes the CSS spec treat the property as a cyclic
+     reference, which resolves to the guaranteed-invalid value (ignoring the
+     fallback!) and renders as black. Same pattern as --color-primary below,
+     which wraps the differently-named --primary and has always worked. */
+  --color-success-light: rgb(var(--success-light-rgb, 52 168 115));
+  --color-success: rgb(var(--success-rgb, 31 138 91));
+  --color-success-dark: rgb(var(--success-dark-rgb, 20 107 69));
+  --color-warning-light: rgb(var(--warning-light-rgb, 232 184 58));
+  --color-warning: rgb(var(--warning-rgb, 194 145 0));
+  --color-warning-dark: rgb(var(--warning-dark-rgb, 143 106 0));
+  --color-error-light: rgb(var(--error-light-rgb, 245 113 58));
+  --color-error: rgb(var(--error-rgb, 220 78 34));
+  --color-error-dark: rgb(var(--error-dark-rgb, 168 56 26));
+  --color-info-light: rgb(var(--info-light-rgb, 123 132 220));
+  --color-info: rgb(var(--info-rgb, 85 96 208));
+  --color-info-dark: rgb(var(--info-dark-rgb, 63 74 168));
+
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) * 1.5);
+  --radius-xl: calc(var(--radius) * 2);
+  --radius-2xl: calc(var(--radius) * 2.5);
+
+  /* Font weights — bridged from runtime CSS vars set by applyTheme() */
+  --font-weight-normal:   var(--font-weight-normal, 400);
+  --font-weight-medium:   var(--font-weight-medium, 500);
+  /* Satoshi (loaded via Fontshare) ships 300/400/500/700/900 only — no 600 —
+     so "semibold" is bridged to Bold to match an actual webfont file. */
+  --font-weight-semibold: var(--font-weight-semibold, 700);
+  --font-weight-bold:     var(--font-weight-bold, 700);
+
+  /* Font sizes — bridged from --font-size-* set by applyTheme() */
+  --text-xs:   var(--font-size-xs,   0.75rem);
+  --text-sm:   var(--font-size-sm,   0.875rem);
+  --text-base: var(--font-size-base, 1rem);
+  --text-lg:   var(--font-size-lg,   1.125rem);
+  --text-xl:   var(--font-size-xl,   1.25rem);
+  --text-2xl:  var(--font-size-2xl,  1.5rem);
+  --text-3xl:  var(--font-size-3xl,  1.875rem);
+  --text-4xl:  var(--font-size-4xl,  2.25rem);
+
+  /* Font families — bridged from --font-family-* set by applyTheme().
+     Default (fallback) typeface is Satoshi. */
+  --font-sans: var(--font-family-sans, 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif);
+  /* Each family is quoted on its own: 'JetBrains Mono' (+ the metric-matched
+     fallback next/font generates), then the platform monospace stack. */
+  --font-mono: var(--font-family-mono, 'JetBrains Mono', 'JetBrains Mono Fallback', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+}
+
+/* ── :root theme ─────────────────────────────────────────────────────────── */
+/* ── Default brand palette, bridged in as default theme values ───────────
+   GPU Deck shares Container Deck's family (docs/BRAND.md): warm off-white /
+   near-black neutrals and one accent, crimson, for primary actions, links,
+   the active nav row, selection and focus rings. Green, amber, vermilion and
+   indigo are kept for state (success / warning / error / info) and never
+   double as the accent; chart-1 is the crimson, chart-2 to chart-5 are muted
+   categorical hues. Keep in sync with utils/brand-defaults.ts. A custom
+   NEXT_PUBLIC_BRAND_COLOR replaces --brand / --primary / --ring (and chart-1)
+   in both modes at runtime via applyTheme() (utils/theme.ts) — these are only
+   the shipped defaults. */
+:root {
+  --background: 244 243 240; /* #f4f3f0 window surface */
+  --foreground: 17 18 21; /* #111215 */
+  --card: 255 255 255;
+  --card-foreground: 17 18 21;
+  --popover: 255 255 255;
+  --popover-foreground: 17 18 21;
+  /* Primary actions are the crimson. */
+  --primary: 179 18 46; /* #b3122e: 6.9:1 with white */
+  --primary-foreground: 255 255 255;
+  --secondary: 236 234 229; /* #eceae5 */
+  --secondary-foreground: 17 18 21;
+  --muted: 236 234 229; /* #eceae5 */
+  --muted-foreground: 91 94 102; /* #5b5e66: 6.5:1 on cards, 5.9:1 on the page */
+  --accent: 236 234 229; /* neutral hover surface */
+  --accent-foreground: 17 18 21;
+  /* Destructive fills are the error vermilion's deep step, not the crimson. */
+  --destructive: 185 58 20; /* #b93a14: 5.7:1 with white */
+  --destructive-foreground: 255 255 255;
+  --border: 226 224 218; /* #e2e0da */
+  --input: 213 210 203; /* #d5d2cb */
+  --ring: 179 18 46;
+  --radius: 0.5rem;
+
+  /* Brand accent — crimson. Used for the active nav marker, selection, the
+     headline chart series, tints (bg-brand/10) and small highlights. */
+  --brand: 179 18 46; /* #b3122e */
+  --brand-foreground: 255 255 255;
+  /* Crimson as text and icons (links, the active nav icon): >= 4.5:1. */
+  --brand-text: 179 18 46;
+  /* Filled tiles carrying white text (avatars). */
+  --brand-strong: 161 15 40; /* #a10f28 */
+
+  /* Shell surface (sidebar, top bar, page bands): a step off the page. */
+  --surface: 236 234 229; /* #eceae5 */
+
+  /* Chart palette. Slot 1 is the crimson; slots 2-5 are muted blue, amber,
+     teal and plum. Validated with the dataviz palette checker on #ffffff
+     (light) and #1b1c20 / #0e0f12 (dark), ALL pairs: CVD worst ΔE 10.7 light /
+     8.0 dark, normal vision 16.3 / 15.3, every slot >= 3:1 on its surface. */
+  --chart-1: var(--brand);
+  --chart-2: 59 110 185; /* #3b6eb9 blue */
+  --chart-3: 195 131 35; /* #c38323 amber */
+  --chart-4: 0 162 145; /* #00a291 teal */
+  --chart-5: 117 58 122; /* #753a7a plum */
+
+  /* Inverse surface — near-black bands (landing hero, CTA, footer) in both modes. */
+  --inverse: 14 15 18; /* #0e0f12 */
+  --inverse-foreground: 242 241 238; /* #f2f1ee */
+  --inverse-muted-foreground: 161 163 171; /* #a1a3ab */
+  --inverse-border: 42 43 48; /* #2a2b30 */
+}
+
+.dark {
+  --background: 14 15 18; /* #0e0f12 window surface */
+  --foreground: 242 241 238; /* #f2f1ee */
+  --card: 27 28 32; /* #1b1c20 */
+  --card-foreground: 242 241 238;
+  --popover: 34 35 40; /* #222328, a step above cards */
+  --popover-foreground: 242 241 238;
+  --primary: 211 38 63; /* #d3263f: 5.1:1 with white */
+  --primary-foreground: 255 255 255;
+  --secondary: 36 37 42; /* #24252a */
+  --secondary-foreground: 242 241 238;
+  --muted: 36 37 42;
+  --muted-foreground: 161 163 171; /* #a1a3ab: 6.8:1 on cards */
+  --accent: 38 39 44; /* #26272c hover surface */
+  --accent-foreground: 242 241 238;
+  --destructive: 196 64 26; /* #c4401a */
+  --destructive-foreground: 255 255 255;
+  --border: 42 43 48; /* #2a2b30 */
+  --input: 54 55 61; /* #36373d */
+  --ring: 211 38 63;
+
+  --surface: 18 19 23; /* #121317 */
+
+  --brand: 211 38 63; /* #d3263f */
+  --brand-foreground: 255 255 255;
+  --brand-text: 242 104 123; /* #f2687b: 5.7:1 on cards */
+  --brand-strong: 161 15 40; /* #a10f28 */
+
+  --chart-2: 82 134 211; /* #5286d3 */
+  --chart-3: 184 131 59; /* #b8833b */
+  --chart-4: 32 165 148; /* #20a594 */
+  --chart-5: 147 87 153; /* #935799 */
+
+  --inverse: 9 10 12; /* #090a0c */
+  --inverse-foreground: 242 241 238;
+  --inverse-muted-foreground: 161 163 171;
+  --inverse-border: 42 43 48;
+}
+
+@layer base {
+  * {
+    border-color: rgb(var(--border));
+  }
+
+  body {
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  html {
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+}
+
+/* Premium Shadows — warm near-black tinted (#111215) */
+.shadow-subtle {
+  box-shadow: 0 1px 2px rgba(17, 18, 21, 0.06);
+}
+
+.shadow-premium {
+  box-shadow: 0 1px 2px rgba(17, 18, 21, 0.04), 0 2px 6px -2px rgba(17, 18, 21, 0.05);
+}
+
+.shadow-premium-lg {
+  box-shadow: 0 16px 36px -12px rgba(17, 18, 21, 0.16), 0 4px 10px -4px rgba(17, 18, 21, 0.06);
+}
+
+.dark .shadow-premium {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.dark .shadow-premium-lg {
+  box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgb(var(--foreground) / 0.06);
+}
+
+/* ── App-wide component skin ──────────────────────────────────────────────
+   components/ui/* is never edited, so the few refinements that must reach
+   every table are applied by data-slot here. Unlayered on purpose: only
+   colour/weight are set, which no page overrides on a table head. */
+[data-slot="table-head"] {
+  color: rgb(var(--muted-foreground));
+  font-weight: 500;
+}
+
+::selection {
+  background-color: rgb(var(--brand) / 0.18);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--foreground) / 0.18) transparent;
+}
+
+/* Dot grid used behind the dashboard header band. */
+.bg-dot-grid {
+  background-image: radial-gradient(circle, rgb(var(--foreground) / 0.07) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+/* Page entrance — opacity only: a transform here would become the
+   containing block for position:fixed children (sheets, sticky bars). */
+@keyframes page-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-page-in {
+  animation: page-in 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Gradient Backgrounds */
+.bg-grid-pattern {
+  background-image:
+    linear-gradient(rgb(var(--border) / 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--border) / 0.08) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.bg-gradient-radial {
+  background: radial-gradient(circle at 50% 0%, rgb(var(--muted) / 0.6), transparent 60%);
+}
+
+/* Glass header bar (components/shared/glass-header.tsx) — liquid glass shared
+   by the landing page and the sign-in pages. Blur + saturation pull the colour
+   of what is underneath through; a bright top edge and a soft sheen give the
+   glass its depth. The tint follows what the bar floats over (data-surface):
+   'inverse' = the black brand bands, dark in either mode; 'page' = the page
+   surface, so it follows light / dark mode. Theme tokens only. */
+.glass-bar {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid transparent;
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  /* The tint's base colour, edge and shadow cross-fade; the faint sheen
+     gradients on top switch with it. */
+  transition: background-color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+}
+
+.glass-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.glass-bar[data-surface="inverse"] {
+  background-color: rgb(var(--inverse) / 0.45);
+  background-image: linear-gradient(180deg, rgb(var(--inverse-foreground) / 0.09), rgb(var(--inverse-foreground) / 0.02));
+  border-color: rgb(var(--inverse-foreground) / 0.12);
+  box-shadow:
+    inset 0 1px 0 0 rgb(var(--inverse-foreground) / 0.18),
+    inset 0 -1px 0 0 rgb(var(--inverse-foreground) / 0.04),
+    0 12px 32px -12px rgb(var(--inverse) / 0.6);
+}
+
+.glass-bar[data-surface="inverse"]::before {
+  background:
+    radial-gradient(120% 160% at 8% -60%, rgb(var(--inverse-foreground) / 0.14), transparent 55%),
+    radial-gradient(90% 140% at 100% 140%, rgb(var(--brand) / 0.12), transparent 60%);
+}
+
+.glass-bar[data-surface="page"] {
+  background-color: rgb(var(--background) / 0.62);
+  background-image: linear-gradient(180deg, rgb(var(--background) / 0.4), rgb(var(--background) / 0));
+  border-color: rgb(var(--foreground) / 0.08);
+  box-shadow:
+    inset 0 1px 0 0 rgb(var(--background) / 0.9),
+    0 12px 32px -16px rgb(var(--foreground) / 0.22);
+}
+
+/* Dark mode: the page surface is near-black, so the top edge catches light
+   instead of the background, and the drop shadow is black, not ink. */
+.dark .glass-bar[data-surface="page"] {
+  background-color: rgb(var(--background) / 0.55);
+  background-image: linear-gradient(180deg, rgb(var(--foreground) / 0.07), rgb(var(--foreground) / 0.02));
+  border-color: rgb(var(--foreground) / 0.1);
+  box-shadow:
+    inset 0 1px 0 0 rgb(var(--foreground) / 0.12),
+    0 12px 32px -12px rgb(var(--inverse) / 0.7);
+}
+
+.glass-bar[data-surface="page"]::before {
+  background:
+    radial-gradient(120% 160% at 8% -60%, rgb(var(--foreground) / 0.05), transparent 55%),
+    radial-gradient(90% 140% at 100% 140%, rgb(var(--brand) / 0.08), transparent 60%);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-bar[data-surface="inverse"] { background-color: rgb(var(--inverse) / 0.92); }
+  .glass-bar[data-surface="page"] { background-color: rgb(var(--background) / 0.95); }
+}
+
+/* Section Backgrounds */
+.section-gray {
+  background-color: rgb(var(--muted) / 0.3);
+}
+
+.dark .section-gray {
+  background-color: rgb(var(--muted) / 0.15);
+}
+
+.section-white {
+  background-color: rgb(var(--background));
+}
+
+.section-gradient {
+  background: linear-gradient(to bottom, rgb(var(--background)), rgb(var(--muted) / 0.2));
+}
+
+/* Premium Card */
+.premium-card {
+  background-color: rgb(var(--card));
+  border: 1px solid rgb(var(--border) / 0.6);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+  box-shadow:
+    0 1px 3px rgba(17, 18, 21, 0.08),
+    0 1px 2px rgba(17, 18, 21, 0.04);
+}
+
+.premium-card:hover {
+  box-shadow:
+    0 12px 32px rgba(17, 18, 21, 0.12),
+    0 4px 8px rgba(17, 18, 21, 0.05);
+  transform: translateY(-2px);
+  border-color: rgb(var(--border));
+  background: rgb(var(--card));
+}
+
+.dark .premium-card {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.dark .premium-card:hover {
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.4),
+    0 4px 6px -4px rgba(0, 0, 0, 0.4);
+}
+
+/* Smooth Animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* Text Gradient */
+.text-gradient-premium {
+  background: linear-gradient(135deg, rgb(var(--foreground)), rgb(var(--foreground) / 0.6));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Better Focus States */
+.focus-premium:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(var(--background)), 0 0 0 4px rgb(var(--ring) / 0.35);
+}
+
+/* Toast / Sonner Styling */
+[data-sonner-toast] {
+  background-color: rgb(var(--card)) !important;
+  border: 1px solid rgb(var(--border)) !important;
+  color: rgb(var(--card-foreground)) !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+}
+
+/* Status toasts use the status tokens (never the crimson accent). */
+[data-sonner-toast][data-type="success"] {
+  background-color: color-mix(in srgb, var(--color-success) 9%, rgb(var(--card))) !important;
+  border-color: color-mix(in srgb, var(--color-success) 32%, transparent) !important;
+  color: var(--color-success-dark) !important;
+}
+
+[data-sonner-toast][data-type="error"] {
+  background-color: color-mix(in srgb, var(--color-error) 9%, rgb(var(--card))) !important;
+  border-color: color-mix(in srgb, var(--color-error) 32%, transparent) !important;
+  color: var(--color-error-dark) !important;
+}
+
+[data-sonner-toast][data-type="warning"] {
+  background-color: color-mix(in srgb, var(--color-warning) 9%, rgb(var(--card))) !important;
+  border-color: color-mix(in srgb, var(--color-warning) 32%, transparent) !important;
+  color: var(--color-warning-dark) !important;
+}
+
+[data-sonner-toast][data-type="info"] {
+  background-color: color-mix(in srgb, var(--color-info) 9%, rgb(var(--card))) !important;
+  border-color: color-mix(in srgb, var(--color-info) 32%, transparent) !important;
+  color: var(--color-info-dark) !important;
+}
+
+.dark [data-sonner-toast][data-type="success"] {
+  background-color: color-mix(in srgb, var(--color-success) 14%, rgb(var(--card))) !important;
+  border-color: color-mix(in srgb, var(--color-success-light) 38%, transparent) !important;
+  color: var(--color-success-light) !important;
+}
+
+.dark [data-sonner-toast][data-type="error"] {
+  background-color: color-mix(in srgb, var(--color-error) 14%, rgb(var(--card))) !important;
+  border-color: color-mix(in srgb, var(--color-error-light) 38%, transparent) !important;
+  color: var(--color-error-light) !important;
+}
+
+.dark [data-sonner-toast][data-type="warning"] {
+  background-color: color-mix(in srgb, var(--color-warning) 14%, rgb(var(--card))) !important;
+  border-color: color-mix(in srgb, var(--color-warning-light) 38%, transparent) !important;
+  color: var(--color-warning-light) !important;
+}
+
+.dark [data-sonner-toast][data-type="info"] {
+  background-color: color-mix(in srgb, var(--color-info) 14%, rgb(var(--card))) !important;
+  border-color: color-mix(in srgb, var(--color-info-light) 38%, transparent) !important;
+  color: var(--color-info-light) !important;
+}
+
+[data-sonner-toast] [data-content] {
+  color: inherit !important;
+}
+
+[data-sonner-toast] [data-title] {
+  color: inherit !important;
+  font-weight: 700 !important;
+}
+
+[data-sonner-toast] [data-description] {
+  color: inherit !important;
+  opacity: 0.9 !important;
+}
+
+/* Shimmer Loading Animation */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+/* ── Avatar fallback gradient animation ──────────────────────────────────────
+   Subtle breathing effect: hue shifts slightly, brightness pulses gently.
+   Keeps the colour family consistent (no jarring changes) while looking alive. */
+@keyframes avatar-breathe {
+  0%,100% { filter: brightness(1)     saturate(1);   }
+  50%     { filter: brightness(1.08)  saturate(1.15); }
+}
+
+.avatar-fallback-animated {
+  animation: avatar-breathe 3s ease-in-out infinite;
+}
+
+/* Long unbroken values (keys, tokens, JSON) wrap inside the box instead of widening dialogs and forms. */
+[data-slot='textarea'] {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}

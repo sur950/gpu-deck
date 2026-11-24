@@ -1,0 +1,5 @@
+/terraform-provider-gpudeck
+/dist/
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate*

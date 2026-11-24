@@ -1,0 +1,30 @@
+{
+    "card0": {
+        "Device Name": "0x740f",
+        "Device ID": "0x740f",
+        "Device Rev": "0x02",
+        "Subsystem ID": "0x0c34",
+        "GUID": "15017",
+        "Unique ID": "0x8d1b4a8a2f3b2c1d",
+        "PCI Bus": "0000:03:00.0",
+        "Card Series": "AMD Instinct MI210",
+        "Card Model": "0x740f",
+        "Card Vendor": "Advanced Micro Devices, Inc. [AMD/ATI]",
+        "Card SKU": "D67301",
+        "GFX Version": "gfx90a",
+        "GPU use (%)": "63",
+        "GPU Memory Allocated (VRAM%)": "48",
+        "GPU Memory Read/Write Activity (%)": "21",
+        "VRAM Total Memory (B)": "68702699520",
+        "VRAM Total Used Memory (B)": "33285996544",
+        "Current Socket Graphics Package Power (W)": "211.0",
+        "Max Graphics Package Power (W)": "300.0",
+        "Temperature (Sensor edge) (C)": "52.0",
+        "Temperature (Sensor junction) (C)": "61.0",
+        "Temperature (Sensor memory) (C)": "57.0",
+        "sclk clock speed:": "(1700Mhz)",
+        "mclk clock speed:": "(1600Mhz)",
+        "Fan speed (%)": "0"
+    },
+    "system": {"Driver version": "6.2.4"}
+}

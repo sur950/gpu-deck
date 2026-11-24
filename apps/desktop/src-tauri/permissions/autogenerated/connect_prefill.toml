@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-connect-prefill"
+description = "Enables the connect_prefill command without any pre-configured scope."
+commands.allow = ["connect_prefill"]
+
+[[permission]]
+identifier = "deny-connect-prefill"
+description = "Denies the connect_prefill command without any pre-configured scope."
+commands.deny = ["connect_prefill"]

@@ -1,0 +1,15 @@
+# GPU Deck SSH instance: key login only, as the one user the agent created.
+Port 2222
+AuthorizedKeysFile /etc/ssh/authorized_keys.d/%u
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+PermitEmptyPasswords no
+PermitUserEnvironment no
+X11Forwarding no
+AllowTcpForwarding yes
+AllowAgentForwarding no
+PrintMotd no
+UsePAM yes
+ClientAliveInterval 30
+ClientAliveCountMax 4

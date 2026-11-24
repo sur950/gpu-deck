@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/agent-protocol/v1/heartbeat.json",
+  "title": "heartbeat (agent -> hub)",
+  "description": "Liveness + compact state every intervals.heartbeat_seconds (default 10 s). The hub sets nodes.last_heartbeat_at and marks the node offline after NODE_OFFLINE_AFTER_SECONDS (default 30 s) without one. No ack; WebSocket ping/pong is used underneath as well.",
+  "type": "object",
+  "required": ["uptime_seconds", "config_version", "instances"],
+  "properties": {
+    "uptime_seconds": { "type": "integer", "minimum": 0 },
+    "config_version": { "type": "integer", "minimum": 0 },
+    "instances": {
+      "type": "array",
+      "description": "Compact state of every instance the agent manages (full detail is in inventory).",
+      "items": {
+        "type": "object",
+        "required": ["instance_id", "state", "health"],
+        "properties": {
+          "instance_id": { "$ref": "common.json#/$defs/uuid" },
+          "state": { "$ref": "common.json#/$defs/instance_state" },
+          "health": { "$ref": "common.json#/$defs/instance_health" },
+          "active_sessions": { "type": ["integer", "null"] },
+          "waiting_sessions": { "type": ["integer", "null"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "running_commands": { "type": "array", "items": { "$ref": "common.json#/$defs/uuid" }, "default": [], "description": "Command ids currently executing; lets the hub detect lost results." },
+    "load": {
+      "type": ["object", "null"],
+      "properties": {
+        "cpu_pct": { "type": ["number", "null"] },
+        "memory_used_bytes": { "type": ["integer", "null"] },
+        "cache_used_bytes": { "type": ["integer", "null"] },
+        "disk_free_bytes": { "type": ["integer", "null"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

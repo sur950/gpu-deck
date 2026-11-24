@@ -1,0 +1,49 @@
+[package]
+name = "gpudeck-desktop"
+version = "1.0.0"
+description = "GPU Deck desktop shell (Tauri 2, remote-shell mode)"
+authors = ["Suresh Konakanchi"]
+license = "Apache-2.0"
+repository = "https://github.com/sur950/gpu-deck"
+homepage = "https://sur950.github.io/gpu-deck/"
+edition = "2021"
+rust-version = "1.85"
+publish = false
+
+# Standalone crate: deliberately not part of apps/node-agent's workspace.
+[workspace]
+
+[lib]
+name = "gpudeck_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.5", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.6", features = ["tray-icon", "image-png"] }
+tauri-plugin-store = "2.5.1"
+tauri-plugin-updater = "2.14.1"
+tauri-plugin-single-instance = { version = "2.5.5", features = ["deep-link"] }
+tauri-plugin-deep-link = "2.6.3"
+tauri-plugin-notification = "2.8.1"
+# Only the Rust `open_url` function is used; the plugin (and its JS commands) is not registered.
+tauri-plugin-opener = "2.7.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+url = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+tokio = { version = "1", features = ["time"] }
+log = "0.4"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

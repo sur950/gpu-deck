@@ -1,0 +1,16 @@
+[package]
+name = "gpudeck-protocol"
+description = "serde types for the GPU Deck agent <-> hub protocol (libs/contracts/agent-protocol, v1)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+jsonschema = { workspace = true }

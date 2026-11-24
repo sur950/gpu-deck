@@ -1,0 +1,64 @@
+{
+  "devices": [
+    {
+      "device_id": "e71da4de-21ea-51dc-8fda-243846b66de0",
+      "vendor": "nvidia",
+      "index": 0,
+      "uuid": "GPU-1234",
+      "name": "NVIDIA L40S",
+      "vram_total_bytes": 48305799168,
+      "health": "healthy"
+    }
+  ],
+  "disks": [],
+  "cache": {
+    "dir": "/var/lib/gpudeck/cache",
+    "limit_bytes": 0,
+    "used_bytes": 0,
+    "items": []
+  },
+  "instances": [],
+  "engine_processes": [],
+  "observed_engines": [
+    {
+      "observe_id": "4be123d1-7ce4-5141-bc91-0147ebbcfd96",
+      "deployment_id": "35ebcad7-77e0-5851-b72f-15ef8f42d19a",
+      "name": "main",
+      "engine": "vllm",
+      "endpoint": "127.0.0.1:8000",
+      "sources": [
+        "metrics",
+        "health",
+        "models"
+      ],
+      "models": [
+        "Qwen/Qwen3-8B"
+      ],
+      "version": null,
+      "health": "healthy",
+      "message": null,
+      "last_ok_at": "2026-11-23T10:00:02.000Z",
+      "pid": 31337,
+      "device_ids": [
+        "e71da4de-21ea-51dc-8fda-243846b66de0"
+      ]
+    },
+    {
+      "observe_id": "8d4f92da-83ce-5c29-8e61-4a5d9b784a4c",
+      "deployment_id": "21484737-03fb-5696-bb42-4747c055a804",
+      "name": "legacy",
+      "engine": "generic",
+      "endpoint": "127.0.0.1:9000",
+      "sources": [
+        "health"
+      ],
+      "models": [],
+      "version": null,
+      "health": "unhealthy",
+      "message": "GET /health: connection refused",
+      "last_ok_at": null,
+      "pid": null,
+      "device_ids": []
+    }
+  ]
+}

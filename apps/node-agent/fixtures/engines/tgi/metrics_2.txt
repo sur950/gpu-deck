@@ -1,0 +1,53 @@
+# TYPE tgi_request_count counter
+tgi_request_count 110
+# TYPE tgi_request_success counter
+tgi_request_success 108
+# TYPE tgi_request_failure counter
+tgi_request_failure{err="validation"} 2
+# TYPE tgi_queue_size gauge
+tgi_queue_size 0
+# TYPE tgi_batch_current_size gauge
+tgi_batch_current_size 4
+# TYPE tgi_batch_current_max_tokens gauge
+tgi_batch_current_max_tokens 4096
+# TYPE tgi_request_input_length histogram
+tgi_request_input_length_bucket{le="10"} 6
+tgi_request_input_length_bucket{le="100"} 44
+tgi_request_input_length_bucket{le="1000"} 99
+tgi_request_input_length_bucket{le="10000"} 110
+tgi_request_input_length_bucket{le="+Inf"} 108
+tgi_request_input_length_sum 57000
+tgi_request_input_length_count 108
+# TYPE tgi_request_generated_tokens histogram
+tgi_request_generated_tokens_bucket{le="10"} 11
+tgi_request_generated_tokens_bucket{le="100"} 77
+tgi_request_generated_tokens_bucket{le="1000"} 108
+tgi_request_generated_tokens_bucket{le="+Inf"} 108
+tgi_request_generated_tokens_sum 11000
+tgi_request_generated_tokens_count 108
+# TYPE tgi_request_duration histogram
+tgi_request_duration_bucket{le="0.1"} 0
+tgi_request_duration_bucket{le="0.5"} 11
+tgi_request_duration_bucket{le="1"} 44
+tgi_request_duration_bucket{le="2.5"} 88
+tgi_request_duration_bucket{le="5"} 105
+tgi_request_duration_bucket{le="10"} 108
+tgi_request_duration_bucket{le="+Inf"} 108
+tgi_request_duration_sum 200.0
+tgi_request_duration_count 108
+# TYPE tgi_request_queue_duration histogram
+tgi_request_queue_duration_bucket{le="0.001"} 55
+tgi_request_queue_duration_bucket{le="0.01"} 88
+tgi_request_queue_duration_bucket{le="0.1"} 107
+tgi_request_queue_duration_bucket{le="1"} 108
+tgi_request_queue_duration_bucket{le="+Inf"} 108
+tgi_request_queue_duration_sum 3.5
+tgi_request_queue_duration_count 108
+# TYPE tgi_request_mean_time_per_token_duration histogram
+tgi_request_mean_time_per_token_duration_bucket{le="0.005"} 11
+tgi_request_mean_time_per_token_duration_bucket{le="0.01"} 66
+tgi_request_mean_time_per_token_duration_bucket{le="0.025"} 105
+tgi_request_mean_time_per_token_duration_bucket{le="0.05"} 108
+tgi_request_mean_time_per_token_duration_bucket{le="+Inf"} 108
+tgi_request_mean_time_per_token_duration_sum 1.76
+tgi_request_mean_time_per_token_duration_count 108

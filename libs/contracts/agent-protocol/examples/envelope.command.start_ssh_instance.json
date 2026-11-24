@@ -1,0 +1,65 @@
+{
+  "v": 1,
+  "id": "4f5a6b7c-8d9e-4f0a-9b1c-2d3e4f5a6b7c",
+  "ts": "2026-11-17T10:20:30.123Z",
+  "node_id": "6f1c2b2e-0b2b-4d8e-9e0e-1b2c3d4e5f60",
+  "correlation_id": null,
+  "type": "command",
+  "payload": {
+    "command": "start_ssh_instance",
+    "timeout_seconds": 600,
+    "args": {
+      "ssh_instance_id": "3e4f5a6b-7c8d-4e9f-8a1b-2c3d4e5f6a7b",
+      "name": "alice-dev",
+      "image": "ghcr.io/sur950/gpu-deck-ssh:1",
+      "devices": [
+        {
+          "device_id": "9a8b7c6d-5e4f-5a3b-9c2d-1e0f9a8b7c6d",
+          "index": 0,
+          "vendor": "nvidia",
+          "slice": {
+            "vram_bytes": 12884901888,
+            "compute_pct": 50
+          }
+        }
+      ],
+      "limits": {
+        "cpu_cores": 4,
+        "memory_bytes": 17179869184,
+        "shm_bytes": 2147483648,
+        "pids": 4096
+      },
+      "authorized_keys": [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGq0p3Yq0Yb0t1u7a4W6Xc0Zt9cQ4m2xZ8l2xJk7v1aB alice@laptop"
+      ],
+      "ssh_user": "alice",
+      "ssh_port": 0,
+      "container_port": 2222,
+      "bind_address": null,
+      "allowed_source_cidrs": [
+        "10.0.0.0/8"
+      ],
+      "env": {
+        "TZ": "UTC"
+      },
+      "volumes": [
+        {
+          "type": "volume",
+          "source": "home",
+          "target": "/config",
+          "keep": true
+        },
+        {
+          "type": "bind",
+          "source": "/var/lib/gpudeck/cache",
+          "target": "/models",
+          "read_only": true
+        }
+      ],
+      "ttl_seconds": 28800,
+      "labels": {
+        "owner": "alice"
+      }
+    }
+  }
+}

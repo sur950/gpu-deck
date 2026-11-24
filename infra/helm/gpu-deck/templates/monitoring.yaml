@@ -1,0 +1,105 @@
+{{- $root := . -}}
+{{- $fullname := include "gpudeck.fullname" . -}}
+{{- if .Values.metrics.serviceMonitor.enabled }}
+{{- $sm := .Values.metrics.serviceMonitor }}
+{{- range $component, $spec := dict "admin-api" (list "http" "/metrics" "http") "api-layer" (list "http" "/metrics" "http") "agent-hub" (list "hub" "/metrics" "https") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ $fullname }}-{{ $component }}
+  labels:
+    {{- include "gpudeck.labels" $root | nindent 4 }}
+    {{- with $sm.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "gpudeck.componentSelector" (list $root $component) | nindent 6 }}
+  endpoints:
+    - port: {{ index $spec 0 }}
+      path: {{ index $spec 1 }}
+      scheme: {{ index $spec 2 }}
+      interval: {{ $sm.interval }}
+      {{- if eq (index $spec 2) "https" }}
+      tlsConfig:
+        insecureSkipVerify: true
+      {{- end }}
+      {{- if $sm.bearerTokenSecret.name }}
+      authorization:
+        type: Bearer
+        credentials:
+          name: {{ $sm.bearerTokenSecret.name }}
+          key: {{ $sm.bearerTokenSecret.key }}
+      {{- end }}
+    {{- if eq $component "admin-api" }}
+    # Fleet metrics (GPU, engine, node, agent, usage) from the admin API exporter.
+    - port: http
+      path: /api/v1/metrics/prometheus
+      interval: 10s
+      {{- if $sm.bearerTokenSecret.name }}
+      authorization:
+        type: Bearer
+        credentials:
+          name: {{ $sm.bearerTokenSecret.name }}
+          key: {{ $sm.bearerTokenSecret.key }}
+      {{- end }}
+    {{- end }}
+{{- end }}
+{{- range $key, $c := $root.Values.components }}
+{{- if and $c.enabled $c.metricsPort }}
+{{- $component := include "gpudeck.componentName" $key }}
+---
+# Worker / scheduler have no Service: scrape the pods' "metrics" port directly.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ $fullname }}-{{ $component }}
+  labels:
+    {{- include "gpudeck.labels" $root | nindent 4 }}
+    {{- with $sm.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "gpudeck.componentSelector" (list $root $component) | nindent 6 }}
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ $sm.interval }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if .Values.metrics.dashboards.enabled }}
+{{- range $path, $_ := .Files.Glob "files/dashboards/*.json" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullname }}-dashboard-{{ base $path | trimSuffix ".json" }}
+  labels:
+    {{- include "gpudeck.labels" $root | nindent 4 }}
+    {{- toYaml $root.Values.metrics.dashboards.labels | nindent 4 }}
+  annotations:
+    grafana_folder: {{ $root.Values.metrics.dashboards.folder | quote }}
+data:
+  {{ base $path }}: |-
+    {{- $root.Files.Get $path | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- if .Values.metrics.prometheusRule.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "gpudeck.labels" . | nindent 4 }}
+    {{- with .Values.metrics.prometheusRule.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- (.Files.Get "files/prometheus/gpudeck-alerts.yml") | nindent 2 }}
+{{- end }}

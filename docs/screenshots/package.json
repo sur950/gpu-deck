@@ -1,0 +1,19 @@
+{
+  "name": "gpu-deck-screenshots",
+  "version": "1.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Captures GPU Deck screens as editable SVG and renders PNG/WebP from them (not part of the pnpm workspace; install with pnpm install --ignore-workspace)",
+  "type": "module",
+  "scripts": {
+    "capture": "node capture.mjs",
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "harfbuzzjs": "1.6.4",
+    "pixelmatch": "8.0.0",
+    "playwright-core": "1.62.1",
+    "pngjs": "7.0.0",
+    "subset-font": "2.9.0"
+  }
+}

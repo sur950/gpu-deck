@@ -1,0 +1,85 @@
+{{- $fullname := include "gpudeck.fullname" . -}}
+{{- with .Values.ingress.admin }}
+{{- if .enabled }}
+# Admin UI and admin API: private network / VPN only (use an internal ingress class).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullname }}-admin
+  labels:
+    {{- include "gpudeck.labels" $ | nindent 4 }}
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .tls }}
+  tls:
+    - hosts: [{{ $.Values.ingress.admin.host | quote }}]
+      secretName: {{ .secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullname }}-admin-api
+                port: { name: http }
+          - path: /branding
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullname }}-admin-api
+                port: { name: http }
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullname }}-web
+                port: { name: http }
+{{- end }}
+{{- end }}
+{{- with .Values.ingress.serving }}
+{{- if .enabled }}
+---
+# Serving API (OpenAI / Anthropic / Ollama) for your AI gateway only.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullname }}-serving
+  labels:
+    {{- include "gpudeck.labels" $ | nindent 4 }}
+  annotations:
+    {{- with .annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with .sourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ join "," . | quote }}
+    {{- end }}
+spec:
+  {{- with .className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .tls }}
+  tls:
+    - hosts: [{{ $.Values.ingress.serving.host | quote }}]
+      secretName: {{ .secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullname }}-api-layer
+                port: { name: http }
+{{- end }}
+{{- end }}

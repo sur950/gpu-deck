@@ -1,0 +1,19 @@
+#!/bin/sh
+# Simulated NVIDIA GPU for multi-node tests on machines without NVIDIA hardware (docs/TESTING.md).
+# Engines on this node really run on the CPU; only inventory and telemetry are simulated.
+# FAKE_GPU_COUNT (1), FAKE_GPU_MEM_MIB (8192), FAKE_GPU_NAME.
+[ -f /etc/fake-gpu.env ] && . /etc/fake-gpu.env
+COUNT="${FAKE_GPU_COUNT:-1}"; MEM="${FAKE_GPU_MEM_MIB:-8192}"; NAME="${FAKE_GPU_NAME:-NVIDIA Simulated (CPU-backed)}"
+H="$(hostname | md5sum | cut -c1-12)"
+# memory.used follows the resident memory of the CPU-backed engines (like VRAM would)
+USED="$(ps -C llama-server,rpc-server -o rss= 2>/dev/null | awk '{s+=$1} END {print int(s/1024) + 300}')"
+case "$*" in
+  *--query-gpu*)
+    i=0
+    while [ "$i" -lt "$COUNT" ]; do
+      echo "$i, GPU-0000000$i-0000-4000-8000-$H, $NAME, 00000000:1$i:00.0, 550.54.15, 9.0, $MEM, $USED, 3, 1, 35.00, 300.00, 300.00, 40, 45, 1410, 1593, 0, 0, 0x0000000000000000"
+      i=$((i+1))
+    done ;;
+  *)
+    echo "| NVIDIA-SMI 550.54.15              Driver Version: 550.54.15      CUDA Version: 12.4     |" ;;
+esac

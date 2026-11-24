@@ -1,0 +1,8 @@
+# Add files here to ignore them from prettier formatting
+/dist
+/coverage
+node_modules
+apps/fastapi/venv
+apps/fastapi/htmlcov
+apps/node-agent/target
+pnpm-lock.yaml

@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-0RxZ5xQPizoCNIMcQzk7/kt6SLiJH8ItQGByoVC5AE4='; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.github.com; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>GPU Deck: the control plane for your own GPUs</title>
+  <meta name="description" content="Open-source control plane for your own GPUs. Deploy models across your fleet, switch layouts by time of day, load and unload by rule, serve OpenAI, Anthropic and Ollama APIs, and meter every request.">
+  <link rel="canonical" href="https://sur950.github.io/gpu-deck/">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0E0F12" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F4F3F0" media="(prefers-color-scheme: light)">
+  <meta name="author" content="Suresh Konakanchi">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="GPU Deck">
+  <meta property="og:title" content="GPU Deck: the control plane for your own GPUs">
+  <meta property="og:description" content="Deploy models across your GPU fleet, switch layouts by time of day, load and unload by rule, and meter every request. Open source, Apache-2.0.">
+  <meta property="og:url" content="https://sur950.github.io/gpu-deck/">
+  <meta property="og:image" content="https://sur950.github.io/gpu-deck/assets/brand/og-image.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="GPU Deck logo and tagline next to a fleet panel of GPUs across three nodes">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="GPU Deck: the control plane for your own GPUs">
+  <meta name="twitter:description" content="Deploy models across your GPU fleet, switch layouts by time of day, load and unload by rule, and meter every request. Open source, Apache-2.0.">
+  <meta name="twitter:image" content="https://sur950.github.io/gpu-deck/assets/brand/og-image.png">
+  <meta name="twitter:image:alt" content="GPU Deck logo and tagline next to a fleet panel of GPUs across three nodes">
+
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+
+  <script>(function(){var d=document.documentElement;d.classList.add("js");try{var t=localStorage.getItem("gpudeck-theme");if(t==="light"||t==="dark")d.setAttribute("data-theme",t);if(localStorage.getItem("gpudeck-star-banner")==="dismissed")d.classList.add("banner-off")}catch(e){}})();</script>
+  <link rel="preload" href="assets/fonts/figtree-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/site.css">
+  <script src="assets/js/site.js" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "GPU Deck",
+    "alternateName": "gpudeck",
+    "description": "Open-source control plane for your own GPUs: deploy models across a GPU fleet, switch layouts by time of day, load and unload by rule, serve OpenAI, Anthropic and Ollama APIs, and meter every request.",
+    "url": "https://sur950.github.io/gpu-deck/",
+    "image": "https://sur950.github.io/gpu-deck/assets/brand/og-image.png",
+    "applicationCategory": "DeveloperApplication",
+    "applicationSubCategory": "GPU infrastructure",
+    "operatingSystem": "Linux, macOS, Windows (desktop app), Kubernetes",
+    "softwareVersion": "1.0.0",
+    "license": "https://www.apache.org/licenses/LICENSE-2.0",
+    "downloadUrl": "https://github.com/sur950/gpu-deck/releases/latest",
+    "releaseNotes": "https://sur950.github.io/gpu-deck/docs/changelog/",
+    "sameAs": "https://github.com/sur950/gpu-deck",
+    "isAccessibleForFree": true,
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "Suresh Konakanchi", "url": "https://suresh-konakanchi.in" }
+  }
+  </script>
+</head>
+<body class="home" data-root="">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <!-- shared:sprite -->
+
+  <svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <symbol id="i-github" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2.2a9.8 9.8 0 0 0-3.1 19.1c.5.1.7-.2.7-.5v-1.7c-2.7.6-3.3-1.3-3.3-1.3-.5-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.3-2.2-.3-4.5-1.1-4.5-4.9 0-1.1.4-2 1-2.7-.1-.2-.4-1.2.1-2.6 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 4.9 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.6.6.7 1 1.6 1 2.7 0 3.8-2.3 4.6-4.5 4.9.4.3.7.9.7 1.8v2.7c0 .3.2.6.7.5A9.8 9.8 0 0 0 12 2.2Z"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.2 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8Z"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5.5-5.5L19 12l-5.5 5.5"/></symbol>
+      <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 5h5v5M19 5l-8 8M17 14v4a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 5 18V8.5A1.5 1.5 0 0 1 6.5 7H10"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2.4"/><path d="M15.5 8.5V6.9a2.4 2.4 0 0 0-2.4-2.4H6.9a2.4 2.4 0 0 0-2.4 2.4v6.2a2.4 2.4 0 0 0 2.4 2.4h1.6"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M5.5 18.5l1.4-1.4M17.1 6.9l1.4-1.4"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1Z"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7.5h16M4 12h16M4 16.5h16"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.2"/><path d="M8.5 10.5V7.8a3.5 3.5 0 0 1 7 0v2.7"/></symbol>
+      <symbol id="i-server" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="7" rx="1.8"/><rect x="3.5" y="13" width="17" height="7" rx="1.8"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/></symbol>
+      <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx=".8"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></symbol>
+      <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="6" r="2.4"/><path d="M8.4 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.6"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.2 5 5.8v5.6c0 4.4 3 8.2 7 9.4 4-1.2 7-5 7-9.4V5.8Z"/><path d="m9.2 12.2 2 2 3.8-4"/></symbol>
+      <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 8.5-8.5M16.5 6.5l2.5 2.5M14 9l2 2"/></symbol>
+      <symbol id="i-vault" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.2"/><circle cx="12" cy="12" r="3.4"/><path d="M12 8.6v-1M12 16.4v-1M8.6 12h-1M16.4 12h-1M6.5 19.5v1.5M17.5 19.5v1.5"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01"/></symbol>
+      <symbol id="i-user-off" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.6 7-5.6 1.2 0 2.3.2 3.3.7M3.5 3.5l17 17"/></symbol>
+      <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3 4 7.2v9.6L12 21l8-4.2V7.2Z"/><path d="M4 7.2 12 11.5l8-4.3M12 11.5V21"/></symbol>
+      <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.4"/><path d="m7 9.5 3 2.5-3 2.5M12.5 15h4.5"/></symbol>
+      <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.5h10.2a4 4 0 0 0 .6-8 5.6 5.6 0 0 0-10.9-1A4.5 4.5 0 0 0 7 18.5Z"/></symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15ZM10 20.5a2.2 2.2 0 0 0 4 0"/></symbol>
+      <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><path d="m12 13.5 4-4.5"/><circle cx="12" cy="13.5" r="1.4"/></symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3.5 3 8l9 4.5L21 8Z"/><path d="m3 12.5 9 4.5 9-4.5M3 16.5l9 4.5 9-4.5"/></symbol>
+      <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11m-5-5 5 5 5-5M5 19.5h14"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4.5 5.5A2 2 0 0 1 6.5 3.5H19v14H6.5a2 2 0 0 0-2 2Z"/><path d="M4.5 19.5a2 2 0 0 0 2 2H19v-4"/></symbol>
+      <symbol id="i-desktop" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M8.5 20h7M12 16.5V20"/></symbol>
+      <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6.5 8h11v3a5.5 5.5 0 0 1-11 0Z"/><path d="M12 16.5V21"/></symbol>
+      <symbol id="i-offline" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2.4"/><path d="M8 12h8M12 8v8"/></symbol>
+      <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2.5-6 5 12 2.5-6H21"/></symbol>
+      <symbol id="i-coins" viewBox="0 0 24 24"><ellipse cx="9" cy="7" rx="5.5" ry="2.5"/><path d="M3.5 7v4c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5V7"/><path d="M9.5 15.4c.8 1 2.8 1.6 5 1.6 3 0 5.5-1.1 5.5-2.5v-4c0-1.2-1.8-2.2-4.3-2.4"/></symbol>
+      <symbol id="i-ssh" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.4"/><path d="M7 10l2.5 2L7 14M12 14h3"/><circle cx="17.5" cy="8" r=".6"/></symbol>
+      <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.4-7.5-10A4.2 4.2 0 0 1 12 7.4 4.2 4.2 0 0 1 19.5 10c0 5.6-7.5 10-7.5 10Z"/></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 18.5V7a2.5 2.5 0 0 1 2.5-2.5h9A2.5 2.5 0 0 1 19 7v6.5a2.5 2.5 0 0 1-2.5 2.5H8.5Z"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+      <symbol id="i-ha" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="m8.3 10.8 7.4-3.6M8.3 13.2l7.4 3.6"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8v.01"/></symbol>
+      <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3Z"/></symbol>
+      <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5.5 21V4.5M5.5 4.5h11l-2.2 4 2.2 4h-11"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 2.8 19.5h18.4Z"/><path d="M12 10v4.2M12 16.8v.01"/></symbol>
+      <symbol id="i-octagon" viewBox="0 0 24 24"><path d="M8.3 3h7.4L21 8.3v7.4L15.7 21H8.3L3 15.7V8.3Z"/><path d="M12 8v4.8M12 15.8v.01"/></symbol>
+      <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5"/></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16Z"/><path d="m13.5 6.5 4 4"/></symbol>
+      <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6"/></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+      <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.4"/><path d="M9.5 4.5v15"/></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+      <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3.5h7l4.5 4.5v12.5H7Z"/><path d="M14 3.5V8h4.5M10 13h5.5M10 16.5h5.5"/></symbol>
+      <symbol id="i-hash" viewBox="0 0 24 24"><path d="M5 9h15M4 15h15M10 4 8 20M16 4l-2 16"/></symbol>
+      <symbol id="i-enter" viewBox="0 0 24 24"><path d="M19.5 5v6a3 3 0 0 1-3 3H5m4-4-4 4 4 4"/></symbol>
+    </defs>
+  </svg>
+  <!-- /shared:sprite -->
+
+  <!-- shared:banner -->
+  <div class="announce" data-banner>
+    <div class="announce-inner">
+      <a class="announce-link" href="https://github.com/sur950/gpu-deck">
+        <span class="announce-long">If GPU Deck is useful to you, star it on GitHub</span><span class="announce-short">Star GPU Deck on GitHub</span>
+        <span class="announce-star"><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><span class="announce-count" data-stars-value></span><span class="sr-only" data-stars-label></span></span>
+      </a>
+      <button type="button" class="announce-close" data-banner-close aria-label="Dismiss this banner"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+  </div>
+  <!-- /shared:banner -->
+
+  <!-- shared:header -->
+  <header class="site-header" id="top">
+    <div class="wrap header-inner">
+      <a class="brand" href="./" aria-label="GPU Deck, home">
+        <img class="logo-dark" src="assets/brand/lockup-dark.svg" width="109" height="30" alt="GPU Deck">
+        <img class="logo-light" src="assets/brand/lockup-light.svg" width="109" height="30" alt="GPU Deck">
+      </a>
+      <nav class="nav" id="site-nav" aria-label="Primary">
+        <ul>
+          <li><a href="#architecture">How it runs</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#hardware">Hardware</a></li>
+          <li><a href="#screens">Screens</a></li>
+          <li><a href="docs/" data-nav="docs">Docs</a></li>
+          <li><a href="docs/changelog/">Changelog</a></li>
+        </ul>
+      </nav>
+      <div class="header-actions">
+        <button type="button" class="search-trigger" data-search-open aria-haspopup="dialog" aria-label="Search the docs">
+          <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+          <span class="st-text">Search docs</span>
+          <kbd data-kbd-mod>⌘K</kbd>
+        </button>
+        <a class="gh-link" href="https://github.com/sur950/gpu-deck" aria-label="Star GPU Deck on GitHub">
+          <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>
+          <span class="gh-text">Star</span>
+          <span class="count" data-stars><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><span data-stars-value></span></span>
+        </a>
+        <button class="icon-btn theme-toggle" type="button" aria-label="Switch colour theme">
+          <svg class="icon i-moon" aria-hidden="true"><use href="#i-moon"/></svg>
+          <svg class="icon i-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+        </button>
+        <button class="icon-btn menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
+          <svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+  <!-- /shared:header -->
+
+  <main id="main">
+    <!-- ============================================================ hero -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-backdrop" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <a class="release-pill" href="https://github.com/sur950/gpu-deck/releases/latest" data-release-link>
+            <span class="tag" data-release>v1.0.0</span>
+            <span>Latest release, read the notes</span>
+            <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>
+          </a>
+          <h1 id="hero-title">The control plane for your own <span class="accent">GPUs.</span></h1>
+          <p class="lead">Deploy models across your GPU fleet, switch layouts by time of day, load and unload by rule, and meter every request. <strong>One CPU-only server runs the control plane; each GPU machine runs a small agent.</strong></p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#get-started">Get started <svg class="icon icon-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <a class="btn btn-secondary" href="https://github.com/sur950/gpu-deck">
+              <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg> Star on GitHub
+              <span class="count" data-stars><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><span data-stars-value></span></span>
+            </a>
+          </div>
+          <ul class="hero-note">
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Apache-2.0, one edition</li>
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Self-hosted, no account</li>
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>OpenAI, Anthropic and Ollama APIs</li>
+          </ul>
+        </div>
+        <aside class="readout" aria-label="GPU Deck at a glance">
+          <div class="readout-head"><span>At a glance</span><span class="live" data-release>v1.0.0</span></div>
+          <dl>
+            <div><dt>GPU vendors</dt><dd>07</dd></div>
+            <div><dt>Inference engines</dt><dd>08<small>+ custom</small></dd></div>
+            <div><dt>API formats</dt><dd>03</dd></div>
+            <div><dt>Rule types</dt><dd>06</dd></div>
+            <div><dt>GPUs the control plane needs</dt><dd class="zero">00</dd></div>
+          </dl>
+        </aside>
+      </div>
+      <div class="wrap-wide">
+        <figure class="hero-shot window">
+          <div class="window-bar" aria-hidden="true"><span class="url"><svg class="icon"><use href="#i-lock"/></svg>gpudeck.example.com</span></div>
+          <picture data-themed>
+            <source data-scheme="light" media="(prefers-color-scheme: light)" type="image/svg+xml" srcset="assets/screenshots/light-overview.svg">
+            <source data-scheme="dark" type="image/svg+xml" srcset="assets/screenshots/overview.svg">
+            <img src="assets/screenshots/overview.svg" width="1440" height="900" fetchpriority="high" decoding="async" alt="The GPU Deck dashboard: nodes and GPUs online, requests per second, generated tokens, time to first token, active sessions, GPU utilisation and today's spend, with live inference traffic and the GPU fleet below.">
+          </picture>
+        </figure>
+      </div>
+
+      <div class="strip">
+        <div class="wrap strip-grid">
+          <p class="strip-row"><span class="label">GPU vendors</span><span class="items"><span>NVIDIA</span><span>AMD</span><span>Apple Silicon</span><span>Hygon</span><span>MetaX</span><span>Moore Threads</span><span>T-Head</span></span></p>
+          <p class="strip-row"><span class="label">Engines</span><span class="items"><span>llama.cpp</span><span>vLLM</span><span>SGLang</span><span>TensorRT-LLM</span><span>MLX</span><span>whisper.cpp</span><span>stable-diffusion.cpp</span><span>your own</span></span></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ why -->
+    <section class="section" id="why" aria-labelledby="why-title">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">Why GPU Deck</p>
+          <h2 id="why-title">GPUs are the expensive part. Most fleets leave them idle or fight over them.</h2>
+          <p>Inference servers get started by hand on one box at a time, models stay loaded all night, and nobody can say which team used which GPU hour. GPU Deck turns a pile of machines into one fleet you can schedule, automate and bill.</p>
+        </div>
+        <div class="why-grid reveal">
+          <article class="why-card">
+            <span class="k">Problem 01</span>
+            <h3>VRAM sits idle overnight</h3>
+            <p>The daytime chat model holds the GPUs at 3 a.m. while the batch job waits.</p>
+            <p class="fix"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Layouts switch whole sets of models by time of day, and idle models unload on their own.</span></p>
+          </article>
+          <article class="why-card">
+            <span class="k">Problem 02</span>
+            <h3>One engine, one box, one script</h3>
+            <p>vLLM here, llama.cpp there, MLX on the Mac, each started and restarted by hand.</p>
+            <p class="fix"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>One control plane picks the engine, places the model on the right GPUs and heals it.</span></p>
+          </article>
+          <article class="why-card">
+            <span class="k">Problem 03</span>
+            <h3>No idea who used what</h3>
+            <p>GPU cost is one line on an invoice, with no split by team, model or idle time.</p>
+            <p class="fix"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Every request is metered per API key, model and node, and priced from your own plans.</span></p>
+          </article>
+        </div>
+        <div class="positioning reveal">
+          <svg class="icon" aria-hidden="true"><use href="#i-route"/></svg>
+          <p><strong>GPU Deck is not an AI gateway.</strong> Put any AI gateway (LiteLLM, Kong, Portkey or your own) in front of it for users, quotas, rate limits and guardrails. GPU Deck authenticates API keys, routes to your GPUs and stores nothing about end users.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ architecture -->
+    <section class="section" id="architecture" aria-labelledby="arch-title">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">How it runs</p>
+          <h2 id="arch-title">One CPU server runs the deck. GPU machines just run the agent.</h2>
+          <p>The control plane needs no GPU, no CUDA and no drivers: it is a handful of containers next to PostgreSQL and Redis. Every GPU machine gets the vendor driver and one native agent, which dials out to the control plane over mutual TLS and starts the engines on localhost.</p>
+        </div>
+
+        <div class="arch reveal">
+          <!-- wide diagram (desktop) -->
+          <svg class="arch-svg wide" viewBox="0 0 1200 640" role="img" aria-labelledby="arch-w-title arch-w-desc" xmlns="http://www.w3.org/2000/svg">
+            <title id="arch-w-title">GPU Deck architecture: what to install where</title>
+            <desc id="arch-w-desc">On the left, an optional AI gateway sends HTTPS requests with an API key to the API layer, and admins reach the web UI and admin API over a private network. In the middle, the control plane runs on one CPU-only server with Docker Compose or Helm: API layer on port 8181, agent hub on port 8443, web UI on 3180, admin API on 8180, Celery worker and beat, the scheduler, PostgreSQL 17 and Redis 7.4. On the right, each GPU machine runs only the gpudeck-agent with its proxy on port 9443, the GPU driver, and engines bound to 127.0.0.1. The API layer calls the agent proxy over mTLS on 9443; each agent dials out to the agent hub over an mTLS WebSocket on 8443.</desc>
+
+            <rect class="zone-client" x="1" y="72" width="216" height="128" rx="14"/>
+            <rect class="zone-client" x="1" y="264" width="216" height="128" rx="14"/>
+            <rect class="zone-client" x="1" y="456" width="216" height="112" rx="14"/>
+            <rect class="zone-cp" x="300" y="16" width="452" height="608" rx="20"/>
+            <rect class="zone-gpu" x="908" y="16" width="292" height="608" rx="20"/>
+
+            <!-- clients -->
+            <text class="t-zone neutral" x="18" y="100">IN FRONT · OPTIONAL</text>
+            <text class="t-title" x="18" y="126">Any AI gateway</text>
+            <text class="t-sub" x="18" y="148">LiteLLM · Kong · Portkey · your own</text>
+            <text class="t-sub" x="18" y="168">Users, quotas, rate limits and</text>
+            <text class="t-sub" x="18" y="185">guardrails live here</text>
+
+            <text class="t-zone neutral" x="18" y="292">ADMINS</text>
+            <text class="t-title" x="18" y="318">Admins and automation</text>
+            <text class="t-sub" x="18" y="340">Browser · Desktop app</text>
+            <text class="t-sub" x="18" y="358">CLI · Terraform</text>
+            <text class="t-mono" x="18" y="378">private network or VPN</text>
+
+            <text class="t-zone neutral" x="18" y="484">OPTIONAL</text>
+            <text class="t-title" x="18" y="510">Prometheus · Grafana</text>
+            <text class="t-sub" x="18" y="532">OpenTelemetry collector,</text>
+            <text class="t-sub" x="18" y="549">dashboards and alert rules</text>
+
+            <!-- client wires -->
+            <path class="wire" d="M218 136H306"/>
+            <path class="flow slow" d="M218 136H306"/>
+            <path class="arrow neutral" d="M305 131l10 5-10 5z"/>
+            <text class="t-label neutral" x="262" y="126" text-anchor="middle">HTTPS</text>
+            <text class="t-mono" x="262" y="154" text-anchor="middle">API key</text>
+
+            <path class="wire" d="M218 328H306"/>
+            <path class="arrow neutral" d="M305 323l10 5-10 5z"/>
+            <text class="t-label neutral" x="262" y="318" text-anchor="middle">HTTPS</text>
+
+            <!-- control plane -->
+            <text class="t-zone" x="322" y="48">CONTROL PLANE</text>
+            <text class="t-zone-sub" x="322" y="70">One CPU-only server · Docker Compose or Helm</text>
+            <rect class="chip agent" x="652" y="32" width="80" height="24" rx="12"/>
+            <text class="t-label" x="692" y="48" text-anchor="middle">NO GPU</text>
+
+            <rect class="box hot" x="316" y="96" width="420" height="80" rx="12"/>
+            <text class="t-title" x="334" y="124">API layer</text>
+            <text class="t-port" x="718" y="124" text-anchor="end">:8181</text>
+            <text class="t-sub" x="334" y="146">Serving API · OpenAI, Anthropic and Ollama formats</text>
+            <text class="t-sub" x="334" y="164">In-memory routing table · no database read per request</text>
+
+            <rect class="box hot" x="316" y="188" width="420" height="72" rx="12"/>
+            <text class="t-title" x="334" y="216">Agent hub</text>
+            <text class="t-port" x="718" y="216" text-anchor="end">:8443</text>
+            <text class="t-sub" x="334" y="238">Joins, certificates and the agents' WebSocket (TLS 1.3, mTLS)</text>
+
+            <path class="divider" d="M316 280H736"/>
+
+            <rect class="box" x="316" y="296" width="202" height="64" rx="12"/>
+            <text class="t-title" x="334" y="322">Web UI</text>
+            <text class="t-port" x="500" y="322" text-anchor="end">:3180</text>
+            <text class="t-sub" x="334" y="344">Admin screens</text>
+            <rect class="box" x="534" y="296" width="202" height="64" rx="12"/>
+            <text class="t-title" x="552" y="322">Admin API</text>
+            <text class="t-port" x="718" y="322" text-anchor="end">:8180</text>
+            <text class="t-sub" x="552" y="344">/api/v1 · CLI · Terraform</text>
+
+            <rect class="box" x="316" y="372" width="202" height="64" rx="12"/>
+            <text class="t-title" x="334" y="398">Worker + beat</text>
+            <text class="t-sub" x="334" y="420">Celery · metering, billing</text>
+            <rect class="box" x="534" y="372" width="202" height="64" rx="12"/>
+            <text class="t-title" x="552" y="398">Scheduler</text>
+            <text class="t-sub" x="552" y="420">Rules, swaps · leader lease</text>
+
+            <path class="divider" d="M372 466H736"/>
+            <text class="t-label neutral" x="316" y="470">STATE</text>
+
+            <rect class="box state" x="316" y="484" width="202" height="64" rx="12"/>
+            <text class="t-title" x="334" y="510">PostgreSQL 17</text>
+            <text class="t-sub" x="334" y="532">Config, vault, history</text>
+            <rect class="box state" x="534" y="484" width="202" height="64" rx="12"/>
+            <text class="t-title" x="552" y="510">Redis 7.4</text>
+            <text class="t-sub" x="552" y="532">Routing table, queues</text>
+
+            <rect class="chip" x="316" y="566" width="420" height="40" rx="10"/>
+            <text class="t-mono" x="334" y="590">$ docker compose up -d</text>
+            <text class="t-mono" x="718" y="590" text-anchor="end">or: helm install gpu-deck</text>
+
+            <!-- links between control plane and GPU machines -->
+            <path class="wire mtls" d="M736 136H914"/>
+            <path class="flow" d="M736 136H914"/>
+            <path class="arrow" d="M913 131l10 5-10 5z"/>
+            <text class="t-label" x="830" y="124" text-anchor="middle">mTLS · :9443</text>
+            <text class="t-mono" x="830" y="156" text-anchor="middle">inference traffic</text>
+
+            <path class="wire dial" d="M924 224H746"/>
+            <path class="flow" d="M924 224H746"/>
+            <path class="arrow" d="M747 219l-10 5 10 5z"/>
+            <text class="t-label" x="830" y="212" text-anchor="middle">mTLS WSS · :8443</text>
+            <text class="t-mono" x="830" y="244" text-anchor="middle">agent dials out</text>
+
+            <!-- GPU machines -->
+            <text class="t-zone neutral" x="930" y="48">GPU MACHINES</text>
+            <text class="t-zone-sub" x="930" y="70">Agent, driver and engines only</text>
+
+            <path class="wire bus" d="M924 136V489"/>
+            <circle class="node-dot" cx="924" cy="136" r="3.5"/>
+            <circle class="node-dot" cx="924" cy="224" r="3.5"/>
+            <path class="wire bus" d="M924 149H956M924 319H956M924 489H956"/>
+
+            <!-- node 1 -->
+            <rect class="box" x="940" y="92" width="244" height="156" rx="12"/>
+            <text class="t-chip" x="956" y="118" font-size="13" font-weight="700">gpu-a</text>
+            <text class="t-mono" x="1168" y="118" text-anchor="end">Linux · NVIDIA</text>
+            <rect class="chip agent" x="956" y="132" width="212" height="34" rx="8"/>
+            <text class="t-chip" x="968" y="154" font-weight="600">gpudeck-agent</text>
+            <text class="t-port" x="1156" y="154" text-anchor="end">:9443 proxy</text>
+            <text class="t-label neutral" x="956" y="186">ENGINES · 127.0.0.1 ONLY</text>
+            <rect class="chip" x="956" y="194" width="39" height="22" rx="6"/><text class="t-chip" x="963" y="209">vLLM</text>
+            <rect class="chip" x="1001" y="194" width="52" height="22" rx="6"/><text class="t-chip" x="1008" y="209">SGLang</text>
+            <rect class="chip" x="1059" y="194" width="90" height="22" rx="6"/><text class="t-chip" x="1066" y="209">TensorRT-LLM</text>
+            <rect class="gpu-sq g1" x="956" y="226" width="11" height="11" rx="2"/><rect class="gpu-sq g1" x="970" y="226" width="11" height="11" rx="2"/><rect class="gpu-sq g2" x="984" y="226" width="11" height="11" rx="2"/><rect class="gpu-sq g2" x="998" y="226" width="11" height="11" rx="2"/><rect class="gpu-sq g3" x="1012" y="226" width="11" height="11" rx="2"/><rect class="gpu-sq g4" x="1026" y="226" width="11" height="11" rx="2"/><rect class="gpu-sq g0" x="1040" y="226" width="11" height="11" rx="2"/><rect class="gpu-sq g0" x="1054" y="226" width="11" height="11" rx="2"/>
+            <text class="t-mono" x="1168" y="236" text-anchor="end">8× H100 · CUDA</text>
+
+            <!-- node 2 -->
+            <rect class="box" x="940" y="262" width="244" height="156" rx="12"/>
+            <text class="t-chip" x="956" y="288" font-size="13" font-weight="700">gpu-b</text>
+            <text class="t-mono" x="1168" y="288" text-anchor="end">Linux · AMD</text>
+            <rect class="chip agent" x="956" y="302" width="212" height="34" rx="8"/>
+            <text class="t-chip" x="968" y="324" font-weight="600">gpudeck-agent</text>
+            <text class="t-port" x="1156" y="324" text-anchor="end">:9443 proxy</text>
+            <text class="t-label neutral" x="956" y="356">ENGINES · 127.0.0.1 ONLY</text>
+            <rect class="chip" x="956" y="364" width="39" height="22" rx="6"/><text class="t-chip" x="963" y="379">vLLM</text>
+            <rect class="chip" x="1001" y="364" width="52" height="22" rx="6"/><text class="t-chip" x="1008" y="379">SGLang</text>
+            <rect class="chip" x="1059" y="364" width="71" height="22" rx="6"/><text class="t-chip" x="1066" y="379">llama.cpp</text>
+            <rect class="gpu-sq g1" x="956" y="396" width="11" height="11" rx="2"/><rect class="gpu-sq g2" x="970" y="396" width="11" height="11" rx="2"/><rect class="gpu-sq g3" x="984" y="396" width="11" height="11" rx="2"/><rect class="gpu-sq g0" x="998" y="396" width="11" height="11" rx="2"/>
+            <text class="t-mono" x="1168" y="406" text-anchor="end">4× MI300X · ROCm</text>
+
+            <!-- node 3 -->
+            <rect class="box" x="940" y="432" width="244" height="156" rx="12"/>
+            <text class="t-chip" x="956" y="458" font-size="13" font-weight="700">mac-studio</text>
+            <text class="t-mono" x="1168" y="458" text-anchor="end">macOS · Apple</text>
+            <rect class="chip agent" x="956" y="472" width="212" height="34" rx="8"/>
+            <text class="t-chip" x="968" y="494" font-weight="600">gpudeck-agent</text>
+            <text class="t-port" x="1156" y="494" text-anchor="end">:9443 proxy</text>
+            <text class="t-label neutral" x="956" y="526">ENGINES · 127.0.0.1 ONLY</text>
+            <rect class="chip" x="956" y="534" width="33" height="22" rx="6"/><text class="t-chip" x="963" y="549">MLX</text>
+            <rect class="chip" x="995" y="534" width="71" height="22" rx="6"/><text class="t-chip" x="1002" y="549">llama.cpp</text>
+            <rect class="chip" x="1072" y="534" width="83" height="22" rx="6"/><text class="t-chip" x="1079" y="549">whisper.cpp</text>
+            <rect class="gpu-sq g4" x="956" y="566" width="11" height="11" rx="2"/>
+            <text class="t-mono" x="1168" y="576" text-anchor="end">M3 Ultra · Metal</text>
+
+            <text class="t-mono" x="930" y="610" font-size="10.5">inbound: only :9443, API layer cert</text>
+          </svg>
+
+          <!-- tall diagram (phones and tablets) -->
+          <svg class="arch-svg tall" viewBox="0 0 360 1104" role="img" aria-labelledby="arch-t-title arch-t-desc" xmlns="http://www.w3.org/2000/svg">
+            <title id="arch-t-title">GPU Deck architecture: what to install where</title>
+            <desc id="arch-t-desc">At the top, an optional AI gateway sends HTTPS requests with an API key to the API layer, and admins reach the admin API over a private network. In the middle, the control plane runs on one CPU-only server: web UI, admin API, Celery worker and beat, scheduler, PostgreSQL, Redis, the API layer on port 8181 and the agent hub on port 8443. At the bottom, each GPU machine runs only the gpudeck-agent with its proxy on 9443, the GPU driver and engines on 127.0.0.1. The API layer calls the agent proxy over mTLS on 9443; each agent dials out to the hub over an mTLS WebSocket on 8443.</desc>
+
+            <rect class="zone-client" x="1" y="1" width="170" height="104" rx="14"/>
+            <rect class="zone-client" x="189" y="1" width="170" height="104" rx="14"/>
+            <rect class="zone-cp" x="24" y="148" width="336" height="396" rx="18"/>
+            <rect class="zone-gpu" x="24" y="648" width="336" height="452" rx="18"/>
+
+            <text class="t-zone neutral" x="14" y="25">OPTIONAL</text>
+            <text class="t-title" x="14" y="49">Any AI gateway</text>
+            <text class="t-sub" x="14" y="69">LiteLLM · Kong ·</text>
+            <text class="t-sub" x="14" y="87">Portkey · your own</text>
+
+            <text class="t-zone neutral" x="202" y="25">ADMINS</text>
+            <text class="t-title" x="202" y="49">Admins</text>
+            <text class="t-sub" x="202" y="69">Browser · Desktop app</text>
+            <text class="t-sub" x="202" y="87">CLI · Terraform</text>
+
+            <path class="wire" d="M10 106V484H30"/>
+            <path class="flow slow" d="M10 106V484H30"/>
+            <path class="arrow neutral" d="M29 479l10 5-10 5z"/>
+            <text class="t-label neutral" x="18" y="130">HTTPS + API key</text>
+
+            <path class="wire" d="M272 106V206"/>
+            <path class="arrow neutral" d="M267 205l5 10 5-10z"/>
+            <text class="t-label neutral" x="280" y="130">HTTPS · VPN</text>
+
+            <text class="t-zone" x="40" y="178">CONTROL PLANE</text>
+            <text class="t-zone-sub" x="40" y="198">One CPU-only server · no GPU</text>
+
+            <rect class="box" x="40" y="216" width="144" height="60" rx="10"/>
+            <text class="t-title" x="52" y="242">Web UI</text>
+            <text class="t-port" x="172" y="242" text-anchor="end">:3180</text>
+            <text class="t-sub" x="52" y="262">Admin screens</text>
+            <rect class="box" x="200" y="216" width="144" height="60" rx="10"/>
+            <text class="t-title" x="212" y="242">Admin API</text>
+            <text class="t-port" x="332" y="242" text-anchor="end">:8180</text>
+            <text class="t-sub" x="212" y="262">/api/v1</text>
+
+            <rect class="box" x="40" y="288" width="144" height="60" rx="10"/>
+            <text class="t-title" x="52" y="314">Worker + beat</text>
+            <text class="t-sub" x="52" y="334">Celery</text>
+            <rect class="box" x="200" y="288" width="144" height="60" rx="10"/>
+            <text class="t-title" x="212" y="314">Scheduler</text>
+            <text class="t-sub" x="212" y="334">Rules and swaps</text>
+
+            <rect class="box state" x="40" y="360" width="144" height="60" rx="10"/>
+            <text class="t-title" x="52" y="386">PostgreSQL 17</text>
+            <text class="t-sub" x="52" y="406">State, vault</text>
+            <rect class="box state" x="200" y="360" width="144" height="60" rx="10"/>
+            <text class="t-title" x="212" y="386">Redis 7.4</text>
+            <text class="t-sub" x="212" y="406">Routing, queues</text>
+
+            <rect class="box hot" x="40" y="440" width="144" height="88" rx="10"/>
+            <text class="t-title" x="52" y="466">API layer</text>
+            <text class="t-port" x="172" y="466" text-anchor="end">:8181</text>
+            <text class="t-sub" x="52" y="488">OpenAI · Anthropic</text>
+            <text class="t-sub" x="52" y="506">· Ollama formats</text>
+            <rect class="box hot" x="200" y="440" width="144" height="88" rx="10"/>
+            <text class="t-title" x="212" y="466">Agent hub</text>
+            <text class="t-port" x="332" y="466" text-anchor="end">:8443</text>
+            <text class="t-sub" x="212" y="488">Joins and the</text>
+            <text class="t-sub" x="212" y="506">agent WebSocket</text>
+
+            <path class="wire mtls" d="M160 528V702"/>
+            <path class="flow" d="M160 528V702"/>
+            <path class="arrow" d="M155 701l5 10 5-10z"/>
+            <text class="t-label" x="152" y="596" text-anchor="end">mTLS</text>
+            <text class="t-label" x="152" y="611" text-anchor="end">:9443</text>
+            <text class="t-mono" x="152" y="627" text-anchor="end">inference</text>
+
+            <path class="wire dial" d="M220 712V538"/>
+            <path class="flow" d="M220 712V538"/>
+            <path class="arrow" d="M215 539l5-10 5 10z"/>
+            <text class="t-label" x="228" y="596">mTLS WSS</text>
+            <text class="t-label" x="228" y="611">:8443</text>
+            <text class="t-mono" x="228" y="627">dials out</text>
+
+            <text class="t-zone neutral" x="40" y="676">GPU MACHINES</text>
+            <text class="t-zone-sub" x="40" y="694">Agent + engines</text>
+
+            <path class="wire bus" d="M40 712H220M40 712V1027"/>
+            <circle class="node-dot" cx="160" cy="712" r="3.5"/>
+            <circle class="node-dot" cx="220" cy="712" r="3.5"/>
+            <path class="wire bus" d="M40 779H72M40 903H72M40 1027H72"/>
+
+            <rect class="box" x="56" y="728" width="288" height="112" rx="10"/>
+            <text class="t-chip" x="72" y="752" font-size="13" font-weight="700">gpu-a</text>
+            <text class="t-mono" x="328" y="752" text-anchor="end">Linux · 8× H100</text>
+            <rect class="chip agent" x="72" y="764" width="256" height="30" rx="8"/>
+            <text class="t-chip" x="84" y="784" font-weight="600">gpudeck-agent</text>
+            <text class="t-port" x="316" y="784" text-anchor="end">:9443</text>
+            <rect class="chip" x="72" y="806" width="39" height="22" rx="6"/><text class="t-chip" x="79" y="821">vLLM</text>
+            <rect class="chip" x="117" y="806" width="52" height="22" rx="6"/><text class="t-chip" x="124" y="821">SGLang</text>
+            <rect class="chip" x="175" y="806" width="90" height="22" rx="6"/><text class="t-chip" x="182" y="821">TensorRT-LLM</text>
+
+            <rect class="box" x="56" y="852" width="288" height="112" rx="10"/>
+            <text class="t-chip" x="72" y="876" font-size="13" font-weight="700">gpu-b</text>
+            <text class="t-mono" x="328" y="876" text-anchor="end">Linux · 4× MI300X</text>
+            <rect class="chip agent" x="72" y="888" width="256" height="30" rx="8"/>
+            <text class="t-chip" x="84" y="908" font-weight="600">gpudeck-agent</text>
+            <text class="t-port" x="316" y="908" text-anchor="end">:9443</text>
+            <rect class="chip" x="72" y="930" width="39" height="22" rx="6"/><text class="t-chip" x="79" y="945">vLLM</text>
+            <rect class="chip" x="117" y="930" width="52" height="22" rx="6"/><text class="t-chip" x="124" y="945">SGLang</text>
+            <rect class="chip" x="175" y="930" width="71" height="22" rx="6"/><text class="t-chip" x="182" y="945">llama.cpp</text>
+
+            <rect class="box" x="56" y="976" width="288" height="112" rx="10"/>
+            <text class="t-chip" x="72" y="1000" font-size="13" font-weight="700">mac-studio</text>
+            <text class="t-mono" x="328" y="1000" text-anchor="end">macOS · M3 Ultra</text>
+            <rect class="chip agent" x="72" y="1012" width="256" height="30" rx="8"/>
+            <text class="t-chip" x="84" y="1032" font-weight="600">gpudeck-agent</text>
+            <text class="t-port" x="316" y="1032" text-anchor="end">:9443</text>
+            <rect class="chip" x="72" y="1054" width="33" height="22" rx="6"/><text class="t-chip" x="79" y="1069">MLX</text>
+            <rect class="chip" x="111" y="1054" width="71" height="22" rx="6"/><text class="t-chip" x="118" y="1069">llama.cpp</text>
+            <rect class="chip" x="188" y="1054" width="83" height="22" rx="6"/><text class="t-chip" x="195" y="1069">whisper.cpp</text>
+          </svg>
+
+          <ul class="arch-legend">
+            <li><span class="sw" aria-hidden="true"></span>mTLS request from the API layer to the agent proxy</li>
+            <li><span class="sw dash" aria-hidden="true"></span>Agent dials out to the hub (mTLS WebSocket)</li>
+            <li><span class="sw plain" aria-hidden="true"></span>HTTPS from your gateway or admins</li>
+            <li><span class="sw zone" aria-hidden="true"></span>Control plane, no GPU needed</li>
+          </ul>
+        </div>
+
+        <div class="install-where">
+          <article class="where primary reveal">
+            <div class="where-k"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg>Install once</div>
+            <h3>On one CPU-only server</h3>
+            <p>Docker with Compose, or a Kubernetes cluster with the Helm chart. Images come from GHCR, signed with cosign.</p>
+            <ul>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Web UI, admin API, API layer, agent hub, worker, beat and scheduler</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>PostgreSQL 17 and Redis 7.4, bundled or your own</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Optional Prometheus, Grafana and OpenTelemetry</span></li>
+            </ul>
+          </article>
+          <article class="where reveal">
+            <div class="where-k"><svg class="icon" aria-hidden="true"><use href="#i-chip"/></svg>On every GPU machine</div>
+            <h3>The driver and one agent</h3>
+            <p>One command installs <code>gpudeck-agent</code> as a systemd (Linux) or launchd (macOS) service and joins it with a single-use token.</p>
+            <ul>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Engines start on 127.0.0.1, natively or in containers</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Model files cached on the machine</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Outbound 8443 to the hub; inbound 9443 from the API layer only</span></li>
+            </ul>
+          </article>
+          <article class="where reveal">
+            <div class="where-k"><svg class="icon" aria-hidden="true"><use href="#i-route"/></svg>Optional, in front</div>
+            <h3>Any AI gateway</h3>
+            <p>Add GPU Deck as an OpenAI, Anthropic or Ollama upstream with a <code>gd-</code> key. Users, quotas and rate limits stay in the gateway.</p>
+            <ul>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span><code>/openai/v1</code>, <code>/anthropic/v1</code>, <code>/ollama/api</code></span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Serving API restricted to the gateway's IPs</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Usage metered per API key</span></li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="facts reveal">
+          <div class="fact">
+            <h3><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Agents dial out</h3>
+            <p>GPU machines open no control port. Commands reach them over the agent's own WebSocket and are replayed after a reconnect.</p>
+          </div>
+          <div class="fact">
+            <h3><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Engines stay on localhost</h3>
+            <p>Engines bind to 127.0.0.1. Only the agent proxy reaches them, and it accepts only the API layer's certificate.</p>
+          </div>
+          <div class="fact">
+            <h3><svg class="icon" aria-hidden="true"><use href="#i-pulse"/></svg>Serving survives restarts</h3>
+            <p>The API layer serves from an in-memory routing table, so upgrades of the rest of the control plane do not drop traffic.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ features -->
+    <section class="section" id="features" aria-labelledby="features-title">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">Features</p>
+          <h2 id="features-title">Everything between &ldquo;I have GPUs&rdquo; and &ldquo;the API is up&rdquo;, and what happens after.</h2>
+          <p>One edition with every feature, from the first machine you join to the cost report at the end of the month.</p>
+        </div>
+
+        <!-- 01 fleet -->
+        <article class="chapter" id="fleet" aria-labelledby="fleet-title">
+          <div class="chapter-copy reveal">
+            <p class="chapter-num"><b>01</b>Fleet</p>
+            <h3 id="fleet-title">Every GPU in one inventory, whatever the vendor.</h3>
+            <p>Group machines into clusters, join them with a one-time token and see every accelerator with its VRAM, slices, load, power, temperature, driver and health. Topology shows which instance sits on which GPU.</p>
+            <ul class="ticks">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span><strong>Seven vendor plugins:</strong> NVIDIA, AMD, Apple Silicon, Hygon, MetaX, Moore Threads and T-Head.</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>GPU slicing, health checks and a model cache on every node.</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Node certificates rotate before expiry; revoking one drops the node at once.</span></li>
+            </ul>
+          </div>
+          <div class="shots reveal" data-tabs>
+            <div class="shot-tabs" role="tablist" aria-label="Fleet screens">
+              <button type="button" role="tab" id="tab-fleet-1" aria-controls="panel-fleet-1" aria-selected="true">GPUs</button>
+              <button type="button" role="tab" id="tab-fleet-2" aria-controls="panel-fleet-2" aria-selected="false" tabindex="-1">Utilisation</button>
+              <button type="button" role="tab" id="tab-fleet-3" aria-controls="panel-fleet-3" aria-selected="false" tabindex="-1">Topology</button>
+              <button type="button" role="tab" id="tab-fleet-4" aria-controls="panel-fleet-4" aria-selected="false" tabindex="-1">Nodes</button>
+            </div>
+            <figure class="shot" role="tabpanel" id="panel-fleet-1" aria-labelledby="tab-fleet-1">
+              <button class="frame" type="button" data-shot="gpus" aria-label="Enlarge the GPUs screenshot">
+                <img src="assets/screenshots/gpus.svg" width="1440" height="900" loading="lazy" decoding="async" alt="GPUs screen: every accelerator grouped by vendor with VRAM slices, live load, driver version and health.">
+              </button>
+              <figcaption><b>GPUs.</b> Every accelerator by vendor, VRAM slices, live load, driver and health.</figcaption>
+            </figure>
+            <figure class="shot" role="tabpanel" id="panel-fleet-2" aria-labelledby="tab-fleet-2" hidden>
+              <button class="frame" type="button" data-shot="infra" aria-label="Enlarge the GPU utilisation screenshot">
+                <img src="assets/screenshots/infra.svg" width="1440" height="900" loading="lazy" decoding="async" alt="GPU infrastructure charts: utilisation, VRAM, power draw and temperature per GPU over time.">
+              </button>
+              <figcaption><b>Utilisation.</b> Load, VRAM, power and temperature per GPU.</figcaption>
+            </figure>
+            <figure class="shot" role="tabpanel" id="panel-fleet-3" aria-labelledby="tab-fleet-3" hidden>
+              <button class="frame" type="button" data-shot="topology" aria-label="Enlarge the topology screenshot">
+                <img src="assets/screenshots/topology.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Topology view: clusters containing nodes, their GPUs and the model instances placed on each GPU.">
+              </button>
+              <figcaption><b>Topology.</b> Clusters, nodes, GPUs and the instances placed on them.</figcaption>
+            </figure>
+            <figure class="shot" role="tabpanel" id="panel-fleet-4" aria-labelledby="tab-fleet-4" hidden>
+              <button class="frame" type="button" data-shot="nodes" aria-label="Enlarge the nodes screenshot">
+                <img src="assets/screenshots/nodes.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Nodes list with heartbeat, agent version, GPUs, model cache and pending join tokens.">
+              </button>
+              <figcaption><b>Nodes.</b> Heartbeat, agent, GPUs, model cache and pending join tokens.</figcaption>
+            </figure>
+          </div>
+        </article>
+
+        <!-- 02 deploy -->
+        <article class="chapter flip" id="deploy" aria-labelledby="deploy-title">
+          <div class="chapter-copy reveal">
+            <p class="chapter-num"><b>02</b>Deploy</p>
+            <h3 id="deploy-title">Pick a model. See where it lands before it loads.</h3>
+            <p>Search Hugging Face or ModelScope, or scan a local folder. GPU Deck picks an engine for the format, the GPU vendor and the driver, runs a scheduler dry run of the placement, then deploys. Every deployment shows its replicas, live sessions, traffic weights and a ready-to-run curl.</p>
+            <ul class="ticks">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span><strong>Engines:</strong> llama.cpp (with router mode), vLLM, SGLang, TensorRT-LLM, MLX, MLX Audio, whisper.cpp, stable-diffusion.cpp or a custom container.</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Least-sessions, round-robin or weighted routing; a failing replica is ejected and the request retried before the first byte.</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>GPU slicing, tensor and pipeline parallelism, launch templates, flag presets and benchmarks.</span></li>
+            </ul>
+          </div>
+          <div class="shots reveal" data-tabs>
+            <div class="shot-tabs" role="tablist" aria-label="Deployment screens">
+              <button type="button" role="tab" id="tab-dep-1" aria-controls="panel-dep-1" aria-selected="true">Deploy wizard</button>
+              <button type="button" role="tab" id="tab-dep-2" aria-controls="panel-dep-2" aria-selected="false" tabindex="-1">Deployment</button>
+              <button type="button" role="tab" id="tab-dep-3" aria-controls="panel-dep-3" aria-selected="false" tabindex="-1">Catalog</button>
+            </div>
+            <figure class="shot" role="tabpanel" id="panel-dep-1" aria-labelledby="tab-dep-1">
+              <button class="frame" type="button" data-shot="deployment-wizard" aria-label="Enlarge the deploy wizard screenshot">
+                <img src="assets/screenshots/deployment-wizard.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Deploy wizard: the engine picked automatically and a scheduler dry run showing which GPUs the model would be placed on.">
+              </button>
+              <figcaption><b>Deploy wizard.</b> Engine auto-pick, then a scheduler dry run of the placement.</figcaption>
+            </figure>
+            <figure class="shot" role="tabpanel" id="panel-dep-2" aria-labelledby="tab-dep-2" hidden>
+              <button class="frame" type="button" data-shot="deployment-detail" aria-label="Enlarge the deployment screenshot">
+                <img src="assets/screenshots/deployment-detail.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Deployment detail: replicas, live sessions, time to first token, traffic weights and a ready-to-run curl command.">
+              </button>
+              <figcaption><b>Deployment.</b> Replicas, live sessions, TTFT, traffic weights and a ready-to-run curl.</figcaption>
+            </figure>
+            <figure class="shot" role="tabpanel" id="panel-dep-3" aria-labelledby="tab-dep-3" hidden>
+              <button class="frame" type="button" data-shot="catalog" aria-label="Enlarge the catalog screenshot">
+                <img src="assets/screenshots/catalog.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Model catalog: Hugging Face models with versions, formats, priority and security defaults.">
+              </button>
+              <figcaption><b>Catalog.</b> Models with versions, formats, priority and security defaults.</figcaption>
+            </figure>
+          </div>
+        </article>
+
+        <!-- 03 automate -->
+        <article class="chapter" id="rules" aria-labelledby="rules-title">
+          <div class="chapter-copy reveal">
+            <p class="chapter-num"><b>03</b>Rules, layouts and swaps</p>
+            <h3 id="rules-title">Rules load, unload and move models so GPUs never sit idle.</h3>
+            <p>Each rule is a short form that reads back as a sentence. Run it in dry-run first, then let it act; the history keeps every evaluation, including what was held back and why.</p>
+            <ul class="ticks">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span><strong>Layouts</strong> are named sets of models and replicas, such as Day and Night, applied on a timezone-aware, DST-safe schedule.</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-swap"/></svg><span><strong>Safe swaps</strong> drain in-flight requests, unload, load and publish the new route, step by step. Progress is persisted, resumes on a new leader and rolls back on failure.</span></li>
+            </ul>
+          </div>
+          <div class="shots reveal" data-tabs>
+            <div class="shot-tabs" role="tablist" aria-label="Automation screens">
+              <button type="button" role="tab" id="tab-rule-1" aria-controls="panel-rule-1" aria-selected="true">Rule builder</button>
+              <button type="button" role="tab" id="tab-rule-2" aria-controls="panel-rule-2" aria-selected="false" tabindex="-1">History</button>
+              <button type="button" role="tab" id="tab-rule-3" aria-controls="panel-rule-3" aria-selected="false" tabindex="-1">Layouts</button>
+              <button type="button" role="tab" id="tab-rule-4" aria-controls="panel-rule-4" aria-selected="false" tabindex="-1">Swaps</button>
+            </div>
+            <figure class="shot" role="tabpanel" id="panel-rule-1" aria-labelledby="tab-rule-1">
+              <button class="frame" type="button" data-shot="rules-builder" aria-label="Enlarge the rule builder screenshot">
+                <img src="assets/screenshots/rules-builder.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Rule builder: choose one of six rule types and fill a short form that reads back as a sentence.">
+              </button>
+              <figcaption><b>Rule builder.</b> Six rule types, each a short form that reads back as a sentence.</figcaption>
+            </figure>
+            <figure class="shot" role="tabpanel" id="panel-rule-2" aria-labelledby="tab-rule-2" hidden>
+              <button class="frame" type="button" data-shot="rule-detail" aria-label="Enlarge the rule history screenshot">
+                <img src="assets/screenshots/rule-detail.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Rule history: every evaluation with its outcome, including skipped runs and the reason they were held back.">
+              </button>
+              <figcaption><b>Rule history.</b> Every evaluation, including what was held back and why.</figcaption>
+            </figure>
+            <figure class="shot" role="tabpanel" id="panel-rule-3" aria-labelledby="tab-rule-3" hidden>
+              <button class="frame" type="button" data-shot="layouts" aria-label="Enlarge the layouts screenshot">
+                <img src="assets/screenshots/layouts.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Layouts: Day and Night GPU layouts listing which models and replicas each should hold, switched by time-schedule rules.">
+              </button>
+              <figcaption><b>Layouts.</b> Day and Night GPU layouts switched by time-schedule rules.</figcaption>
+            </figure>
+            <figure class="shot" role="tabpanel" id="panel-rule-4" aria-labelledby="tab-rule-4" hidden>
+              <button class="frame" type="button" data-shot="swaps" aria-label="Enlarge the swaps screenshot">
+                <img src="assets/screenshots/swaps.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Swaps: loads, unloads, moves and restarts shown step by step, with rollback on failure.">
+              </button>
+              <figcaption><b>Swaps.</b> Loads, unloads, moves and restarts step by step, with rollback.</figcaption>
+            </figure>
+          </div>
+        </article>
+        <div class="rules-block reveal">
+          <h4 class="mini-label">Six rule types</h4>
+          <div class="rules-grid">
+            <div class="rule"><code>time_schedule</code><h4>Time schedule</h4><p>Apply the Day layout at 08:00 on weekdays, Night at 20:00, and prefetch models before the switch.</p></div>
+            <div class="rule"><code>idle_unload</code><h4>Idle unload</h4><p>Unload a model after 30 minutes without requests, keeping a minimum number of replicas.</p></div>
+            <div class="rule"><code>high_load_grow</code><h4>High load grow</h4><p>Add a replica when requests queue up or the KV cache fills for several minutes.</p></div>
+            <div class="rule"><code>low_traffic_shrink</code><h4>Low traffic shrink</h4><p>Scale down, or move to a smaller GPU slice, when traffic stays low.</p></div>
+            <div class="rule"><code>make_room_by_priority</code><h4>Make room by priority</h4><p>Evict an idle, evictable model when a higher-priority one needs the VRAM.</p></div>
+            <div class="rule"><code>auto_heal</code><h4>Auto heal</h4><p>Restart, or move to another GPU, an instance that keeps failing health checks.</p></div>
+          </div>
+          <h4 class="mini-label">How a swap runs</h4>
+          <ol class="swap-line">
+            <li><b>Drain</b>Stop new requests</li>
+            <li><b>Wait</b>In-flight reaches zero</li>
+            <li><b>Unload</b>Free the GPU</li>
+            <li><b>Load</b>Start the new instance</li>
+            <li class="rollback"><b>Roll back</b>Reload the previous one</li>
+          </ol>
+        </div>
+
+        <!-- 04 serve -->
+        <article class="chapter" id="serve" aria-labelledby="serve-title">
+          <div class="chapter-copy reveal">
+            <p class="chapter-num"><b>04</b>Serve</p>
+            <h3 id="serve-title">OpenAI, Anthropic and Ollama APIs on your own GPUs.</h3>
+            <p>Point any SDK or AI gateway at the API layer. It checks the API key, picks a ready replica from an in-memory routing table and streams the answer straight from the engine.</p>
+            <div class="stat-row">
+              <div class="stat"><b>~1.3 ms</b><span>median proxy overhead on streamed time to first byte</span></div>
+              <div class="stat"><b>0</b><span>database reads per request on the hot path</span></div>
+              <div class="stat"><b>gd-</b><span>API keys stored as hashes, shown once</span></div>
+            </div>
+          </div>
+          <div class="reveal" data-tabs>
+            <div class="code-card">
+              <div class="code-card-head">
+                <div class="code-tabs" role="tablist" aria-label="API examples">
+                  <button type="button" role="tab" id="tab-api-1" aria-controls="panel-api-1" aria-selected="true">curl</button>
+                  <button type="button" role="tab" id="tab-api-2" aria-controls="panel-api-2" aria-selected="false" tabindex="-1">OpenAI SDK</button>
+                  <button type="button" role="tab" id="tab-api-3" aria-controls="panel-api-3" aria-selected="false" tabindex="-1">Anthropic SDK</button>
+                  <button type="button" role="tab" id="tab-api-4" aria-controls="panel-api-4" aria-selected="false" tabindex="-1">Ollama</button>
+                </div>
+                <button class="copy" type="button" data-copy-active><svg class="icon i-copy" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon i-done" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button>
+              </div>
+              <div role="tabpanel" id="panel-api-1" aria-labelledby="tab-api-1" tabindex="0">
+<pre><code><span class="k">curl</span> https://gpudeck-api.example.com/openai/v1/chat/completions \
+  <span class="f">-H</span> <span class="s">"Authorization: Bearer gd-…"</span> \
+  <span class="f">-H</span> <span class="s">"Content-Type: application/json"</span> \
+  <span class="f">-d</span> <span class="s">'{
+    "model": "qwen3-0.6b",
+    "stream": true,
+    "messages": [{"role": "user", "content": "Hello from my own GPU"}]
+  }'</span></code></pre>
+              </div>
+              <div role="tabpanel" id="panel-api-2" aria-labelledby="tab-api-2" tabindex="0" hidden>
+<pre><code><span class="k">from</span> openai <span class="k">import</span> OpenAI
+
+client = OpenAI(
+    base_url=<span class="s">"https://gpudeck-api.example.com/openai/v1"</span>,
+    api_key=<span class="s">"gd-…"</span>,
+)
+stream = client.chat.completions.create(
+    model=<span class="s">"qwen3-0.6b"</span>,
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Hello from my own GPU"</span>}],
+    stream=<span class="k">True</span>,
+)
+<span class="k">for</span> chunk <span class="k">in</span> stream:
+    print(chunk.choices[0].delta.content <span class="k">or</span> <span class="s">""</span>, end=<span class="s">""</span>)</code></pre>
+              </div>
+              <div role="tabpanel" id="panel-api-3" aria-labelledby="tab-api-3" tabindex="0" hidden>
+<pre><code><span class="k">from</span> anthropic <span class="k">import</span> Anthropic
+
+client = Anthropic(
+    base_url=<span class="s">"https://gpudeck-api.example.com/anthropic"</span>,
+    api_key=<span class="s">"gd-…"</span>,
+)
+message = client.messages.create(
+    model=<span class="s">"qwen3-0.6b"</span>,
+    max_tokens=512,
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Hello from my own GPU"</span>}],
+)
+print(message.content[0].text)</code></pre>
+              </div>
+              <div role="tabpanel" id="panel-api-4" aria-labelledby="tab-api-4" tabindex="0" hidden>
+<pre><code><span class="c"># Ollama clients: OLLAMA_HOST=https://gpudeck-api.example.com/ollama</span>
+<span class="k">curl</span> https://gpudeck-api.example.com/ollama/api/chat \
+  <span class="f">-H</span> <span class="s">"Authorization: Bearer gd-…"</span> \
+  <span class="f">-d</span> <span class="s">'{
+    "model": "qwen3-0.6b",
+    "stream": false,
+    "messages": [{"role": "user", "content": "Hello from my own GPU"}]
+  }'</span></code></pre>
+              </div>
+            </div>
+            <div class="endpoints">
+              <div class="endpoint">
+                <div class="endpoint-head"><h4>OpenAI</h4><code>/openai/v1 · /v1</code></div>
+                <p>chat/completions · completions · responses · embeddings · rerank · images · audio/speech · audio/transcriptions · videos · models</p>
+              </div>
+              <div class="endpoint">
+                <div class="endpoint-head"><h4>Anthropic</h4><code>/anthropic/v1</code></div>
+                <p>messages · messages/count_tokens · messages/batches · models</p>
+              </div>
+              <div class="endpoint">
+                <div class="endpoint-head"><h4>Ollama</h4><code>/ollama/api · /api</code></div>
+                <p>chat · generate · embed · tags · ps · show · version</p>
+              </div>
+            </div>
+
+          </div>
+        </article>
+
+        <!-- 05 observe -->
+        <article class="chapter flip" id="observe" aria-labelledby="observe-title">
+          <div class="chapter-copy reveal">
+            <p class="chapter-num"><b>05</b>Observe</p>
+            <h3 id="observe-title">See inside every inference, down to the KV cache.</h3>
+            <p>Sessions, throughput, time to first token, end-to-end latency and KV cache use for every deployment, next to live GPU load, VRAM, power and temperature. Logs, traces, audit entries and usage rows share one request id.</p>
+            <ul class="ticks">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Prometheus metrics for the control plane, API layer, agents and engines.</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Grafana dashboards for the GPU fleet, inference, usage and cost and the control plane, with alert rules.</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>OpenTelemetry traces, and alerts to Slack, email or signed webhooks.</span></li>
+            </ul>
+          </div>
+          <div class="shots reveal" data-tabs>
+            <div class="shot-tabs" role="tablist" aria-label="Observability screens">
+              <button type="button" role="tab" id="tab-obs-1" aria-controls="panel-obs-1" aria-selected="true">Inference</button>
+              <button type="button" role="tab" id="tab-obs-2" aria-controls="panel-obs-2" aria-selected="false" tabindex="-1">Dashboard</button>
+            </div>
+            <figure class="shot" role="tabpanel" id="panel-obs-1" aria-labelledby="tab-obs-1">
+              <button class="frame" type="button" data-shot="inference" aria-label="Enlarge the inference metrics screenshot">
+                <img src="assets/screenshots/inference.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Inference metrics: sessions, throughput, time to first token, end-to-end latency and KV cache use per deployment.">
+              </button>
+              <figcaption><b>Inference.</b> Sessions, throughput, TTFT, end-to-end latency and KV cache per deployment.</figcaption>
+            </figure>
+            <figure class="shot" role="tabpanel" id="panel-obs-2" aria-labelledby="tab-obs-2" hidden>
+              <button class="frame" type="button" data-shot="overview" aria-label="Enlarge the dashboard screenshot">
+                <img src="assets/screenshots/overview.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Dashboard: fleet health, live requests, tokens, time to first token, GPU load and today's spend.">
+              </button>
+              <figcaption><b>Dashboard.</b> Fleet health, live requests, tokens, TTFT, GPU load and today's spend.</figcaption>
+            </figure>
+          </div>
+        </article>
+
+        <!-- 06 meter -->
+        <article class="chapter" id="metering" aria-labelledby="meter-title">
+          <div class="chapter-copy reveal">
+            <p class="chapter-num"><b>06</b>Meter and bill</p>
+            <h3 id="meter-title">Know what every GPU minute costs, including the idle ones.</h3>
+            <p>Requests, tokens and GPU minutes per API key, model and node. Price plans turn them into cost per key, cluster, model and server, and time a model spends loaded but idle shows up as its own bucket instead of disappearing.</p>
+            <ul class="ticks">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Token prices per node, cluster or default plan, with a separate rate for cached tokens.</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Billable GPU time comes from uptime and is shared pro rata by tokens.</span></li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Monthly reports and CSV exports. Billing shows what the servers cost, nothing more.</span></li>
+            </ul>
+          </div>
+          <div class="shots reveal" data-tabs>
+            <div class="shot-tabs" role="tablist" aria-label="Metering screens">
+              <button type="button" role="tab" id="tab-met-1" aria-controls="panel-met-1" aria-selected="true">Billing</button>
+              <button type="button" role="tab" id="tab-met-2" aria-controls="panel-met-2" aria-selected="false" tabindex="-1">Metering</button>
+            </div>
+            <figure class="shot" role="tabpanel" id="panel-met-1" aria-labelledby="tab-met-1">
+              <button class="frame" type="button" data-shot="billing" aria-label="Enlarge the billing screenshot">
+                <img src="assets/screenshots/billing.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Billing: cost per API key and cluster from price plans, including idle loaded time.">
+              </button>
+              <figcaption><b>Billing.</b> Cost per key and cluster from price plans, including idle loaded time.</figcaption>
+            </figure>
+            <figure class="shot" role="tabpanel" id="panel-met-2" aria-labelledby="tab-met-2" hidden>
+              <button class="frame" type="button" data-shot="metering" aria-label="Enlarge the metering screenshot">
+                <img src="assets/screenshots/metering.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Metering: requests, tokens and GPU minutes per API key, model and node.">
+              </button>
+              <figcaption><b>Metering.</b> Requests, tokens and GPU minutes per API key, model and node.</figcaption>
+            </figure>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================================================ also in the box -->
+    <section class="section" id="more" aria-labelledby="more-title">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">Also in the box</p>
+          <h2 id="more-title">The parts you would otherwise script yourself.</h2>
+        </div>
+        <div class="box-grid">
+          <article class="box-card wide reveal">
+            <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-ssh"/></svg></span>
+            <h3>SSH GPU instances</h3>
+            <p>Hand someone an SSH container with a GPU or a slice of one. Public keys only, an optional source CIDR allow-list, sshd only on the node's private interface, stopped by TTL.</p>
+            <button class="thumb" type="button" data-shot="ssh-instances" aria-label="Enlarge the SSH GPU instances screenshot">
+              <img src="assets/screenshots/ssh-instances.svg" width="1440" height="900" loading="lazy" decoding="async" alt="SSH GPU instances: containers with sshd and a GPU slice, with their time to live.">
+            </button>
+          </article>
+          <article class="box-card wide reveal">
+            <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-cloud"/></svg></span>
+            <h3>Cloud GPU VMs</h3>
+            <p>Launch GPU VMs on AWS, Azure, GCP or DigitalOcean from the Clusters screen. Cloud-init installs the agent and the node joins its cluster like any other machine.</p>
+            <button class="thumb" type="button" data-shot="cloud" aria-label="Enlarge the cloud VMs screenshot">
+              <img src="assets/screenshots/cloud.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Cloud VMs: GPU virtual machines on AWS, Azure, GCP or DigitalOcean that join their cluster.">
+            </button>
+          </article>
+          <article class="box-card reveal">
+            <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-vault"/></svg></span>
+            <h3>Credentials vault</h3>
+            <p>Typed credentials for clouds, model hubs, alert channels and SSH. Encrypted at rest, write-only secrets, an audited reveal and key rotation.</p>
+          </article>
+          <article class="box-card reveal">
+            <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg></span>
+            <h3>Audit log</h3>
+            <p>Sign-ins, changes, rule actions and swaps: who, what, when and from where, with CSV export.</p>
+          </article>
+          <article class="box-card reveal">
+            <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg></span>
+            <h3>Alerts</h3>
+            <p>Node, swap, rule and health events to Slack, email or HMAC-signed webhooks, filtered by severity.</p>
+          </article>
+          <article class="box-card reveal">
+            <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-ha"/></svg></span>
+            <h3>High availability</h3>
+            <p>Stateless APIs behind a load balancer, a leader-elected scheduler on Postgres leases, and swaps that resume on the new leader.</p>
+          </article>
+          <article class="box-card reveal">
+            <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-gauge"/></svg></span>
+            <h3>Model cache and benchmarks</h3>
+            <p>Model files cached per node and prefetched before a layout switch. Benchmarks sweep concurrency against an SLO and can tune launch flags.</p>
+          </article>
+          <article class="box-card reveal">
+            <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-offline"/></svg></span>
+            <h3>Offline install</h3>
+            <p>An air-gapped bundle with images, the chart, agent builds, the CLI and a Terraform mirror, plus Hugging Face mirror support.</p>
+          </article>
+          <article class="box-card reveal">
+            <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-desktop"/></svg></span>
+            <h3>Desktop app</h3>
+            <p>A native window around any control plane, with notifications and a tray. <a class="link-arrow" href="#desktop">More<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></p>
+          </article>
+          <article class="box-card reveal">
+            <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg></span>
+            <h3>IP rules</h3>
+            <p>Allow and block lists for the admin and serving APIs, cached in memory, and refused if they would lock you out.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ automation -->
+    <section class="section" id="tooling" aria-labelledby="tooling-title">
+      <div class="wrap serve-grid">
+        <div class="reveal">
+          <p class="eyebrow">CLI, Terraform, Helm</p>
+          <h2 id="tooling-title" class="section-title">Run it from code, not just from the UI.</h2>
+          <p class="muted">Every admin API operation is a <code>gpudeck</code> CLI command, with tables on a terminal and JSON when piped. The Terraform provider manages clusters, join tokens, models, deployments, layouts, rules, alert channels, API keys and IP rules. The Helm chart runs the control plane with PodDisruptionBudgets, an HPA on the API layer, default-deny NetworkPolicies and a migration hook.</p>
+          <ul class="chips">
+            <li>gpudeck CLI</li>
+            <li>registry.terraform.io/sur950/gpudeck</li>
+            <li>oci://ghcr.io/sur950/charts/gpu-deck</li>
+          </ul>
+        </div>
+        <div class="reveal" data-tabs>
+          <div class="code-card">
+            <div class="code-card-head">
+              <div class="code-tabs" role="tablist" aria-label="Automation examples">
+                <button type="button" role="tab" id="tab-tool-1" aria-controls="panel-tool-1" aria-selected="true">CLI</button>
+                <button type="button" role="tab" id="tab-tool-2" aria-controls="panel-tool-2" aria-selected="false" tabindex="-1">Terraform</button>
+                <button type="button" role="tab" id="tab-tool-3" aria-controls="panel-tool-3" aria-selected="false" tabindex="-1">Helm</button>
+              </div>
+              <button class="copy" type="button" data-copy-active><svg class="icon i-copy" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon i-done" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button>
+            </div>
+            <div role="tabpanel" id="panel-tool-1" aria-labelledby="tab-tool-1" tabindex="0">
+<pre><code><span class="k">gpudeck</span> login <span class="f">-e</span> https://gpudeck-admin.example.com <span class="f">-u</span> admin
+<span class="k">gpudeck</span> nodes join-tokens create <span class="f">--cluster-id</span> <span class="s">"$CID"</span> <span class="f">-o</span> json | jq <span class="f">-r</span> .join_command
+<span class="k">gpudeck</span> deployments create <span class="f">-f</span> deploy.yaml
+<span class="k">gpudeck</span> rules create <span class="f">-f</span> idle-unload.yaml &amp;&amp; <span class="k">gpudeck</span> rules dry-run <span class="s">"$RULE_ID"</span>
+<span class="k">gpudeck</span> layouts apply <span class="s">"$NIGHT_LAYOUT_ID"</span>
+<span class="k">gpudeck</span> live events <span class="f">-t</span> nodes <span class="f">-t</span> deployments    <span class="c"># live stream, Ctrl-C to stop</span></code></pre>
+            </div>
+            <div role="tabpanel" id="panel-tool-2" aria-labelledby="tab-tool-2" tabindex="0" hidden>
+<pre><code><span class="k">resource</span> <span class="s">"gpudeck_layout"</span> <span class="s">"night"</span> {
+  name            = <span class="s">"night"</span>
+  unlisted_policy = <span class="s">"unload"</span>
+  items = [
+    { deployment_id = gpudeck_deployment.qwen3.id, replicas = 1 },
+  ]
+}
+
+<span class="k">resource</span> <span class="s">"gpudeck_rule"</span> <span class="s">"evening"</span> {
+  name = <span class="s">"night layout"</span>
+  type = <span class="s">"time_schedule"</span>
+  params = jsonencode({
+    layout_id = gpudeck_layout.night.id
+    at        = <span class="s">"20:00"</span>
+    timezone  = <span class="s">"Asia/Kolkata"</span>
+  })
+}</code></pre>
+            </div>
+            <div role="tabpanel" id="panel-tool-3" aria-labelledby="tab-tool-3" tabindex="0" hidden>
+<pre><code><span class="c"># PostgreSQL and Redis are yours (managed or operator-run)</span>
+<span class="k">kubectl</span> create namespace gpu-deck
+<span class="k">kubectl</span> <span class="f">-n</span> gpu-deck create secret generic gpu-deck-env <span class="f">--from-env-file</span>=prod.env
+<span class="k">helm</span> upgrade <span class="f">--install</span> gpu-deck oci://ghcr.io/sur950/charts/gpu-deck \
+  <span class="f">--version</span> <span data-version>1.0.0</span> <span class="f">-n</span> gpu-deck \
+  <span class="f">--set</span> secrets.existingSecret=gpu-deck-env <span class="f">-f</span> my-values.yaml</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ get started -->
+    <section class="section" id="get-started" aria-labelledby="start-title">
+      <div class="wrap">
+        <div class="start-head">
+          <div class="section-head reveal">
+            <p class="eyebrow">Get started</p>
+            <h2 id="start-title">From a CPU server to your first API call.</h2>
+            <p>Four steps. The commands below are the short version; <a href="docs/deployment/">the deployment guide</a> has every setting, the HTTPS setup and the checks.</p>
+          </div>
+        </div>
+
+        <ol class="steps">
+          <li class="step reveal" data-tabs>
+            <span class="step-num" aria-hidden="true">1</span>
+            <div class="step-copy">
+              <h3>Start the control plane</h3>
+              <span class="where-tag"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg>CPU-only server</span>
+              <p>Any Linux server (or a Mac) with Docker and the Compose plugin. Fill the <code>CHANGE-ME</code> values in the <code>.env</code> (secret key, vault key, admin password and the hub URL your GPU machines will reach), then start it.</p>
+              <div class="seg" role="tablist" aria-label="Install method">
+                <button type="button" role="tab" id="tab-inst-1" aria-controls="panel-inst-1" aria-selected="true">Docker Compose</button>
+                <button type="button" role="tab" id="tab-inst-2" aria-controls="panel-inst-2" aria-selected="false" tabindex="-1">Kubernetes</button>
+                <button type="button" role="tab" id="tab-inst-3" aria-controls="panel-inst-3" aria-selected="false" tabindex="-1">Air-gapped</button>
+              </div>
+            </div>
+            <div class="step-code">
+              <div class="code-card">
+                <div class="code-card-head">
+                  <span class="file">control plane</span>
+                  <button class="copy" type="button" data-copy-active><svg class="icon i-copy" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon i-done" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button>
+                </div>
+                <div class="panel" role="tabpanel" id="panel-inst-1" aria-labelledby="tab-inst-1" tabindex="0">
+<pre><code><span class="k">git</span> clone <span class="f">--depth</span> 1 <span class="f">--branch</span> v<span data-version>1.0.0</span> https://github.com/sur950/gpu-deck.git
+<span class="k">cd</span> gpu-deck
+<span class="k">cp</span> apps/fastapi/.env.example apps/fastapi/.env   <span class="c"># replace every CHANGE-ME</span>
+<span class="k">export</span> GPUDECK_VERSION=<span data-version>1.0.0</span>
+<span class="k">export</span> COMPOSE_FILE=infra/docker/docker-compose.yml:infra/docker/docker-compose.full.yml
+<span class="k">docker</span> compose pull
+<span class="k">docker</span> compose <span class="f">--profile</span> tools run <span class="f">--rm</span> migrate
+<span class="k">docker</span> compose up <span class="f">-d</span>                  <span class="c"># web UI on :3180, serving API on :8181</span></code></pre>
+                </div>
+                <div class="panel" role="tabpanel" id="panel-inst-2" aria-labelledby="tab-inst-2" tabindex="0" hidden>
+<pre><code><span class="c"># Bring your own PostgreSQL 17 and Redis 7.4; secrets go in a Secret</span>
+<span class="k">kubectl</span> create namespace gpu-deck
+<span class="k">kubectl</span> <span class="f">-n</span> gpu-deck create secret generic gpu-deck-env <span class="f">--from-env-file</span>=prod.env
+<span class="k">helm</span> upgrade <span class="f">--install</span> gpu-deck oci://ghcr.io/sur950/charts/gpu-deck \
+  <span class="f">--version</span> <span data-version>1.0.0</span> <span class="f">-n</span> gpu-deck \
+  <span class="f">--set</span> secrets.existingSecret=gpu-deck-env <span class="f">-f</span> my-values.yaml
+<span class="c"># the agent hub is a LoadBalancer Service on TCP 8443, never an HTTP ingress</span></code></pre>
+                </div>
+                <div class="panel" role="tabpanel" id="panel-inst-3" aria-labelledby="tab-inst-3" tabindex="0" hidden>
+<pre><code><span class="c"># on a connected machine</span>
+<span class="k">infra/offline/build-bundle.sh</span> <span class="f">--version</span> <span data-version>1.0.0</span> <span class="f">--with-data-services</span>
+<span class="c"># on the site, after copying the bundle</span>
+<span class="k">./install.sh</span> verify
+<span class="k">./install.sh</span> load-images <span class="f">--registry</span> registry.local:5000/gpu-deck
+<span class="k">./install.sh</span> compose <span class="f">--env</span> /etc/gpu-deck/.env <span class="f">--full</span>    <span class="c"># or: ./install.sh helm</span></code></pre>
+                </div>
+              </div>
+            </div>
+          </li>
+
+          <li class="step reveal">
+            <span class="step-num" aria-hidden="true">2</span>
+            <div class="step-copy">
+              <h3>Add a GPU machine</h3>
+              <span class="where-tag"><svg class="icon" aria-hidden="true"><use href="#i-chip"/></svg>each GPU machine</span>
+              <p>Install the GPU driver, then open <b>Nodes, Add node</b>. You get a single-use join token (15 minutes) and a one-line install command. Run it on the machine: it installs <code>gpudeck-agent</code> as a service, gets a certificate from GPU Deck's own CA and dials out to the hub.</p>
+              <p class="small">The machine needs outbound port 8443 to the control plane, and accepts inbound 9443 from the API layer only.</p>
+            </div>
+            <div class="step-code">
+              <div class="code-card">
+                <div class="code-card-head">
+                  <span class="file">GPU machine</span>
+                  <button class="copy" type="button" data-copy-active><svg class="icon i-copy" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon i-done" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button>
+                </div>
+                <div class="panel">
+<pre><code><span class="c"># Paste the one-line command from Nodes, Add node. It installs the</span>
+<span class="c"># agent as a systemd (Linux) or launchd (macOS) service, then runs:</span>
+<span class="k">gpudeck-agent</span> join <span class="f">--hub</span> https://gpudeck-hub.example.com:8443 \
+  <span class="f">--token</span> gdj_… <span class="f">--ca-fingerprint</span> &lt;sha256&gt;
+<span class="c"># the node shows up online, with its GPUs, within seconds</span></code></pre>
+                </div>
+              </div>
+            </div>
+          </li>
+
+          <li class="step reveal">
+            <span class="step-num" aria-hidden="true">3</span>
+            <div class="step-copy">
+              <h3>Deploy a model</h3>
+              <span class="where-tag"><svg class="icon" aria-hidden="true"><use href="#i-desktop"/></svg>web UI or CLI</span>
+              <p>In <b>Catalog</b>, search Hugging Face or ModelScope (or scan a local path) and press <b>Deploy</b>. The wizard picks the engine and shows the placement; the agent downloads the files, starts the engine on 127.0.0.1 and the instance turns ready.</p>
+            </div>
+            <div class="step-code">
+              <div class="code-card">
+                <div class="code-card-head">
+                  <span class="file">terminal</span>
+                  <button class="copy" type="button" data-copy-active><svg class="icon i-copy" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon i-done" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button>
+                </div>
+                <div class="panel">
+<pre><code><span class="c"># the same from a terminal</span>
+<span class="k">cat</span> &gt; deploy.yaml &lt;&lt;<span class="s">'EOF'</span>
+name: qwen3-chat
+model_id: &lt;id from the catalog&gt;     <span class="c"># gpudeck models list</span>
+replicas: 1
+max_replicas: 2                   <span class="c"># no engine set: GPU Deck picks one</span>
+<span class="s">EOF</span>
+<span class="k">gpudeck</span> deployments create <span class="f">-f</span> deploy.yaml <span class="f">--set</span> dry_run=true   <span class="c"># placement preview</span>
+<span class="k">gpudeck</span> deployments create <span class="f">-f</span> deploy.yaml</code></pre>
+                </div>
+              </div>
+            </div>
+          </li>
+
+          <li class="step reveal">
+            <span class="step-num" aria-hidden="true">4</span>
+            <div class="step-copy">
+              <h3>Create a key and call it</h3>
+              <span class="where-tag"><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg>anywhere</span>
+              <p>Create an API key under <b>API keys</b>. The <code>gd-</code> key is shown once and only its hash is stored. Give your AI gateway its own key, or one per team, and usage and cost are split the same way.</p>
+            </div>
+            <div class="step-code">
+              <div class="code-card">
+                <div class="code-card-head">
+                  <span class="file">first request</span>
+                  <button class="copy" type="button" data-copy-active><svg class="icon i-copy" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon i-done" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button>
+                </div>
+                <div class="panel">
+<pre><code><span class="k">curl</span> http://127.0.0.1:8181/openai/v1/chat/completions \
+  <span class="f">-H</span> <span class="s">"Authorization: Bearer gd-…"</span> <span class="f">-H</span> <span class="s">"Content-Type: application/json"</span> \
+  <span class="f">-d</span> <span class="s">'{"model":"qwen3-0.6b","messages":[{"role":"user","content":"hi"}]}'</span></code></pre>
+                </div>
+              </div>
+            </div>
+          </li>
+        </ol>
+
+        <div class="callout reveal">
+          <svg class="icon" aria-hidden="true"><use href="#i-terminal"/></svg>
+          <p>Just want to look around? Clone the repository and run the web UI on its built-in fixtures with <code>NEXT_PUBLIC_API_MOCKS=1 pnpm --filter web dev</code>, or start the full stack with <code>./infra/scripts/bootstrap.dev.sh</code>. Details in the <a href="docs/development/">development guide</a>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ hardware -->
+    <section class="section" id="hardware" aria-labelledby="hw-title">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">Hardware and engines</p>
+          <h2 id="hw-title">Honest about what has run on real hardware.</h2>
+          <p>GPU Deck is verified end to end on Apple Silicon: a Mac running the agent with llama.cpp and MLX, behind all three API formats. Everything else is implemented and tested against recorded fixtures (vendor tool output, engine responses, cloud API replies), but not yet on real hardware or accounts.</p>
+        </div>
+        <div class="hw-grid">
+          <div class="table-card reveal">
+            <h3>GPU vendors <span>7 plugins</span></h3>
+            <table>
+              <thead><tr><th scope="col">Vendor</th><th scope="col">Detected through</th><th scope="col">Status</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Apple Silicon</th><td>IOKit, Metal</td><td class="st"><span class="badge ok"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Verified</span></td></tr>
+                <tr><th scope="row">NVIDIA</th><td>NVML, falling back to <code>nvidia-smi</code></td><td class="st"><span class="badge pending"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Needs reports</span></td></tr>
+                <tr><th scope="row">AMD</th><td><code>amd-smi</code> or <code>rocm-smi</code></td><td class="st"><span class="badge pending"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Needs reports</span></td></tr>
+                <tr><th scope="row">Hygon</th><td><code>hy-smi</code></td><td class="st"><span class="badge pending"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Needs reports</span></td></tr>
+                <tr><th scope="row">MetaX</th><td><code>mx-smi</code></td><td class="st"><span class="badge pending"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Needs reports</span></td></tr>
+                <tr><th scope="row">Moore Threads</th><td><code>mthreads-gmi</code></td><td class="st"><span class="badge pending"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Needs reports</span></td></tr>
+                <tr><th scope="row">T-Head</th><td><code>ppu-smi</code></td><td class="st"><span class="badge pending"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Needs reports</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-card reveal">
+            <h3>Engines <span>native or container</span></h3>
+            <table>
+              <thead><tr><th scope="col">Engine</th><th scope="col">Runs on</th><th scope="col">Status</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">llama.cpp</th><td>Every vendor; GGUF, router mode</td><td class="st"><span class="badge ok"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Verified</span></td></tr>
+                <tr><th scope="row">MLX</th><td>Apple Silicon</td><td class="st"><span class="badge ok"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Verified</span></td></tr>
+                <tr><th scope="row">vLLM</th><td>NVIDIA, AMD and others, container</td><td class="st"><span class="badge pending"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Needs reports</span></td></tr>
+                <tr><th scope="row">SGLang</th><td>NVIDIA, AMD, container</td><td class="st"><span class="badge pending"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Needs reports</span></td></tr>
+                <tr><th scope="row">TensorRT-LLM</th><td>NVIDIA, container</td><td class="st"><span class="badge pending"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Needs reports</span></td></tr>
+                <tr><th scope="row">whisper.cpp, stable-diffusion.cpp, MLX Audio</th><td>Native binaries</td><td class="st"><span class="badge pending"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Needs reports</span></td></tr>
+                <tr><th scope="row">Custom</th><td>Your container image</td><td class="st"><span class="badge pending"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Needs reports</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="hw-note reveal">
+          <p><strong>Running GPU Deck on NVIDIA, AMD or a cloud account?</strong> A short hardware report (it works or it does not) is the most useful contribution right now. Also not yet run for real: the Linux agent install, the Helm chart on a live cluster, and the AWS, Azure, GCP and DigitalOcean providers.</p>
+          <a class="btn btn-primary btn-sm" href="https://github.com/sur950/gpu-deck/issues/new?template=hardware_report.yml">File a hardware report <svg class="icon icon-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ gallery -->
+    <section class="section" id="screens" aria-labelledby="screens-title">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">Screens</p>
+          <h2 id="screens-title">A tour of the control plane.</h2>
+          <p>Captured from a populated development stack: three clusters, five simulated nodes (L40S, H100, MI300X, a cloud burst node and a Mac Studio), nine deployments and seven weeks of usage.</p>
+        </div>
+        <ul class="gallery" data-gallery>
+          <li><button type="button" data-shot="overview"><span class="g-img"><img src="assets/screenshots/overview.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Dashboard: fleet health, live requests, tokens, time to first token, GPU load and today's spend."></span><span class="g-cap"><b>Dashboard.</b> Fleet health, live requests, tokens, TTFT, GPU load and today's spend.</span></button></li>
+          <li><button type="button" data-shot="gpus"><span class="g-img"><img src="assets/screenshots/gpus.svg" width="1440" height="900" loading="lazy" decoding="async" alt="GPUs: every accelerator by vendor, VRAM slices, live load, driver and health."></span><span class="g-cap"><b>GPUs.</b> Every accelerator by vendor, VRAM slices, live load, driver and health.</span></button></li>
+          <li><button type="button" data-shot="inference"><span class="g-img"><img src="assets/screenshots/inference.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Inference: sessions, throughput, time to first token, end-to-end latency and KV cache per deployment."></span><span class="g-cap"><b>Inference.</b> Sessions, throughput, TTFT, latency and KV cache per deployment.</span></button></li>
+          <li><button type="button" data-shot="deployment-wizard"><span class="g-img"><img src="assets/screenshots/deployment-wizard.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Deploy wizard: engine auto-pick, then a scheduler dry run of the placement."></span><span class="g-cap"><b>Deploy wizard.</b> Engine auto-pick, then a dry run of the placement.</span></button></li>
+          <li><button type="button" data-shot="rules-builder"><span class="g-img"><img src="assets/screenshots/rules-builder.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Rule builder: six rule types, each a short form that reads back as a sentence."></span><span class="g-cap"><b>Rule builder.</b> Six rule types that read back as sentences.</span></button></li>
+          <li><button type="button" data-shot="layouts"><span class="g-img"><img src="assets/screenshots/layouts.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Layouts: Day and Night GPU layouts switched by time-schedule rules."></span><span class="g-cap"><b>Layouts.</b> Day and Night layouts switched on a schedule.</span></button></li>
+          <li><button type="button" data-shot="swaps"><span class="g-img"><img src="assets/screenshots/swaps.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Swaps: loads, unloads, moves and restarts step by step, with rollback."></span><span class="g-cap"><b>Swaps.</b> Loads, unloads, moves and restarts, with rollback.</span></button></li>
+          <li><button type="button" data-shot="billing"><span class="g-img"><img src="assets/screenshots/billing.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Billing: cost per key and cluster from price plans, including idle loaded time."></span><span class="g-cap"><b>Billing.</b> Cost per key and cluster, including idle loaded time.</span></button></li>
+          <li><button type="button" data-shot="topology"><span class="g-img"><img src="assets/screenshots/topology.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Topology: clusters, nodes, GPUs and the instances placed on them."></span><span class="g-cap"><b>Topology.</b> Clusters, nodes, GPUs and placed instances.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="infra"><span class="g-img"><img src="assets/screenshots/infra.svg" width="1440" height="900" loading="lazy" decoding="async" alt="GPU infra: utilisation, VRAM, power and temperature per GPU."></span><span class="g-cap"><b>GPU infra.</b> Utilisation, VRAM, power and temperature per GPU.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="nodes"><span class="g-img"><img src="assets/screenshots/nodes.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Nodes: heartbeat, agent, GPUs, model cache and pending join tokens."></span><span class="g-cap"><b>Nodes.</b> Heartbeat, agent, GPUs, model cache, join tokens.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="nodes-join"><span class="g-img"><img src="assets/screenshots/nodes-join.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Add a node: a one-time join token, then the agent dials in over mTLS."></span><span class="g-cap"><b>Add a node.</b> One-time join token, then the agent dials in over mTLS.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="catalog"><span class="g-img"><img src="assets/screenshots/catalog.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Catalog: Hugging Face models with versions, formats, priority and security defaults."></span><span class="g-cap"><b>Catalog.</b> Models with versions, formats, priority and security defaults.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="deployment-detail"><span class="g-img"><img src="assets/screenshots/deployment-detail.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Deployment: replicas, live sessions, time to first token, traffic weights and a ready-to-run curl."></span><span class="g-cap"><b>Deployment.</b> Replicas, sessions, TTFT, traffic weights and a curl.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="rule-detail"><span class="g-img"><img src="assets/screenshots/rule-detail.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Rule history: every evaluation, including what was held back and why."></span><span class="g-cap"><b>Rule history.</b> Every evaluation, including what was held back.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="metering"><span class="g-img"><img src="assets/screenshots/metering.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Metering: requests, tokens and GPU minutes per API key, model and node."></span><span class="g-cap"><b>Metering.</b> Requests, tokens and GPU minutes per key, model and node.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="credentials"><span class="g-img"><img src="assets/screenshots/credentials.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Credentials: typed vault entries for clouds, model hubs, alert channels and SSH."></span><span class="g-cap"><b>Credentials.</b> Typed vault entries for clouds, hubs, alerts and SSH.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="ssh-instances"><span class="g-img"><img src="assets/screenshots/ssh-instances.svg" width="1440" height="900" loading="lazy" decoding="async" alt="SSH GPU instances: containers with sshd and a GPU or a slice, stopped by TTL."></span><span class="g-cap"><b>SSH GPU instances.</b> sshd with a GPU or a slice, stopped by TTL.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="cloud"><span class="g-img"><img src="assets/screenshots/cloud.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Cloud VMs: GPU VMs on AWS, Azure, GCP or DigitalOcean that join their cluster."></span><span class="g-cap"><b>Cloud VMs.</b> GPU VMs on AWS, Azure, GCP or DigitalOcean.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="nodes-join-pool"><span class="g-img"><img src="assets/screenshots/nodes-join-pool.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Node pools: a multi-use enrolment token with install commands for systemd, launchd and Kubernetes."></span><span class="g-cap"><b>Node pools.</b> One multi-use token, install commands per platform.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="cloud-provision"><span class="g-img"><img src="assets/screenshots/cloud-provision.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Provision a cloud GPU VM: pick a region and a GPU instance type at list price; the VM joins its cluster."></span><span class="g-cap"><b>Provision a cloud VM.</b> Region, GPU type at list price, then it joins.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="audit-log"><span class="g-img"><img src="assets/screenshots/audit-log.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Audit log: sign-ins, changes, rule actions and swaps: who, what, when and from where."></span><span class="g-cap"><b>Audit log.</b> Who, what, when and from where.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="light-overview"><span class="g-img"><img src="assets/screenshots/light-overview.svg" width="1440" height="900" loading="lazy" decoding="async" alt="The dashboard in light mode."></span><span class="g-cap"><b>Light mode.</b> Dashboard.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="light-deployments"><span class="g-img"><img src="assets/screenshots/light-deployments.svg" width="1440" height="900" loading="lazy" decoding="async" alt="The deployments list in light mode."></span><span class="g-cap"><b>Light mode.</b> Deployments.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="light-billing"><span class="g-img"><img src="assets/screenshots/light-billing.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Billing in light mode."></span><span class="g-cap"><b>Light mode.</b> Billing.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="desktop-connect"><span class="g-img"><img src="assets/screenshots/desktop-connect.svg" width="1040" height="760" loading="lazy" decoding="async" alt="Desktop app connect screen: saved control planes with a live health check."></span><span class="g-cap"><b>Desktop app.</b> Saved control planes with a live health check.</span></button></li>
+          <li data-more hidden><button type="button" data-shot="login"><span class="g-img"><img src="assets/screenshots/login.svg" width="1440" height="900" loading="lazy" decoding="async" alt="Sign-in screen for the single admin configured in the .env file."></span><span class="g-cap"><b>Sign in.</b> The single admin from <code>.env</code>.</span></button></li>
+        </ul>
+        <div class="gallery-more">
+          <button class="btn btn-ghost" type="button" data-gallery-more aria-expanded="false">Show all 27 screens</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ desktop -->
+    <section class="section" id="desktop" aria-labelledby="desktop-title">
+      <div class="wrap desktop-grid">
+        <figure class="desktop-shot reveal">
+          <button type="button" data-shot="desktop-connect" aria-label="Enlarge the desktop app screenshot">
+            <img src="assets/screenshots/desktop-connect.svg" width="1040" height="760" loading="lazy" decoding="async" alt="GPU Deck desktop app: the connect screen listing saved control planes, each with a live health check.">
+          </button>
+        </figure>
+        <div class="reveal">
+          <p class="eyebrow">Desktop app</p>
+          <h2 id="desktop-title" class="section-title">Your control plane in a native window.</h2>
+          <p class="muted">A small Tauri 2 app that loads a control plane's own web UI, so it always matches the server's version. Save several control planes, see each one's health before you connect, and keep notifications flowing when the window is closed.</p>
+          <ul class="ticks">
+            <li><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg><span>Native notifications for alerts, finished swaps and fired rules.</span></li>
+            <li><svg class="icon" aria-hidden="true"><use href="#i-pulse"/></svg><span>A tray with fleet health, and <code>gpudeck://</code> deep links.</span></li>
+            <li><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg><span>A locked-down bridge: the server page can only send notifications and update the tray.</span></li>
+          </ul>
+          <ul class="platforms">
+            <li><b>macOS</b><span>universal .dmg</span></li>
+            <li><b>Windows</b><span>.msi, .exe</span></li>
+            <li><b>Linux</b><span>.AppImage, .deb</span></li>
+          </ul>
+          <a class="btn btn-secondary" href="https://github.com/sur950/gpu-deck/releases/latest"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Download from Releases</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ security -->
+    <section class="section" id="security" aria-labelledby="security-title">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">Security</p>
+          <h2 id="security-title">Deny everything, then open only what inference needs.</h2>
+          <p>Nothing on a GPU machine is reachable from the internet. Every rule in the network model maps to where it is enforced in code, the chart and the Compose files.</p>
+        </div>
+        <div class="sec-grid reveal">
+          <div class="sec"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg><h3>Mutual TLS between machines</h3><p>Agents present a certificate to the hub; the agent proxy accepts only the API layer's certificate. TLS 1.3 on the hub.</p></div>
+          <div class="sec"><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg><h3>Single-use joins, own CA</h3><p>Join tokens expire in 15 minutes. Certificates rotate 30 days before expiry and a revoked one drops the node at once.</p></div>
+          <div class="sec"><svg class="icon" aria-hidden="true"><use href="#i-vault"/></svg><h3>Encrypted credentials vault</h3><p>Fernet with key rotation, write-only secret fields, a confirmed and audited reveal, and usage history for every read.</p></div>
+          <div class="sec"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg><h3>Audit everything</h3><p>Admin, rule, swap, key and vault actions with actor, IP, user agent, request id, before and after.</p></div>
+          <div class="sec"><svg class="icon" aria-hidden="true"><use href="#i-user-off"/></svg><h3>No end-user data</h3><p>GPU Deck knows API keys, not people. Usage rows hold counts and timings, not prompts or completions.</p></div>
+          <div class="sec"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><h3>Hardened admin</h3><p>Argon2id passwords, HttpOnly sessions with CSRF protection, login lockout and IP allow and block rules.</p></div>
+          <div class="sec"><svg class="icon" aria-hidden="true"><use href="#i-plug"/></svg><h3>Locked-down nodes</h3><p>Engines bind to localhost, and an optional egress lock (pf or nftables) limits downloads to your model hubs.</p></div>
+          <div class="sec"><svg class="icon" aria-hidden="true"><use href="#i-box"/></svg><h3>Signed, minimal images</h3><p>Non-root containers with a read-only root file system, cosign signatures, provenance and SBOMs.</p></div>
+        </div>
+        <div class="sec-links reveal">
+          <a class="link-arrow" href="docs/security-model/">Read the security model<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <a class="link-arrow" href="docs/security-policy/">Report a vulnerability privately<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ faq -->
+    <section class="section" id="faq" aria-labelledby="faq-title">
+      <div class="wrap faq-grid">
+        <div class="section-head reveal">
+          <p class="eyebrow">FAQ</p>
+          <h2 id="faq-title">Questions people ask first.</h2>
+          <p>Something else? Ask in <a href="https://github.com/sur950/gpu-deck/discussions">GitHub Discussions</a>.</p>
+        </div>
+        <div class="faq-list reveal">
+          <details>
+            <summary>Does the control plane need a GPU?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+            <div class="answer"><p>No. The control plane is a set of CPU-only containers plus PostgreSQL and Redis. A small server (4 vCPU and 8 GB of RAM is a reasonable start for up to five GPU machines) or a Kubernetes cluster is enough. GPUs live only on the machines that run the agent.</p></div>
+          </details>
+          <details>
+            <summary>What exactly do I install on a GPU machine?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+            <div class="answer"><p>The vendor driver, and the node agent through the one-line command from the web UI. The agent downloads llama.cpp itself; for MLX, whisper.cpp and similar engines you install the binary, and for vLLM, SGLang or TensorRT-LLM a container runtime. Models are downloaded and cached by the agent.</p></div>
+          </details>
+          <details>
+            <summary>Is GPU Deck an AI gateway?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+            <div class="answer"><p>No. It authenticates API keys, routes requests to your GPUs and meters them. Users, quotas, rate limits and guardrails belong in an AI gateway in front of it, such as LiteLLM, Kong, Portkey or your own. Give the gateway its own <code>gd-</code> key, or one per team.</p></div>
+          </details>
+          <details>
+            <summary>Does GPU Deck see my users' prompts?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+            <div class="answer"><p>Requests pass through the API layer to your engines, but GPU Deck stores nothing about end users. Usage rows hold counts and timings (tokens, GPU seconds, latency) per API key, model and node, not prompts or completions.</p></div>
+          </details>
+          <details>
+            <summary>Which hardware has actually been tested?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+            <div class="answer"><p>Apple Silicon end to end, with llama.cpp and MLX. NVIDIA, AMD and the other vendor plugins, the container engines, multi-node placement and the cloud providers are tested against recorded fixtures. If you run any of them, please <a href="https://github.com/sur950/gpu-deck/issues/new?template=hardware_report.yml">file a hardware report</a>.</p></div>
+          </details>
+          <details>
+            <summary>Can it run without internet access?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+            <div class="answer"><p>Yes. The offline bundle carries the images, the Helm chart, the agent builds, the CLI and a Terraform provider mirror. Point the agents at a Hugging Face or ModelScope mirror, or use local model files.</p></div>
+          </details>
+          <details>
+            <summary>How do upgrades work?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+            <div class="answer"><p>Every component ships under one version. Upgrade the control plane first (migrations run forward, and the API layer keeps serving meanwhile), then the agents node by node. A control plane works with every agent of the same protocol major.</p></div>
+          </details>
+          <details>
+            <summary>How does it relate to GPUStack?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+            <div class="answer"><p>GPU Deck includes ideas and some code adapted from <a href="https://github.com/gpustack/gpustack">GPUStack</a> (Apache-2.0), such as accelerator detection and placement heuristics; the <a href="https://github.com/sur950/gpu-deck/blob/main/NOTICE">NOTICE</a> carries the credit. GPU Deck adds rules, layouts, swaps, deep inference metrics, metering and billing.</p></div>
+          </details>
+          <details>
+            <summary>Is there a paid or enterprise edition?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+            <div class="answer"><p>No. There is one edition with every feature, under the Apache License 2.0.</p></div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ docs -->
+    <section class="section" id="docs" aria-labelledby="docs-title">
+      <div class="wrap">
+        <div class="docs-head-row">
+          <div class="section-head reveal">
+            <p class="eyebrow">Documentation</p>
+            <h2 id="docs-title">Read the docs.</h2>
+            <p>Every guide and specification, built from the same files as the release you run.</p>
+          </div>
+          <div class="docs-actions reveal">
+            <button type="button" class="docs-search" data-search-open aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><span>Search the docs</span><kbd data-kbd-mod>⌘K</kbd></button>
+            <a class="btn btn-secondary btn-sm" href="docs/">All documentation <svg class="icon icon-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          </div>
+        </div>
+        <ul class="docs-grid reveal">
+          <li><a class="doc" href="docs/deployment/"><span class="doc-k">Deployment</span><b>Deploy GPU Deck</b><span>What runs where, ports, sizing, Docker, Kubernetes and offline installs.</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+          <li><a class="doc" href="docs/architecture/"><span class="doc-k">Getting started</span><b>Architecture</b><span>Components and the join, serving, swap and billing flows.</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+          <li><a class="doc" href="docs/serving-api/"><span class="doc-k">Using GPU Deck</span><b>Serving API</b><span>OpenAI, Anthropic and Ollama endpoints, auth, errors and routing.</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+          <li><a class="doc" href="docs/rules/"><span class="doc-k">Using GPU Deck</span><b>Rules, layouts and swaps</b><span>The six rule types, layouts on a schedule and safe swaps.</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+          <li><a class="doc" href="docs/operations/"><span class="doc-k">Operations</span><b>Operations</b><span>Upgrade, backup, rotation, high availability and troubleshooting.</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+          <li><a class="doc" href="docs/security-model/"><span class="doc-k">Security</span><b>Security model</b><span>Network rules and every control, mapped to where it is enforced.</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+          <li><a class="doc" href="docs/environment-variables/"><span class="doc-k">Reference</span><b>Environment variables</b><span>Every setting GPU Deck reads, grouped like the .env files.</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+          <li><a class="doc" href="docs/changelog/"><span class="doc-k">Project</span><b>Changelog</b><span>What changed in every release, and the known limitations.</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================================================ contribute -->
+    <section class="section" id="contribute" aria-labelledby="contribute-title">
+      <div class="wrap">
+        <div class="cta reveal">
+          <p class="eyebrow">Built in the open</p>
+          <h2 id="contribute-title">Bring your GPUs. Help shape what comes next.</h2>
+          <p>GPU Deck is a one-person open-source project. The roadmap follows what people run it on, so reports from real hardware, issues and pull requests all move it forward.</p>
+          <div class="cta-cards">
+            <a class="cta-card" href="https://github.com/sur950/gpu-deck/issues/new?template=hardware_report.yml"><b><svg class="icon" aria-hidden="true"><use href="#i-chip"/></svg>Report your hardware</b><span>Tell us how it runs on your GPUs, engines or cloud.</span></a>
+            <a class="cta-card" href="docs/contributing/"><b><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg>Contribute</b><span>Start with the contributing guide and the development notes.</span></a>
+            <a class="cta-card" href="https://github.com/sur950/gpu-deck/discussions"><b><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>Discuss</b><span>Questions, ideas and show-and-tell in Discussions.</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- shared:footer -->
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <img class="logo-dark" src="assets/brand/lockup-dark.svg" width="123" height="34" alt="GPU Deck">
+          <img class="logo-light" src="assets/brand/lockup-light.svg" width="123" height="34" alt="GPU Deck">
+          <p>The control plane for your own GPUs. Open source under the Apache License 2.0.</p>
+          <a class="footer-star" href="https://github.com/sur950/gpu-deck"><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg>Star on GitHub</a>
+        </div>
+        <nav class="footer-col" aria-labelledby="f-product">
+          <h2 id="f-product">Product</h2>
+          <ul>
+            <li><a href="#architecture">How it runs</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#get-started">Get started</a></li>
+            <li><a href="#hardware">Hardware support</a></li>
+            <li><a href="#desktop">Desktop app</a></li>
+            <li><a href="https://github.com/sur950/gpu-deck/releases">Releases</a></li>
+          </ul>
+        </nav>
+        <nav class="footer-col" aria-labelledby="f-docs">
+          <h2 id="f-docs">Docs</h2>
+          <ul>
+            <li><a href="docs/">Documentation</a></li>
+            <li><a href="docs/deployment/">Deployment</a></li>
+            <li><a href="docs/architecture/">Architecture</a></li>
+            <li><a href="docs/operations/">Operations</a></li>
+            <li><a href="docs/serving-api/">Serving API</a></li>
+            <li><a href="docs/changelog/">Changelog</a></li>
+          </ul>
+        </nav>
+        <nav class="footer-col" aria-labelledby="f-project">
+          <h2 id="f-project">Project</h2>
+          <ul>
+            <li><a href="https://github.com/sur950/gpu-deck">GitHub</a></li>
+            <li><a href="https://github.com/sur950/gpu-deck/issues">Issues</a></li>
+            <li><a href="https://github.com/sur950/gpu-deck/discussions">Discussions</a></li>
+            <li><a href="docs/contributing/">Contributing</a></li>
+            <li><a href="docs/security-policy/">Security policy</a></li>
+            <li><a href="docs/code-of-conduct/">Code of conduct</a></li>
+          </ul>
+        </nav>
+      </div>
+      <div class="footer-bottom">
+        <p>Made by <a class="credit" href="https://suresh-konakanchi.in">Suresh Konakanchi</a> · © 2026 · <a href="https://github.com/sur950/gpu-deck/blob/main/LICENSE">Apache-2.0</a> · <a href="https://github.com/sur950/gpu-deck/blob/main/NOTICE">NOTICE</a></p>
+        <p>No cookies, no trackers. Fonts: Figtree and JetBrains Mono (<a href="assets/fonts/OFL-Figtree.txt">SIL OFL</a>).</p>
+      </div>
+    </div>
+  </footer>
+  <!-- /shared:footer -->
+
+  <!-- shared:search -->
+  <dialog class="search-dialog" aria-label="Search the documentation" data-search>
+    <div class="search-head">
+      <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+      <input class="search-input" type="text" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="search-results" aria-label="Search the docs" placeholder="Search the docs" autocomplete="off" spellcheck="false" data-search-input>
+      <button type="button" class="search-esc" data-search-close>Esc</button>
+    </div>
+    <div class="search-body">
+      <div class="search-results" id="search-results" role="listbox" aria-label="Search results" data-search-results></div>
+      <p class="search-state" data-search-state>Search every page of the documentation: guides, the serving API, environment variables, metrics and more.</p>
+    </div>
+    <div class="search-foot" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd>to move</span><span><kbd>↵</kbd>to open</span><span><kbd>esc</kbd>to close</span></div>
+  </dialog>
+  <!-- /shared:search -->
+
+  <dialog class="lightbox" aria-labelledby="lb-caption">
+    <div class="lb-bar">
+      <p class="lb-cap" id="lb-caption"></p>
+      <span class="lb-count" aria-live="polite"></span>
+      <button class="icon-btn" type="button" data-lb-prev aria-label="Previous screenshot"><svg class="icon" aria-hidden="true"><use href="#i-left"/></svg></button>
+      <button class="icon-btn" type="button" data-lb-next aria-label="Next screenshot"><svg class="icon" aria-hidden="true"><use href="#i-right"/></svg></button>
+      <button class="icon-btn" type="button" data-lb-close aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="lb-stage"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="" width="1440" height="900"></div>
+  </dialog>
+
+  <p class="sr-only" aria-live="polite" data-announce></p>
+</body>
+</html>

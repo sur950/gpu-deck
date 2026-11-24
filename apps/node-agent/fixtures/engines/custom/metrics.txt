@@ -1,0 +1,27 @@
+# TYPE tgi_batch_current_size gauge
+tgi_batch_current_size 3
+# TYPE tgi_queue_size gauge
+tgi_queue_size 1
+# TYPE tgi_batch_current_max_tokens gauge
+tgi_batch_current_max_tokens 2048
+# TYPE tgi_request_success counter
+tgi_request_success 41
+# TYPE tgi_request_input_length summary
+tgi_request_input_length_sum 9120
+tgi_request_input_length_count 41
+# TYPE tgi_request_generated_tokens summary
+tgi_request_generated_tokens_sum 5300
+tgi_request_generated_tokens_count 41
+# TYPE tgi_request_duration histogram
+tgi_request_duration_bucket{le="0.5"} 10
+tgi_request_duration_bucket{le="1"} 30
+tgi_request_duration_bucket{le="5"} 41
+tgi_request_duration_bucket{le="+Inf"} 41
+tgi_request_duration_sum 30.5
+tgi_request_duration_count 41
+# TYPE tgi_request_queue_duration histogram
+tgi_request_queue_duration_bucket{le="0.01"} 40
+tgi_request_queue_duration_bucket{le="0.1"} 41
+tgi_request_queue_duration_bucket{le="+Inf"} 41
+tgi_request_queue_duration_sum 0.2
+tgi_request_queue_duration_count 41

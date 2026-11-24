@@ -1,0 +1,638 @@
+name: Release
+
+# Push a tag vX.Y.Z (equal to the VERSION file) to build, sign and publish a release:
+#   - images ghcr.io/<owner>/gpu-deck-{api,web,agent,ssh} for linux/amd64 + linux/arm64 (native
+#     runners), with BuildKit provenance + SBOM, a GitHub attestation and a keyless cosign
+#     signature, after a Trivy scan
+#   - node agent binaries (Linux glibc/musl x86_64 + aarch64, macOS Apple Silicon + Intel)
+#   - desktop installers (macOS universal dmg, Windows msi + nsis, Linux AppImage + deb), signed
+#     and notarized when the secrets exist, plus the updater manifest latest.json
+#   - CLI wheel + sdist (optionally published to PyPI), Terraform provider zips (GoReleaser,
+#     GPG-signed when the key exists), the Helm chart (pushed to oci://ghcr.io/<owner>/charts)
+#   - the GitHub release with notes from CHANGELOG.md and SHA256SUMS.txt over every file
+# Optional secrets are skipped with a warning when absent; docs/RELEASING.md lists them all.
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24.21.0"
+  PYTHON_VERSION: "3.12"
+  HELM_VERSION: "v3.19.0"
+  ZIG_VERSION: "0.13.0"
+  CARGO_ZIGBUILD_VERSION: "0.20.1"
+  GORELEASER_VERSION: "~> v2"
+  TRIVY_IMAGE: aquasec/trivy:0.67.2
+  CARGO_TERM_COLOR: always
+
+jobs:
+  prepare:
+    name: Check tag, versions and notes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+      owner: ${{ steps.v.outputs.owner }}
+      is_latest: ${{ steps.v.outputs.is_latest }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: v
+        name: Tag equals VERSION
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME is not a version like v1.2.3"; exit 1
+          fi
+          FILE="$(tr -d '[:space:]' < VERSION)"
+          if [[ "$VERSION" != "$FILE" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match VERSION ($FILE)"; exit 1
+          fi
+          {
+            echo "version=$VERSION"
+            echo "prerelease=$([[ "$VERSION" == *-* ]] && echo true || echo false)"
+            echo "owner=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          } >> "$GITHUB_OUTPUT"
+          # The image tags `latest` and `X` move only when this is the highest final release
+          # (a hotfix of an older line leaves them alone).
+          HIGHEST="$(git tag -l 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' | sort -V | tail -1)"
+          if [[ "$VERSION" != *-* && "$VERSION" == "$HIGHEST" ]]; then
+            echo "is_latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_latest=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Every manifest carries the version
+        run: python3 scripts/version.py --check
+      - name: Release notes from CHANGELOG.md
+        env:
+          CLI_ON_PYPI: ${{ vars.PUBLISH_PYPI == 'true' && '1' || '0' }}
+        run: |
+          mkdir -p notes
+          scripts/release_notes.sh "${{ steps.v.outputs.version }}" > notes/release-notes.md
+          scripts/release_notes.sh --section "${{ steps.v.outputs.version }}" > notes/changelog-section.md
+          cat notes/release-notes.md
+      - uses: actions/upload-artifact@v7
+        with:
+          name: notes
+          path: notes/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------------------------
+  # Images: one native runner per platform pushes by digest; image-publish joins them under the
+  # version tags, scans, attests and signs.
+  image-build:
+    name: Image ${{ matrix.image }} ${{ matrix.platform }}
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        image: [gpu-deck-api, gpu-deck-web, gpu-deck-agent, gpu-deck-ssh]
+        platform: [linux/amd64, linux/arm64]
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+          - image: gpu-deck-api
+            dockerfile: infra/docker/api/Dockerfile
+            context: .
+          - image: gpu-deck-web
+            dockerfile: infra/docker/web/Dockerfile
+            context: .
+          - image: gpu-deck-agent
+            dockerfile: infra/docker/node-agent/Dockerfile
+            context: apps/node-agent
+          # Default SSH GPU-instance image (Ubuntu + OpenSSH, glibc for the NVIDIA runtime).
+          - image: gpu-deck-ssh
+            dockerfile: apps/node-agent/packaging/ssh-image/Dockerfile
+            context: apps/node-agent/packaging/ssh-image
+    env:
+      IMAGE: ghcr.io/${{ needs.prepare.outputs.owner }}/${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.image }}
+            org.opencontainers.image.licenses=Apache-2.0
+      - id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.image }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-${{ matrix.platform }}
+      - name: Keep the digest
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests"
+          digest="${{ steps.build.outputs.digest }}"
+          touch "$RUNNER_TEMP/digests/${digest#sha256:}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: digest-${{ matrix.image }}-${{ matrix.runner }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  image-publish:
+    name: Publish ${{ matrix.image }}
+    needs: [prepare, image-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [gpu-deck-api, gpu-deck-web, gpu-deck-agent, gpu-deck-ssh]
+    env:
+      IMAGE: ghcr.io/${{ needs.prepare.outputs.owner }}/${{ matrix.image }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digest-${{ matrix.image }}-*
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}},enable=${{ needs.prepare.outputs.is_latest == 'true' && !startsWith(github.ref_name, 'v0.') }}
+          flavor: latest=${{ needs.prepare.outputs.is_latest }}
+      - name: Tag the multi-arch index
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          # shellcheck disable=SC2046
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf "$IMAGE@sha256:%s " *)
+      - id: index
+        name: Index digest
+        run: |
+          DIGEST="$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)"
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          docker buildx imagetools inspect "$IMAGE:$VERSION"
+      - name: Trivy (critical, fixed only)
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker run --rm -e TRIVY_USERNAME -e TRIVY_PASSWORD "$TRIVY_IMAGE" image --no-progress \
+            --exit-code 1 --severity CRITICAL --ignore-unfixed "$IMAGE@${{ steps.index.outputs.digest }}"
+      - run: mkdir -p "$RUNNER_TEMP/sbom"
+      - name: SBOM (SPDX) for the release page
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ env.IMAGE }}@${{ steps.index.outputs.digest }}
+          format: spdx-json
+          output-file: ${{ runner.temp }}/sbom/${{ matrix.image }}-${{ env.VERSION }}.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+        env:
+          SYFT_REGISTRY_AUTH_USERNAME: ${{ github.actor }}
+          SYFT_REGISTRY_AUTH_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      - name: GitHub build attestation
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.index.outputs.digest }}
+          push-to-registry: true
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+      - name: Sign (keyless) and attach the SBOM
+        env:
+          REF: ${{ env.IMAGE }}@${{ steps.index.outputs.digest }}
+        run: |
+          cosign sign --yes --recursive "$REF"
+          cosign attest --yes --type spdxjson \
+            --predicate "$RUNNER_TEMP/sbom/${{ matrix.image }}-$VERSION.spdx.json" "$REF"
+          echo "$REF" > "$RUNNER_TEMP/sbom/${{ matrix.image }}-$VERSION.digest.txt"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-sbom-${{ matrix.image }}
+          path: ${{ runner.temp }}/sbom/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------------------------
+  agent-linux:
+    name: Agent binaries (Linux)
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          toolchain: stable
+          targets: >-
+            x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu,
+            x86_64-unknown-linux-musl, aarch64-unknown-linux-musl
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Install cargo-zigbuild
+        run: pipx install "cargo-zigbuild==${CARGO_ZIGBUILD_VERSION}"
+      - name: Build (glibc 2.28 and static musl)
+        run: |
+          infra/scripts/cross-compile-agent.sh --version "${{ needs.prepare.outputs.version }}" \
+            --out dist/agent \
+            --targets "x86_64-unknown-linux-gnu.2.28 aarch64-unknown-linux-gnu.2.28 x86_64-unknown-linux-musl aarch64-unknown-linux-musl"
+          rm -f dist/agent/SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-agent-linux
+          path: dist/agent/
+          retention-days: 7
+
+  agent-macos:
+    name: Agent binaries (macOS)
+    needs: prepare
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          toolchain: stable
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+      - name: Build (Apple Silicon and Intel)
+        run: |
+          infra/scripts/cross-compile-agent.sh --version "${{ needs.prepare.outputs.version }}" \
+            --out dist/agent --targets "aarch64-apple-darwin x86_64-apple-darwin"
+          rm -f dist/agent/SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-agent-macos
+          path: dist/agent/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------------------------
+  desktop:
+    name: Desktop (${{ matrix.name }})
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS universal
+            runner: macos-latest
+            rust_targets: aarch64-apple-darwin, x86_64-apple-darwin
+            args: --target universal-apple-darwin --bundles app
+            bundle_dir: apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle
+          - name: Windows x64
+            runner: windows-latest
+            rust_targets: x86_64-pc-windows-msvc
+            args: --bundles msi,nsis
+            bundle_dir: apps/desktop/src-tauri/target/release/bundle
+          - name: Linux x64
+            # The oldest supported Ubuntu: the AppImage runs on its glibc (2.35) and newer.
+            runner: ubuntu-22.04
+            rust_targets: x86_64-unknown-linux-gnu
+            args: --bundles appimage,deb
+            bundle_dir: apps/desktop/src-tauri/target/release/bundle
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      HAS_UPDATER: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && vars.GPUDECK_UPDATER_PUBKEY != '' }}
+      HAS_APPLE_CERT: ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' && secrets.APPLE_SIGNING_IDENTITY != '' }}
+      HAS_APPLE_NOTARY: ${{ secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+      HAS_WINDOWS_CERT: ${{ secrets.WINDOWS_CERTIFICATE != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: WebKitGTK and bundler packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf file
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.rust_targets }}
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: apps/desktop/src-tauri
+      - run: pnpm install --frozen-lockfile --filter desktop...
+      - name: Updater config (when the signing key exists)
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          GPUDECK_UPDATER_PUBKEY: ${{ vars.GPUDECK_UPDATER_PUBKEY }}
+          GPUDECK_UPDATER_ENDPOINTS: ${{ vars.GPUDECK_UPDATER_ENDPOINTS || format('https://github.com/{0}/releases/latest/download/latest.json', github.repository) }}
+        run: |
+          if [[ "$HAS_UPDATER" == "true" ]]; then
+            pnpm --filter desktop release:config
+            echo "TAURI_EXTRA_CONFIG=--config src-tauri/tauri.updater.conf.json" >> "$GITHUB_ENV"
+          else
+            echo "::warning::TAURI_SIGNING_PRIVATE_KEY secret or GPUDECK_UPDATER_PUBKEY variable missing: the desktop app ships with the updater off."
+          fi
+      - name: Windows code signing certificate (optional)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if ($env:HAS_WINDOWS_CERT -ne 'true') {
+            Write-Output "::warning::No WINDOWS_CERTIFICATE secret: the Windows installers are unsigned."
+            exit 0
+          }
+          $pfx = Join-Path $env:RUNNER_TEMP 'cert.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $pw = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $pw
+          Remove-Item $pfx
+          $overlay = @{ bundle = @{ windows = @{ certificateThumbprint = $cert.Thumbprint } } } | ConvertTo-Json -Depth 5
+          $path = Join-Path $env:GITHUB_WORKSPACE 'apps/desktop/src-tauri/tauri.signing.conf.json'
+          Set-Content -Path $path -Value $overlay -Encoding utf8
+          "TAURI_SIGN_CONFIG=--config src-tauri/tauri.signing.conf.json" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          SECRET_APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          SECRET_APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          SECRET_APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          SECRET_APPLE_ID: ${{ secrets.APPLE_ID }}
+          SECRET_APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          SECRET_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          # Only export the Apple variables when they are set: the bundler treats an empty
+          # APPLE_CERTIFICATE as "import this certificate" and fails.
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            if [[ "$HAS_APPLE_CERT" == "true" ]]; then
+              export APPLE_CERTIFICATE="$SECRET_APPLE_CERTIFICATE"
+              export APPLE_CERTIFICATE_PASSWORD="$SECRET_APPLE_CERTIFICATE_PASSWORD"
+              export APPLE_SIGNING_IDENTITY="$SECRET_APPLE_SIGNING_IDENTITY"
+              if [[ "$HAS_APPLE_NOTARY" == "true" ]]; then
+                export APPLE_ID="$SECRET_APPLE_ID" APPLE_PASSWORD="$SECRET_APPLE_PASSWORD" APPLE_TEAM_ID="$SECRET_APPLE_TEAM_ID"
+              else
+                echo "::warning::No APPLE_ID/APPLE_PASSWORD/APPLE_TEAM_ID: the macOS app is signed but not notarized."
+              fi
+            else
+              echo "::warning::No APPLE_CERTIFICATE secrets: the macOS app is signed ad hoc and not notarized."
+            fi
+          fi
+          if [[ "$HAS_UPDATER" != "true" ]]; then
+            unset TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+          fi
+          cd apps/desktop
+          # shellcheck disable=SC2086
+          pnpm tauri build ${{ matrix.args }} ${TAURI_EXTRA_CONFIG:-} ${TAURI_SIGN_CONFIG:-}
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            scripts/make-dmg.sh universal-apple-darwin
+          fi
+      - name: Collect installers
+        run: scripts/collect_desktop_bundles.sh "${{ matrix.bundle_dir }}" dist/desktop "$VERSION"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-desktop-${{ runner.os }}
+          path: dist/desktop/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------------------------
+  cli:
+    name: CLI wheel and sdist
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Build
+        working-directory: apps/cli
+        run: |
+          uv build --out-dir ../../dist/cli
+          wheel="../../dist/cli/gpudeck_cli-${{ needs.prepare.outputs.version }}-py3-none-any.whl"
+          test -f "$wheel"
+          # the offline fallback spec (libs/contracts/openapi/admin.yaml) must be inside
+          unzip -l "$wheel" | grep -q 'gpudeck/_spec/admin.yaml'
+          uv venv "$RUNNER_TEMP/cli-smoke"
+          uv pip install --python "$RUNNER_TEMP/cli-smoke/bin/python" "$wheel"
+          GPUDECK_SPEC=bundled GPUDECK_CACHE_DIR="$RUNNER_TEMP/cli-smoke-home" \
+            "$RUNNER_TEMP/cli-smoke/bin/gpudeck" --version
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-cli
+          path: dist/cli/
+          retention-days: 7
+
+  pypi:
+    name: Publish CLI to PyPI
+    # Opt in with the repository variable PUBLISH_PYPI=true after adding this workflow as a
+    # trusted publisher of gpudeck-cli on pypi.org (environment "pypi"). No token needed.
+    if: vars.PUBLISH_PYPI == 'true'
+    needs: [prepare, cli, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/project/gpudeck-cli/${{ needs.prepare.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-cli
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+
+  # ---------------------------------------------------------------------------------------------
+  terraform:
+    name: Terraform provider (GoReleaser)
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HAS_GPG: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: apps/terraform-provider/go.mod
+          cache-dependency-path: apps/terraform-provider/go.sum
+      - id: gpg
+        name: Import the GPG signing key (optional)
+        if: env.HAS_GPG == 'true'
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+      - name: Skip signing without a key
+        if: env.HAS_GPG != 'true'
+        run: |
+          echo "::warning::No GPG_PRIVATE_KEY secret: the provider SHA256SUMS is unsigned (the Terraform Registry requires a signature)."
+          echo "GORELEASER_SKIP=publish,announce,validate,sign" >> "$GITHUB_ENV"
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          distribution: goreleaser
+          version: ${{ env.GORELEASER_VERSION }}
+          workdir: apps/terraform-provider
+          args: release --clean --skip=${{ env.GORELEASER_SKIP || 'publish,announce,validate' }}
+        env:
+          GPG_FINGERPRINT: ${{ steps.gpg.outputs.fingerprint }}
+      - name: Collect
+        run: |
+          V="${{ needs.prepare.outputs.version }}"
+          mkdir -p dist/terraform
+          cd apps/terraform-provider
+          cp dist/terraform-provider-gpudeck_"$V"_*.zip dist/terraform-provider-gpudeck_"$V"_SHA256SUMS* ../../dist/terraform/
+          cp terraform-registry-manifest.json ../../dist/terraform/terraform-provider-gpudeck_"$V"_manifest.json
+          ls -l ../../dist/terraform
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-terraform
+          path: dist/terraform/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------------------------
+  helm:
+    name: Helm chart (GHCR OCI)
+    needs: [prepare, image-publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    env:
+      CHART_REPO: oci://ghcr.io/${{ needs.prepare.outputs.owner }}/charts
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+      - name: Lint and package
+        run: |
+          helm lint infra/helm/gpu-deck --strict --set secrets.existingSecret=ci
+          mkdir -p dist/helm
+          helm package infra/helm/gpu-deck --version "$VERSION" --app-version "$VERSION" -d dist/helm
+      - name: Push and sign
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+          helm push "dist/helm/gpu-deck-$VERSION.tgz" "$CHART_REPO" 2>&1 | tee push.log
+          DIGEST="$(grep -Eo 'sha256:[0-9a-f]{64}' push.log | tail -1)"
+          echo "$GHCR_TOKEN" | cosign login ghcr.io -u "${{ github.actor }}" --password-stdin
+          cosign sign --yes "${CHART_REPO#oci://}/gpu-deck@$DIGEST"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-helm
+          path: dist/helm/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------------------------
+  publish:
+    name: GitHub release
+    needs: [prepare, image-publish, agent-linux, agent-macos, desktop, cli, terraform, helm]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: ${{ runner.temp }}/artifacts
+          pattern: release-*
+          merge-multiple: true
+      - uses: actions/download-artifact@v8
+        with:
+          name: notes
+          path: ${{ runner.temp }}/notes
+      - name: Desktop updater manifest (latest.json)
+        run: |
+          A="$RUNNER_TEMP/artifacts"
+          if ls "$A"/*.sig >/dev/null 2>&1; then
+            python3 scripts/desktop_updater_manifest.py "$A" "$VERSION" \
+              "$RUNNER_TEMP/notes/changelog-section.md" \
+              "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME" > "$A/latest.json"
+            cat "$A/latest.json"
+          else
+            echo "::warning::No updater signatures: no latest.json (installed desktop apps will not update themselves)."
+          fi
+      - name: Checksums
+        working-directory: ${{ runner.temp }}/artifacts
+        run: |
+          rm -f SHA256SUMS.txt
+          find . -maxdepth 1 -type f ! -name SHA256SUMS.txt -printf '%f\n' | sort | xargs -d '\n' sha256sum > "$RUNNER_TEMP/SHA256SUMS.txt"
+          mv "$RUNNER_TEMP/SHA256SUMS.txt" SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: GitHub build attestation for the binaries
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-checksums: ${{ runner.temp }}/artifacts/SHA256SUMS.txt
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+        run: |
+          mapfile -t FILES < <(find "$RUNNER_TEMP/artifacts" -maxdepth 1 -type f | sort)
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${FILES[@]}" --clobber
+          else
+            FLAGS=(--title "GPU Deck $VERSION" --notes-file "$RUNNER_TEMP/notes/release-notes.md" --verify-tag)
+            # GitHub marks the highest version as Latest, so a hotfix of an older line stays out.
+            if [[ "$PRERELEASE" == "true" ]]; then FLAGS+=(--prerelease); fi
+            gh release create "$GITHUB_REF_NAME" "${FILES[@]}" "${FLAGS[@]}"
+          fi

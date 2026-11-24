@@ -1,0 +1,83 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. For a security problem, do not use this form. Use a [private security advisory](https://github.com/sur950/gpu-deck/security/advisories/new) instead.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Control plane (admin API, hub, jobs)
+        - API layer (serving API)
+        - Web UI
+        - Node agent
+        - Desktop app
+        - CLI
+        - Terraform provider
+        - Helm / Docker
+        - Docs
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The release or image tag (for example 1.0.0). For a source build, the commit hash. `gpudeck --version`, `gpudeck-agent version` and the About screen show it.
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment type
+      options:
+        - Local development (bootstrap.dev.sh)
+        - Docker Compose
+        - Kubernetes (Helm)
+        - Offline bundle
+        - Desktop app against a remote server
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: GPU vendor, model and engine
+      description: For example NVIDIA L40S with vLLM, or Apple M3 Max with MLX. Write "none" if it does not matter.
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Ubuntu 24.04, macOS 26, Windows 11
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant output from the component (container logs, agent log, browser console). Redact API keys (gd-...), join tokens (gdj_...), vault keys, certificates, passwords and any hostnames you want private before pasting.
+      render: text
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Optional, but very helpful for UI problems.

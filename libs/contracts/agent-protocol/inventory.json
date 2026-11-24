@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/agent-protocol/v1/inventory.json",
+  "title": "inventory (agent -> hub)",
+  "description": "Full snapshot of hardware, disks, cache and running instances. Sent right after hello_ack, every intervals.inventory_seconds, and after any change the agent detects (device health, cache state, instance state). The hub treats it as authoritative and reconciles the devices, node_model_cache and instances tables (instances the hub expects but the agent does not report are marked error unless a command for them is in flight).",
+  "type": "object",
+  "required": ["devices", "disks", "cache", "instances"],
+  "properties": {
+    "devices": { "type": "array", "items": { "$ref": "common.json#/$defs/Device" } },
+    "disks": { "type": "array", "items": { "$ref": "common.json#/$defs/Disk" } },
+    "cache": {
+      "type": "object",
+      "required": ["dir", "limit_bytes", "used_bytes", "items"],
+      "properties": {
+        "dir": { "type": "string" },
+        "limit_bytes": { "type": "integer", "minimum": 0 },
+        "used_bytes": { "type": "integer", "minimum": 0 },
+        "items": { "type": "array", "items": { "$ref": "common.json#/$defs/CacheItem" } }
+      },
+      "additionalProperties": false
+    },
+    "instances": { "type": "array", "items": { "$ref": "common.json#/$defs/InstanceStatus" } },
+    "engine_processes": {
+      "type": "array",
+      "default": [],
+      "description": "Shared engine processes (llama.cpp router) and the instances attached to them.",
+      "items": {
+        "type": "object",
+        "required": ["engine_process_id", "engine", "port", "pid"],
+        "properties": {
+          "engine_process_id": { "$ref": "common.json#/$defs/uuid" },
+          "engine": { "$ref": "common.json#/$defs/engine_name" },
+          "engine_version_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }] },
+          "port": { "type": "integer" },
+          "pid": { "type": ["integer", "null"] },
+          "device_ids": { "type": "array", "items": { "$ref": "common.json#/$defs/uuid" } },
+          "instance_ids": { "type": "array", "items": { "$ref": "common.json#/$defs/uuid" } }
+        },
+        "additionalProperties": false
+      }
+    },
+    "ssh_instances": { "type": "array", "default": [], "items": { "$ref": "common.json#/$defs/SshInstanceStatus" }, "description": "SSH GPU containers managed by the agent (added 2026-11-17). Authoritative like instances: ones the hub expects but the agent does not report are gone." },
+    "observed_engines": { "type": "array", "default": [], "items": { "$ref": "common.json#/$defs/ObservedEngine" }, "description": "Model servers configured in agent.toml [[observe]] (added 2026-11-23). Authoritative: external deployments the hub knows for this node but the agent no longer reports become stale." },
+    "system": {
+      "type": "object",
+      "properties": {
+        "cpu_cores": { "type": ["integer", "null"] },
+        "memory_total_bytes": { "type": ["integer", "null"] },
+        "memory_used_bytes": { "type": ["integer", "null"] },
+        "load_avg_1m": { "type": ["number", "null"] },
+        "uptime_seconds": { "type": ["integer", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "config_version": { "type": "integer", "minimum": 0 }
+  },
+  "additionalProperties": false
+}

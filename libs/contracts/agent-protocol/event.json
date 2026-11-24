@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/agent-protocol/v1/event.json",
+  "title": "event (agent -> hub)",
+  "description": "Something happened on the node. The hub updates state (instances, devices, cache), writes audit/alert rows where the kind warrants it, and stores log lines in log_chunks. Events are at-least-once: the agent buffers up to EVENT_BUFFER_MAX events while disconnected and replays them on reconnect; the hub dedups on envelope id for 10 minutes.",
+  "type": "object",
+  "required": ["kind", "severity", "message"],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "agent_started", "agent_stopping",
+        "engine_started", "engine_stopped", "engine_crashed",
+        "instance_state_changed", "instance_health_changed",
+        "device_health_changed", "device_error",
+        "cache_changed", "cache_pressure",
+        "drain_progress", "drain_completed",
+        "benchmark_progress",
+        "config_applied", "config_rejected",
+        "cert_rotated", "cert_expiring",
+        "egress_blocked",
+        "ssh_instance_state_changed",
+        "log"
+      ]
+    },
+    "severity": { "type": "string", "enum": ["info", "warning", "critical"] },
+    "message": { "type": "string", "maxLength": 2048 },
+    "instance_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }] },
+    "deployment_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }] },
+    "engine_process_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }] },
+    "device_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }] },
+    "ssh_instance_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }], "description": "For ssh_instance_state_changed (added 2026-11-17); details carries the SshInstanceStatus." },
+    "command_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }], "description": "Command that caused this event, when any." },
+    "state": {
+      "type": ["object", "null"],
+      "description": "For *_state_changed / *_health_changed: {\"from\": ..., \"to\": ..., \"reason\": ...}.",
+      "properties": {
+        "from": { "type": ["string", "null"] },
+        "to": { "type": "string" },
+        "reason": { "type": ["string", "null"] }
+      }
+    },
+    "drain": {
+      "type": ["object", "null"],
+      "description": "For drain_progress / drain_completed.",
+      "properties": {
+        "active_sessions": { "type": "integer", "minimum": 0 },
+        "waiting_sessions": { "type": "integer", "minimum": 0 },
+        "elapsed_seconds": { "type": "number", "minimum": 0 },
+        "timed_out": { "type": "boolean", "default": false }
+      },
+      "additionalProperties": false
+    },
+    "cache_item": { "oneOf": [{ "$ref": "common.json#/$defs/CacheItem" }, { "type": "null" }] },
+    "exit": {
+      "type": ["object", "null"],
+      "description": "For engine_stopped / engine_crashed.",
+      "properties": {
+        "code": { "type": ["integer", "null"] },
+        "signal": { "type": ["string", "null"] },
+        "oom": { "type": "boolean", "default": false },
+        "last_lines": { "type": "array", "items": { "type": "string" }, "maxItems": 50 }
+      },
+      "additionalProperties": false
+    },
+    "log": {
+      "type": ["object", "null"],
+      "description": "For kind=log: a batch of lines from one source. Flushed every LOG_FLUSH_INTERVAL_MS or LOG_CHUNK_MAX_LINES lines.",
+      "required": ["source", "lines"],
+      "properties": {
+        "source": { "type": "string", "enum": ["engine", "agent"] },
+        "stream": { "$ref": "common.json#/$defs/log_stream" },
+        "lines": { "type": "array", "items": { "$ref": "common.json#/$defs/LogLine" }, "minItems": 1, "maxItems": 500 }
+      },
+      "additionalProperties": false
+    },
+    "details": { "type": ["object", "null"], "description": "Free-form extra context (benchmark progress numbers, blocked egress host, cert not_after, ...)." }
+  },
+  "additionalProperties": false
+}

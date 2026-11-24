@@ -1,0 +1,19 @@
+apiVersion: v2
+name: gpu-deck
+description: >-
+  GPU Deck control plane (admin API, serving API layer, agent hub, jobs, web UI) and the node
+  agent DaemonSet for Kubernetes GPU nodes.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+kubeVersion: ">=1.27.0-0"
+home: https://sur950.github.io/gpu-deck/
+icon: https://raw.githubusercontent.com/sur950/gpu-deck/main/apps/web/public/brand/gpudeck-icon-512.png
+sources:
+  - https://github.com/sur950/gpu-deck
+maintainers:
+  - name: Suresh Konakanchi
+    url: https://github.com/sur950
+keywords: [gpu, llm, inference, control-plane]
+annotations:
+  licenses: Apache-2.0

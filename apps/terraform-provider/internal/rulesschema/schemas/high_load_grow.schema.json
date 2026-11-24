@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/rules/v1/high_load_grow.schema.json",
+  "title": "High load grow — params",
+  "description": "Over N waiting requests, or KV cache over X %, for M minutes: add a replica on a free GPU (up to max_replicas). If no GPU is free the run records no_capacity and, when allowed, delegates to make_room_by_priority.",
+  "type": "object",
+  "required": ["for_minutes", "max_replicas"],
+  "properties": {
+    "waiting_requests_above": { "type": ["integer", "null"], "minimum": 0, "maximum": 100000, "default": 5, "title": "N: waiting requests above", "description": "metric_rollups_engine_1m.waiting_sessions_avg summed over the deployment. null disables this condition." },
+    "kv_cache_pct_above": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "default": 90, "title": "X: KV cache usage above (%)", "description": "metric_rollups_engine_1m.kv_cache_usage_pct_avg, max over instances. null disables this condition." },
+    "condition": { "type": "string", "enum": ["any", "all"], "default": "any", "title": "Fire when", "description": "any = either threshold; all = both." },
+    "for_minutes": { "type": "integer", "minimum": 1, "maximum": 1440, "default": 2, "title": "M: for (minutes)" },
+    "step_replicas": { "type": "integer", "minimum": 1, "maximum": 16, "default": 1, "title": "Replicas to add per fire" },
+    "max_replicas": { "type": "integer", "minimum": 1, "maximum": 64, "default": 4, "title": "Never exceed (replicas)" },
+    "placement_strategy": { "type": ["string", "null"], "enum": ["spread", "pack", null], "default": null, "title": "Placement", "description": "null = use the deployment's own strategy." },
+    "min_free_vram_bytes": { "type": ["integer", "null"], "minimum": 0, "default": null, "title": "Need free VRAM (bytes)", "description": "null = scheduler estimate from the model version size and context." },
+    "make_room": { "type": "boolean", "default": false, "title": "Evict lower priority models if needed", "description": "Allow evicting idle lower-priority models (same semantics as make_room_by_priority) when no GPU is free." }
+  },
+  "additionalProperties": false,
+  "anyOf": [
+    { "properties": { "waiting_requests_above": { "type": "integer" } }, "required": ["waiting_requests_above"] },
+    { "properties": { "kv_cache_pct_above": { "type": "number" } }, "required": ["kv_cache_pct_above"] }
+  ]
+}

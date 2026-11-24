@@ -1,0 +1,57 @@
+[
+    {
+        "gpu": 0,
+        "usage": {
+            "gfx_activity": {"value": 87, "unit": "%"},
+            "umc_activity": {"value": 41, "unit": "%"},
+            "mm_activity": "N/A",
+            "vcn_activity": ["N/A", "N/A", "N/A", "N/A"],
+            "jpeg_activity": ["N/A"]
+        },
+        "power": {
+            "socket_power": {"value": 612, "unit": "W"},
+            "gfx_voltage": "N/A",
+            "soc_voltage": "N/A",
+            "mem_voltage": "N/A",
+            "throttle_status": "UNTHROTTLED",
+            "power_management": "ENABLED"
+        },
+        "clock": {
+            "gfx_0": {"clk": {"value": 2100, "unit": "MHz"}, "min_clk": {"value": 500, "unit": "MHz"}, "max_clk": {"value": 2100, "unit": "MHz"}, "clk_locked": "DISABLED", "deep_sleep": "DISABLED"},
+            "mem_0": {"clk": {"value": 1300, "unit": "MHz"}, "min_clk": {"value": 900, "unit": "MHz"}, "max_clk": {"value": 1300, "unit": "MHz"}, "clk_locked": "N/A", "deep_sleep": "DISABLED"}
+        },
+        "temperature": {
+            "edge": "N/A",
+            "hotspot": {"value": 71, "unit": "C"},
+            "mem": {"value": 58, "unit": "C"}
+        },
+        "pcie": {"width": 16, "speed": {"value": 32, "unit": "GT/s"}, "bandwidth": {"value": 1200, "unit": "Mb/s"}, "replay_count": 0, "l0_to_recovery_count": 0, "replay_roll_over_count": 0, "nak_sent_count": 0, "nak_received_count": 0},
+        "ecc": {"total_correctable_count": 3, "total_uncorrectable_count": 0, "total_deferred_count": 0, "cache_correctable_count": 0, "cache_uncorrectable_count": 0},
+        "fan": {"speed": "N/A", "max": "N/A", "rpm": "N/A", "usage": "N/A"},
+        "voltage_curve": "N/A",
+        "perf_level": "AUTO",
+        "energy": {"total_energy_consumption": {"value": 912345678.9, "unit": "uJ"}},
+        "mem_usage": {
+            "total_vram": {"value": 196592, "unit": "MB"},
+            "used_vram": {"value": 152331, "unit": "MB"},
+            "free_vram": {"value": 44261, "unit": "MB"},
+            "total_visible_vram": {"value": 196592, "unit": "MB"},
+            "used_visible_vram": {"value": 152331, "unit": "MB"},
+            "free_visible_vram": {"value": 44261, "unit": "MB"},
+            "total_gtt": {"value": 128848, "unit": "MB"},
+            "used_gtt": {"value": 20, "unit": "MB"},
+            "free_gtt": {"value": 128828, "unit": "MB"}
+        }
+    },
+    {
+        "gpu": 1,
+        "usage": {"gfx_activity": {"value": 0, "unit": "%"}, "umc_activity": {"value": 0, "unit": "%"}, "mm_activity": "N/A"},
+        "power": {"socket_power": {"value": 141, "unit": "W"}, "throttle_status": "THERMAL", "power_management": "ENABLED"},
+        "clock": {"gfx_0": {"clk": {"value": 132, "unit": "MHz"}}, "mem_0": {"clk": {"value": 900, "unit": "MHz"}}},
+        "temperature": {"edge": "N/A", "hotspot": {"value": 97, "unit": "C"}, "mem": {"value": 35, "unit": "C"}},
+        "pcie": {"width": 16, "bandwidth": "N/A"},
+        "ecc": {"total_correctable_count": 0, "total_uncorrectable_count": 1},
+        "fan": {"speed": "N/A", "max": "N/A", "rpm": "N/A", "usage": "N/A"},
+        "mem_usage": {"total_vram": {"value": 196592, "unit": "MB"}, "used_vram": {"value": 283, "unit": "MB"}, "free_vram": {"value": 196309, "unit": "MB"}}
+    }
+]

@@ -1,0 +1,25 @@
+{
+  "ssh_instance_id": "3e4f5a6b-7c8d-4e9f-8a1b-2c3d4e5f6a7b",
+  "container_id": "c0ffee1234567890",
+  "host_address": "10.0.0.5",
+  "host_port": 2200,
+  "ssh_user": "alice",
+  "host_key_fingerprint": "SHA256:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU",
+  "host_keys": [
+    {
+      "type": "ssh-ed25519",
+      "fingerprint": "SHA256:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU",
+      "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGq0p3Yq0Yb0t1u7a4W6Xc0Zt9cQ4m2xZ8l2xJk7v1aB"
+    }
+  ],
+  "ssh_command": "ssh -p 2200 alice@10.0.0.5",
+  "device_ids": [
+    "9a8b7c6d-5e4f-5a3b-9c2d-1e0f9a8b7c6d"
+  ],
+  "gpu_attached": true,
+  "started_at": "2026-11-17T10:20:41.000Z",
+  "expires_at": "2026-11-17T18:20:41.000Z",
+  "warnings": [
+    "vram/compute limits are enforced only when the CUDA MPS daemon runs on the node"
+  ]
+}

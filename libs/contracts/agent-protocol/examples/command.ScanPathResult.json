@@ -1,0 +1,80 @@
+{
+  "path": "/Users/alice/.ollama/models",
+  "truncated": false,
+  "visited": 42,
+  "seconds": 0.031,
+  "candidates": [
+    {
+      "path": "/Users/alice/.ollama/models/blobs/sha256-7f4030143c1c477224c5434f8272c662a8b042079a0a584f0a27a1684fe2e1fa",
+      "kind": "ollama_blob",
+      "format": "gguf",
+      "files": [
+        {
+          "path": "sha256-7f4030143c1c477224c5434f8272c662a8b042079a0a584f0a27a1684fe2e1fa",
+          "absolute_path": "/Users/alice/.ollama/models/blobs/sha256-7f4030143c1c477224c5434f8272c662a8b042079a0a584f0a27a1684fe2e1fa",
+          "size_bytes": 522640096,
+          "format": "gguf",
+          "sha256": "7f4030143c1c477224c5434f8272c662a8b042079a0a584f0a27a1684fe2e1fa",
+          "is_required": true
+        }
+      ],
+      "total_size_bytes": 522640096,
+      "suggested": {
+        "name": "qwen3:0.6b",
+        "family": null,
+        "type": null,
+        "quantization": "Q4_K_M",
+        "context_size": 40960,
+        "architecture": "qwen3",
+        "ollama_name": "qwen3:0.6b"
+      },
+      "metadata": {
+        "general.architecture": "qwen3",
+        "general.name": "Qwen3 0.6B",
+        "general.file_type": 15,
+        "qwen3.context_length": 40960,
+        "qwen3.block_count": 28
+      }
+    },
+    {
+      "path": "/Users/alice/.lmstudio/models/mlx-community/Qwen3-0.6B-4bit",
+      "kind": "lmstudio",
+      "format": "mlx",
+      "files": [
+        {
+          "path": "config.json",
+          "absolute_path": "/Users/alice/.lmstudio/models/mlx-community/Qwen3-0.6B-4bit/config.json",
+          "size_bytes": 1032,
+          "format": "other",
+          "sha256": null,
+          "is_required": true
+        },
+        {
+          "path": "model.safetensors",
+          "absolute_path": "/Users/alice/.lmstudio/models/mlx-community/Qwen3-0.6B-4bit/model.safetensors",
+          "size_bytes": 335000000,
+          "format": "mlx",
+          "sha256": null,
+          "is_required": true
+        }
+      ],
+      "total_size_bytes": 335001032,
+      "suggested": {
+        "name": "qwen3-0.6b-4bit",
+        "quantization": "4bit",
+        "context_size": 40960,
+        "architecture": "qwen3",
+        "publisher": "mlx-community",
+        "lmstudio_name": "mlx-community/Qwen3-0.6B-4bit"
+      },
+      "metadata": {
+        "model_type": "qwen3",
+        "max_position_embeddings": 40960,
+        "quantization": {
+          "bits": 4,
+          "group_size": 64
+        }
+      }
+    }
+  ]
+}

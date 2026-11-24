@@ -1,0 +1,13 @@
+[flake8]
+max-line-length = 100
+extend-ignore = E203,W503
+exclude =
+    venv,
+    .venv,
+    __pycache__,
+    .run,
+    htmlcov,
+    # sqlacodegen output, regenerated from the live schema
+    app/db/postgres/models/generated_models.py,
+    # SQL-first migration wrappers are templated
+    app/db/postgres/alembic/migrations

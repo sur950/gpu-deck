@@ -1,0 +1,63 @@
+[
+    {
+        "gpu": 0,
+        "asic": {
+            "market_name": "AMD Instinct MI300X",
+            "vendor_id": "0x1002",
+            "vendor_name": "Advanced Micro Devices Inc. [AMD/ATI]",
+            "subvendor_id": "0x1002",
+            "device_id": "0x74a1",
+            "subsystem_id": "0x74a1",
+            "rev_id": "0x00",
+            "asic_serial": "0x8D1B4A8A2F3B2C1D",
+            "oam_id": 0,
+            "num_compute_units": 304,
+            "target_graphics_version": "gfx942"
+        },
+        "bus": {
+            "bdf": "0000:0C:00.0",
+            "max_pcie_width": 16,
+            "max_pcie_speed": {"value": 32, "unit": "GT/s"},
+            "pcie_interface_version": "Gen 5",
+            "slot_type": "OAM"
+        },
+        "vbios": {"name": "AMD MI300X_HW_SRIOV_CVS_1VF", "build_date": "2023/09/27 13:36", "part_number": "113-M3000100-102", "version": "022.040.003.042.000001"},
+        "limit": {
+            "max_power": {"value": 750, "unit": "W"},
+            "min_power": {"value": 0, "unit": "W"},
+            "socket_power": {"value": 750, "unit": "W"},
+            "slowdown_edge_temperature": "N/A",
+            "slowdown_hotspot_temperature": {"value": 100, "unit": "C"},
+            "slowdown_vram_temperature": {"value": 105, "unit": "C"},
+            "shutdown_edge_temperature": "N/A",
+            "shutdown_hotspot_temperature": {"value": 110, "unit": "C"},
+            "shutdown_vram_temperature": {"value": 115, "unit": "C"}
+        },
+        "driver": {"name": "amdgpu", "version": "6.7.0"},
+        "board": {"model_number": "N/A", "product_serial": "692351000000", "fru_id": "N/A", "product_name": "AMD Instinct MI300X OAM", "manufacturer_name": "AMD"},
+        "ras": {"eeprom_version": "0x30000", "parity_schema": "DISABLED", "single_bit_schema": "DISABLED", "double_bit_schema": "DISABLED", "poison_schema": "ENABLED", "ecc_block_state": {"UMC": "ENABLED", "SDMA": "ENABLED", "GFX": "ENABLED"}},
+        "partition": {"compute_partition": "SPX", "memory_partition": "NPS1"},
+        "soc_pstate": "N/A",
+        "process_isolation": "Disabled",
+        "numa": {"node": 0, "affinity": 0},
+        "vram": {"type": "HBM", "vendor": "N/A", "size": {"value": 196592, "unit": "MB"}, "bit_width": 8192},
+        "cache_info": [{"cache": "L2", "cache_properties": ["DATA_CACHE", "SIMD_CACHE"], "max_num_cu_shared": 38, "num_cache_instance": 8, "cache_size": {"value": 4096, "unit": "KB"}}]
+    },
+    {
+        "gpu": 1,
+        "asic": {
+            "market_name": "AMD Instinct MI300X",
+            "vendor_id": "0x1002",
+            "device_id": "0x74a1",
+            "asic_serial": "0x4E2C1A3B5D6F7081",
+            "num_compute_units": 304,
+            "target_graphics_version": "gfx942"
+        },
+        "bus": {"bdf": "0000:22:00.0", "max_pcie_width": 16},
+        "limit": {"max_power": {"value": 750, "unit": "W"}},
+        "driver": {"name": "amdgpu", "version": "6.7.0"},
+        "partition": {"compute_partition": "SPX", "memory_partition": "NPS1"},
+        "numa": {"node": 0, "affinity": 0},
+        "vram": {"type": "HBM", "vendor": "N/A", "size": {"value": 196592, "unit": "MB"}, "bit_width": 8192}
+    }
+]

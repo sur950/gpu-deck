@@ -1,0 +1,249 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $np := .Values.networkPolicy -}}
+{{- $fullname := include "gpudeck.fullname" . -}}
+{{- $sel := include "gpudeck.selectorLabels" . -}}
+# Deny everything for GPU Deck pods, then open only the documented network
+# paths (docs/security-model.md). Node agent pods use hostNetwork and are governed by the node firewall.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-default-deny
+  labels:
+    {{- include "gpudeck.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- $sel | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+---
+# DNS for every GPU Deck pod.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-dns
+  labels:
+    {{- include "gpudeck.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- $sel | nindent 6 }}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            {{- toYaml $np.dnsNamespaceSelector | nindent 12 }}
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Control plane and jobs -> Postgres / Redis (private network only), OTel collector.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-data-egress
+  labels:
+    {{- include "gpudeck.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/instance
+        operator: In
+        values: [{{ .Release.Name | quote }}]
+      - key: app.kubernetes.io/component
+        operator: In
+        values: [admin-api, api-layer, agent-hub, worker, beat, scheduler, migrate]
+  policyTypes: [Egress]
+  egress:
+    - to:
+        {{- range $np.databaseCIDRs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: {{ $np.databasePort }} }
+    - to:
+        {{- range $np.redisCIDRs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: {{ $np.redisPort }} }
+    {{- if $np.otelCIDRs }}
+    - to:
+        {{- range $np.otelCIDRs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: {{ $np.otelPort }} }
+    {{- end }}
+---
+# Admin API: from the (internal) ingress controller and the web pods; metrics scrapes.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-admin-api
+  labels:
+    {{- include "gpudeck.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "gpudeck.componentSelector" (list . "admin-api") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            {{- toYaml $np.ingressControllerNamespaceSelector | nindent 12 }}
+        - podSelector:
+            matchLabels:
+              {{- include "gpudeck.componentSelector" (list . "web") | nindent 14 }}
+        - namespaceSelector:
+            {{- toYaml $np.monitoringNamespaceSelector | nindent 12 }}
+      ports:
+        - { protocol: TCP, port: {{ .Values.components.adminApi.port }} }
+  egress:
+    # Catalog search (Hugging Face / ModelScope) and alert test deliveries.
+    - to:
+        {{- range $np.httpsEgressCIDRs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: 443 }
+    # Health probes / benchmarks against node agent proxies.
+    - to:
+        {{- range $np.nodeCIDRs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: {{ .Values.nodeAgent.proxyPort }} }
+---
+# API layer: your AI gateway (via the ingress or its CIDRs) -> 8181; API layer -> node proxies 9443.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-api-layer
+  labels:
+    {{- include "gpudeck.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "gpudeck.componentSelector" (list . "api-layer") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            {{- toYaml $np.ingressControllerNamespaceSelector | nindent 12 }}
+        - namespaceSelector:
+            {{- toYaml $np.monitoringNamespaceSelector | nindent 12 }}
+        {{- range $np.gatewayCIDRs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: {{ .Values.components.apiLayer.port }} }
+  egress:
+    - to:
+        {{- range $np.nodeCIDRs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: {{ .Values.nodeAgent.proxyPort }} }
+---
+# Agent hub: node agents dial in on 8443 (mTLS).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-agent-hub
+  labels:
+    {{- include "gpudeck.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "gpudeck.componentSelector" (list . "agent-hub") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - {{- if $np.agentSourceCIDRs }}
+      from:
+        {{- range $np.agentSourceCIDRs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
+        - namespaceSelector:
+            {{- toYaml $np.monitoringNamespaceSelector | nindent 12 }}
+      {{- end }}
+      ports:
+        - { protocol: TCP, port: {{ .Values.components.agentHub.port }} }
+  egress:
+    # Node-agent builds from the GitHub release (AGENT_RELEASE_URL); empty it offline.
+    - to:
+        {{- range $np.httpsEgressCIDRs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: 443 }
+---
+# Jobs (worker, beat, scheduler): alert delivery (Slack/webhooks/SMTP), catalog downloads
+# metadata, and node proxy probes. No ingress.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-jobs
+  labels:
+    {{- include "gpudeck.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/instance
+        operator: In
+        values: [{{ .Release.Name | quote }}]
+      - key: app.kubernetes.io/component
+        operator: In
+        values: [worker, beat, scheduler]
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # Prometheus scrapes of the worker (:9464) and scheduler (:9465) listeners.
+    - from:
+        - namespaceSelector:
+            {{- toYaml $np.monitoringNamespaceSelector | nindent 12 }}
+      ports:
+        {{- range $k := list "worker" "scheduler" }}
+        {{- with (index $.Values.components $k).metricsPort }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+        {{- end }}
+  egress:
+    - to:
+        {{- range $np.httpsEgressCIDRs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: 443 }
+        - { protocol: TCP, port: {{ $np.smtpPort }} }
+    - to:
+        {{- range $np.nodeCIDRs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: {{ .Values.nodeAgent.proxyPort }} }
+---
+# Web UI: from the (internal) ingress controller; to the admin API only.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-web
+  labels:
+    {{- include "gpudeck.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "gpudeck.componentSelector" (list . "web") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            {{- toYaml $np.ingressControllerNamespaceSelector | nindent 12 }}
+      ports:
+        - { protocol: TCP, port: {{ .Values.components.web.port }} }
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "gpudeck.componentSelector" (list . "admin-api") | nindent 14 }}
+      ports:
+        - { protocol: TCP, port: {{ .Values.components.adminApi.port }} }
+{{- end }}

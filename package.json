@@ -1,0 +1,37 @@
+{
+  "name": "gpu-deck",
+  "version": "1.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "author": "Suresh Konakanchi",
+  "homepage": "https://sur950.github.io/gpu-deck/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sur950/gpu-deck.git"
+  },
+  "bugs": "https://github.com/sur950/gpu-deck/issues",
+  "packageManager": "pnpm@10.28.2",
+  "description": "GPU Deck — GPU control plane (admin API, serving API, jobs, web UI, node agent)",
+  "scripts": {
+    "web:dev": "pnpm --filter web dev",
+    "web:start": "pnpm --filter web start",
+    "web:build": "pnpm --filter web build",
+    "web:lint": "pnpm --filter web lint",
+    "api:dev": "cd apps/fastapi && venv/bin/uvicorn app.main:app --port 8180 --reload",
+    "serving:dev": "cd apps/fastapi && venv/bin/uvicorn app.api_layer_main:app --port 8181 --reload",
+    "worker:dev": "cd apps/fastapi && PYTHONPATH=. venv/bin/celery -A app.workers.celery_app worker --beat --loglevel=info --pool=threads",
+    "scheduler:dev": "cd apps/fastapi && venv/bin/python -m app.workers.scheduler",
+    "api:test": "cd apps/fastapi && ./tests/scripts/run_tests.sh unit",
+    "dev": "./infra/scripts/bootstrap.dev.sh",
+    "dev:stop": "./infra/scripts/bootstrap.dev.sh stop",
+    "dev:status": "./infra/scripts/bootstrap.dev.sh status",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,md,yaml,yml}\""
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  },
+  "engines": {
+    "node": ">=20.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "connect-screen",
+  "description": "The bundled connect screen (local origin only, connect window only): manage saved servers, check and connect. No filesystem, shell, opener, notification or updater access. Remote server pages get no static capability; see src/windows.rs grant_ipc.",
+  "local": true,
+  "windows": ["connect"],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "core:window:allow-start-dragging",
+    "allow-servers-list",
+    "allow-servers-save",
+    "allow-servers-remove",
+    "allow-servers-probe",
+    "allow-servers-connect",
+    "allow-connect-prefill",
+    "allow-connect-back"
+  ]
+}

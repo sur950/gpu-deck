@@ -1,0 +1,33 @@
+[package]
+name = "gpudeck-devices"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.85"
+description = "GPU Deck node agent: vendor device plugins (NVIDIA, AMD, Hygon, MetaX, Moore Threads, T-Head, Apple Silicon) producing one common Device / DeviceSample type."
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+anyhow = "1"
+async-trait = "0.1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
+# NVML is dlopen'ed at runtime (libnvidia-ml.so.1); the agent binary starts without it and falls
+# back to nvidia-smi. Compiles on every platform (no link-time dependency).
+nvml-wrapper = "0.13"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["process", "time", "rt", "macros", "sync", "io-util"] }
+tracing = "0.1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation-sys = "0.8"
+libc = "0.2"
+libloading = "0.8"
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSString"] }
+objc2-metal = { version = "0.3", default-features = false, features = ["std", "MTLDevice"] }
+
+[dev-dependencies]
+serde_json = "1"
+tempfile = "3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }

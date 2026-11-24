@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/rules/v1/time_schedule.schema.json",
+  "title": "Time schedule — params",
+  "description": "At a clock time on given days (in a timezone) switch to a named GPU layout. Target selector is ignored for this type (the layout defines targets). Optional prefetch warms caches ahead of the switch.",
+  "type": "object",
+  "required": ["layout_id"],
+  "properties": {
+    "at": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$", "default": "00:00", "title": "At (HH:MM)" },
+    "days": {
+      "type": "array",
+      "title": "Days",
+      "default": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "enum": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] }
+    },
+    "cron": { "type": ["string", "null"], "default": null, "title": "Cron (advanced)", "description": "5-field cron expression; when set it replaces at/days." },
+    "timezone": { "type": "string", "default": "UTC", "title": "Timezone", "description": "IANA zone, e.g. Asia/Kolkata. Default from env RULES_DEFAULT_TIMEZONE." },
+    "layout_id": { "type": "string", "format": "uuid", "title": "Switch to layout" },
+    "prefetch_minutes_before": { "type": "integer", "minimum": 0, "maximum": 1440, "default": 15, "title": "Prefetch models (minutes before)", "description": "Issue prefetch_model + pin for every model the layout needs this long before the switch." },
+    "drain_timeout_seconds": { "type": "integer", "minimum": 0, "maximum": 3600, "default": 300, "title": "Drain timeout (seconds)" },
+    "catch_up": { "type": "boolean", "default": true, "title": "Catch up missed runs", "description": "If the jobs process was down at the scheduled time, apply the layout on start-up when the next run is more than 1 h away." }
+  },
+  "additionalProperties": false
+}

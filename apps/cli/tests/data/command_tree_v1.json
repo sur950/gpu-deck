@@ -1,0 +1,2059 @@
+{
+ "agent download": {
+  "arguments": 2,
+  "options": [
+   "--token",
+   "--x-gpu-deck-join-token"
+  ]
+ },
+ "agent downloads": {
+  "arguments": 0,
+  "options": []
+ },
+ "agent install-script": {
+  "arguments": 0,
+  "options": [
+   "--token",
+   "--version",
+   "--x-gpu-deck-join-token"
+  ]
+ },
+ "agent sha256": {
+  "arguments": 2,
+  "options": [
+   "--token",
+   "--x-gpu-deck-join-token"
+  ]
+ },
+ "alerts channels create": {
+  "arguments": 0,
+  "options": [
+   "--credential-id",
+   "--enabled",
+   "--event-filter",
+   "--file",
+   "--min-severity",
+   "--name",
+   "--secret",
+   "--set",
+   "--type"
+  ]
+ },
+ "alerts channels delete": {
+  "arguments": 1,
+  "options": []
+ },
+ "alerts channels get": {
+  "arguments": 1,
+  "options": []
+ },
+ "alerts channels list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--page",
+   "--page-size",
+   "--search",
+   "--sort",
+   "--type"
+  ]
+ },
+ "alerts channels test": {
+  "arguments": 1,
+  "options": []
+ },
+ "alerts channels update": {
+  "arguments": 1,
+  "options": [
+   "--credential-id",
+   "--enabled",
+   "--event-filter",
+   "--file",
+   "--min-severity",
+   "--name",
+   "--secret",
+   "--set"
+  ]
+ },
+ "alerts events acknowledge": {
+  "arguments": 1,
+  "options": []
+ },
+ "alerts events get": {
+  "arguments": 1,
+  "options": []
+ },
+ "alerts events list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--event-type",
+   "--from",
+   "--page",
+   "--page-size",
+   "--resource-id",
+   "--resource-type",
+   "--severity",
+   "--sort",
+   "--status",
+   "--to"
+  ]
+ },
+ "alerts events resend": {
+  "arguments": 1,
+  "options": [
+   "--channel-id"
+  ]
+ },
+ "alerts events resolve": {
+  "arguments": 1,
+  "options": []
+ },
+ "api-keys activate": {
+  "arguments": 1,
+  "options": []
+ },
+ "api-keys create": {
+  "arguments": 0,
+  "options": [
+   "--description",
+   "--expires-at",
+   "--file",
+   "--name",
+   "--set"
+  ]
+ },
+ "api-keys delete": {
+  "arguments": 1,
+  "options": []
+ },
+ "api-keys get": {
+  "arguments": 1,
+  "options": []
+ },
+ "api-keys list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--page",
+   "--page-size",
+   "--search",
+   "--sort",
+   "--status"
+  ]
+ },
+ "api-keys revoke": {
+  "arguments": 1,
+  "options": []
+ },
+ "api-keys rotate": {
+  "arguments": 1,
+  "options": []
+ },
+ "api-keys stats": {
+  "arguments": 0,
+  "options": []
+ },
+ "api-keys suspend": {
+  "arguments": 1,
+  "options": []
+ },
+ "api-keys update": {
+  "arguments": 1,
+  "options": [
+   "--description",
+   "--expires-at",
+   "--file",
+   "--name",
+   "--set"
+  ]
+ },
+ "audit export": {
+  "arguments": 0,
+  "options": [
+   "--actor-type",
+   "--event-type",
+   "--from",
+   "--resource-type",
+   "--to"
+  ]
+ },
+ "audit get": {
+  "arguments": 1,
+  "options": []
+ },
+ "audit list": {
+  "arguments": 0,
+  "options": [
+   "--actor-id",
+   "--actor-type",
+   "--all",
+   "--event-type",
+   "--from",
+   "--outcome",
+   "--page",
+   "--page-size",
+   "--request-id",
+   "--resource-id",
+   "--resource-type",
+   "--search",
+   "--sort",
+   "--to"
+  ]
+ },
+ "auth change-password": {
+  "arguments": 0,
+  "options": [
+   "--current-password",
+   "--file",
+   "--new-password",
+   "--set"
+  ]
+ },
+ "auth csrf": {
+  "arguments": 0,
+  "options": []
+ },
+ "auth login": {
+  "arguments": 0,
+  "options": [
+   "--ca-bundle",
+   "--endpoint",
+   "--no-keyring",
+   "--password",
+   "--password-stdin",
+   "--save-as",
+   "--username"
+  ]
+ },
+ "auth logout": {
+  "arguments": 0,
+  "options": []
+ },
+ "auth logout-all": {
+  "arguments": 0,
+  "options": []
+ },
+ "auth sessions list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--page",
+   "--page-size"
+  ]
+ },
+ "auth sessions revoke": {
+  "arguments": 1,
+  "options": []
+ },
+ "auth whoami": {
+  "arguments": 0,
+  "options": []
+ },
+ "benchmark-runs apply": {
+  "arguments": 1,
+  "options": [
+   "--apply-launch-flags",
+   "--apply-replicas",
+   "--apply-traffic-config",
+   "--file",
+   "--set"
+  ]
+ },
+ "benchmark-runs cancel": {
+  "arguments": 1,
+  "options": []
+ },
+ "benchmark-runs export": {
+  "arguments": 1,
+  "options": []
+ },
+ "benchmark-runs get": {
+  "arguments": 1,
+  "options": []
+ },
+ "benchmarks auto-tune": {
+  "arguments": 1,
+  "options": [
+   "--auto-tune",
+   "--file",
+   "--instance-id",
+   "--set"
+  ]
+ },
+ "benchmarks create": {
+  "arguments": 0,
+  "options": [
+   "--auto-tune",
+   "--concurrency-levels",
+   "--deployment-id",
+   "--description",
+   "--duration-seconds",
+   "--file",
+   "--name",
+   "--set"
+  ]
+ },
+ "benchmarks delete": {
+  "arguments": 1,
+  "options": []
+ },
+ "benchmarks get": {
+  "arguments": 1,
+  "options": []
+ },
+ "benchmarks list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--deployment-id",
+   "--page",
+   "--page-size",
+   "--search",
+   "--sort"
+  ]
+ },
+ "benchmarks runs": {
+  "arguments": 1,
+  "options": [
+   "--all",
+   "--page",
+   "--page-size"
+  ]
+ },
+ "benchmarks start": {
+  "arguments": 1,
+  "options": [
+   "--auto-tune",
+   "--file",
+   "--instance-id",
+   "--set"
+  ]
+ },
+ "benchmarks update": {
+  "arguments": 1,
+  "options": [
+   "--auto-tune",
+   "--concurrency-levels",
+   "--description",
+   "--duration-seconds",
+   "--file",
+   "--name",
+   "--set"
+  ]
+ },
+ "billing estimate": {
+  "arguments": 0,
+  "options": [
+   "--cluster-id",
+   "--period-end",
+   "--period-start"
+  ]
+ },
+ "billing reports create": {
+  "arguments": 0,
+  "options": [
+   "--file",
+   "--group-by",
+   "--name",
+   "--period-end",
+   "--period-start",
+   "--set"
+  ]
+ },
+ "billing reports delete": {
+  "arguments": 1,
+  "options": []
+ },
+ "billing reports export": {
+  "arguments": 1,
+  "options": []
+ },
+ "billing reports get": {
+  "arguments": 1,
+  "options": []
+ },
+ "billing reports list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--page",
+   "--page-size",
+   "--search",
+   "--sort",
+   "--status"
+  ]
+ },
+ "billing reports regenerate": {
+  "arguments": 1,
+  "options": []
+ },
+ "cache delete": {
+  "arguments": 1,
+  "options": [
+   "--force"
+  ]
+ },
+ "cache evict": {
+  "arguments": 0,
+  "options": [
+   "--cache-item-ids",
+   "--file",
+   "--force",
+   "--model-version-id",
+   "--node-ids",
+   "--set",
+   "--target-free-bytes",
+   "--unpin-only",
+   "--unpinned-older-than-seconds"
+  ]
+ },
+ "cache list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--model-id",
+   "--model-version-id",
+   "--node-id",
+   "--page",
+   "--page-size",
+   "--pinned",
+   "--sort",
+   "--state",
+   "--unused-for-hours"
+  ]
+ },
+ "cache pin": {
+  "arguments": 1,
+  "options": [
+   "--file",
+   "--reason",
+   "--set"
+  ]
+ },
+ "cache prefetch": {
+  "arguments": 0,
+  "options": [
+   "--file",
+   "--model-version-id",
+   "--node-ids",
+   "--pin",
+   "--pin-reason",
+   "--set"
+  ]
+ },
+ "cache summary": {
+  "arguments": 0,
+  "options": [
+   "--cluster-id"
+  ]
+ },
+ "cache unpin": {
+  "arguments": 1,
+  "options": []
+ },
+ "catalog remote-files": {
+  "arguments": 0,
+  "options": [
+   "--credential-id",
+   "--repo-id",
+   "--revision",
+   "--source"
+  ]
+ },
+ "catalog scan": {
+  "arguments": 0,
+  "options": [
+   "--file",
+   "--max-depth",
+   "--node-id",
+   "--path",
+   "--recursive",
+   "--set"
+  ]
+ },
+ "catalog search": {
+  "arguments": 0,
+  "options": [
+   "--author",
+   "--credential-id",
+   "--format",
+   "--limit",
+   "--q",
+   "--sort",
+   "--source",
+   "--type"
+  ]
+ },
+ "cloud nodes apply-price-plan": {
+  "arguments": 1,
+  "options": []
+ },
+ "cloud nodes create": {
+  "arguments": 0,
+  "options": [
+   "--apply-price-plan",
+   "--auto-terminate-idle-minutes",
+   "--cluster-id",
+   "--count",
+   "--disk-gb",
+   "--dry-run",
+   "--file",
+   "--image",
+   "--instance-type",
+   "--name",
+   "--region",
+   "--set",
+   "--zone"
+  ]
+ },
+ "cloud nodes delete": {
+  "arguments": 1,
+  "options": []
+ },
+ "cloud nodes get": {
+  "arguments": 1,
+  "options": []
+ },
+ "cloud nodes list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--cluster-id",
+   "--include-terminated",
+   "--page",
+   "--page-size",
+   "--provider",
+   "--search",
+   "--sort",
+   "--status"
+  ]
+ },
+ "cloud nodes refresh": {
+  "arguments": 1,
+  "options": []
+ },
+ "cloud nodes start": {
+  "arguments": 1,
+  "options": []
+ },
+ "cloud nodes stop": {
+  "arguments": 1,
+  "options": [
+   "--drain-timeout-seconds",
+   "--file",
+   "--force",
+   "--reason",
+   "--set"
+  ]
+ },
+ "cloud nodes terminate": {
+  "arguments": 1,
+  "options": [
+   "--drain-timeout-seconds",
+   "--file",
+   "--force",
+   "--reason",
+   "--set"
+  ]
+ },
+ "cloud nodes update": {
+  "arguments": 1,
+  "options": [
+   "--auto-terminate-idle-minutes",
+   "--file",
+   "--set"
+  ]
+ },
+ "cloud providers check-credential": {
+  "arguments": 1,
+  "options": [
+   "--credential-id",
+   "--file",
+   "--set"
+  ]
+ },
+ "cloud providers instance-types": {
+  "arguments": 1,
+  "options": [
+   "--cluster-id",
+   "--credential-id",
+   "--gpu-count",
+   "--gpu-vendor",
+   "--max-price",
+   "--min-vram-gb",
+   "--refresh",
+   "--region",
+   "--search"
+  ]
+ },
+ "cloud providers list": {
+  "arguments": 0,
+  "options": []
+ },
+ "cloud providers quotas": {
+  "arguments": 1,
+  "options": [
+   "--cluster-id",
+   "--credential-id",
+   "--region"
+  ]
+ },
+ "cloud providers regions": {
+  "arguments": 1,
+  "options": [
+   "--cluster-id",
+   "--credential-id",
+   "--refresh"
+  ]
+ },
+ "clusters create": {
+  "arguments": 0,
+  "options": [
+   "--credential-id",
+   "--description",
+   "--egress-allowlist",
+   "--file",
+   "--name",
+   "--price-plan-id",
+   "--region",
+   "--set",
+   "--type"
+  ]
+ },
+ "clusters delete": {
+  "arguments": 1,
+  "options": []
+ },
+ "clusters get": {
+  "arguments": 1,
+  "options": []
+ },
+ "clusters list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--page",
+   "--page-size",
+   "--search",
+   "--sort",
+   "--status",
+   "--type"
+  ]
+ },
+ "clusters nodes": {
+  "arguments": 1,
+  "options": [
+   "--all",
+   "--page",
+   "--page-size",
+   "--search",
+   "--sort"
+  ]
+ },
+ "clusters update": {
+  "arguments": 1,
+  "options": [
+   "--credential-id",
+   "--description",
+   "--egress-allowlist",
+   "--file",
+   "--name",
+   "--price-plan-id",
+   "--region",
+   "--set",
+   "--status",
+   "--type"
+  ]
+ },
+ "config delete": {
+  "arguments": 1,
+  "options": []
+ },
+ "config list": {
+  "arguments": 0,
+  "options": []
+ },
+ "config set": {
+  "arguments": 1,
+  "options": [
+   "--auth-mode",
+   "--ca-bundle",
+   "--endpoint",
+   "--keyring",
+   "--no-keyring",
+   "--no-use",
+   "--no-verify-tls",
+   "--timeout",
+   "--use",
+   "--verify-tls"
+  ]
+ },
+ "config show": {
+  "arguments": 1,
+  "options": []
+ },
+ "config use": {
+  "arguments": 1,
+  "options": []
+ },
+ "deployments create": {
+  "arguments": 0,
+  "options": [
+   "--cluster-id",
+   "--context-size",
+   "--description",
+   "--device-vendor-filter",
+   "--dry-run",
+   "--engine-version-id",
+   "--file",
+   "--gpu-count",
+   "--kv-sharing",
+   "--max-replicas",
+   "--min-replicas",
+   "--model-id",
+   "--model-version-id",
+   "--name",
+   "--pd-split",
+   "--placement-strategy",
+   "--pp-size",
+   "--preset",
+   "--priority-override",
+   "--replicas",
+   "--set",
+   "--slice-compute-pct",
+   "--slice-vram-bytes",
+   "--start",
+   "--tool-parser",
+   "--tp-size"
+  ]
+ },
+ "deployments delete": {
+  "arguments": 1,
+  "options": [
+   "--force"
+  ]
+ },
+ "deployments get": {
+  "arguments": 1,
+  "options": []
+ },
+ "deployments instances": {
+  "arguments": 1,
+  "options": [
+   "--include-stopped"
+  ]
+ },
+ "deployments list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--cluster-id",
+   "--engine",
+   "--model-id",
+   "--page",
+   "--page-size",
+   "--priority",
+   "--search",
+   "--sort",
+   "--status"
+  ]
+ },
+ "deployments preview": {
+  "arguments": 0,
+  "options": [
+   "--deployment-id",
+   "--file",
+   "--replicas",
+   "--set"
+  ]
+ },
+ "deployments restart": {
+  "arguments": 1,
+  "options": [
+   "--file",
+   "--set",
+   "--then",
+   "--timeout-seconds"
+  ]
+ },
+ "deployments scale": {
+  "arguments": 1,
+  "options": [
+   "--drain-timeout-seconds",
+   "--file",
+   "--placement-strategy",
+   "--replicas",
+   "--set"
+  ]
+ },
+ "deployments start": {
+  "arguments": 1,
+  "options": []
+ },
+ "deployments stop": {
+  "arguments": 1,
+  "options": []
+ },
+ "deployments swaps": {
+  "arguments": 1,
+  "options": [
+   "--all",
+   "--page",
+   "--page-size"
+  ]
+ },
+ "deployments traffic": {
+  "arguments": 1,
+  "options": [
+   "--file",
+   "--set"
+  ]
+ },
+ "deployments update": {
+  "arguments": 1,
+  "options": [
+   "--cluster-id",
+   "--context-size",
+   "--description",
+   "--device-vendor-filter",
+   "--engine-version-id",
+   "--file",
+   "--gpu-count",
+   "--kv-sharing",
+   "--max-replicas",
+   "--min-replicas",
+   "--model-version-id",
+   "--name",
+   "--pd-split",
+   "--placement-strategy",
+   "--pp-size",
+   "--preset",
+   "--priority-override",
+   "--replicas",
+   "--set",
+   "--slice-compute-pct",
+   "--slice-vram-bytes",
+   "--tool-parser",
+   "--tp-size"
+  ]
+ },
+ "devices all-slices": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--deployment-id",
+   "--node-id",
+   "--page",
+   "--page-size"
+  ]
+ },
+ "devices get": {
+  "arguments": 1,
+  "options": []
+ },
+ "devices list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--cluster-id",
+   "--free-vram-min-bytes",
+   "--health",
+   "--node-id",
+   "--page",
+   "--page-size",
+   "--sort",
+   "--vendor"
+  ]
+ },
+ "devices slices": {
+  "arguments": 1,
+  "options": [
+   "--include-released"
+  ]
+ },
+ "devices slices-create": {
+  "arguments": 1,
+  "options": [
+   "--compute-pct",
+   "--deployment-id",
+   "--file",
+   "--name",
+   "--set",
+   "--vram-bytes"
+  ]
+ },
+ "devices slices-delete": {
+  "arguments": 2,
+  "options": [
+   "--force"
+  ]
+ },
+ "devices slices-update": {
+  "arguments": 2,
+  "options": [
+   "--compute-pct",
+   "--file",
+   "--name",
+   "--set",
+   "--vram-bytes"
+  ]
+ },
+ "engines auto-pick": {
+  "arguments": 0,
+  "options": [
+   "--cluster-id",
+   "--context-size",
+   "--file",
+   "--gpu-count",
+   "--model-version-id",
+   "--node-id",
+   "--preset",
+   "--set"
+  ]
+ },
+ "engines compat-check": {
+  "arguments": 0,
+  "options": [
+   "--context-size",
+   "--device-vendor",
+   "--engine-version-id",
+   "--file",
+   "--gpu-count",
+   "--model-version-id",
+   "--node-id",
+   "--set"
+  ]
+ },
+ "engines compat-checks": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--engine-version-id",
+   "--model-version-id",
+   "--page",
+   "--page-size",
+   "--result"
+  ]
+ },
+ "engines get": {
+  "arguments": 1,
+  "options": []
+ },
+ "engines list": {
+  "arguments": 0,
+  "options": [
+   "--enabled",
+   "--model-type",
+   "--vendor"
+  ]
+ },
+ "engines update": {
+  "arguments": 1,
+  "options": [
+   "--description",
+   "--display-name",
+   "--file",
+   "--is-enabled",
+   "--set",
+   "--supported-formats",
+   "--supported-model-types",
+   "--supported-vendors"
+  ]
+ },
+ "engines versions create": {
+  "arguments": 1,
+  "options": [
+   "--file",
+   "--image",
+   "--is-default",
+   "--min-driver-version",
+   "--port-range",
+   "--set",
+   "--status",
+   "--version"
+  ]
+ },
+ "engines versions delete": {
+  "arguments": 2,
+  "options": []
+ },
+ "engines versions get": {
+  "arguments": 2,
+  "options": []
+ },
+ "engines versions list": {
+  "arguments": 1,
+  "options": []
+ },
+ "engines versions update": {
+  "arguments": 2,
+  "options": [
+   "--file",
+   "--image",
+   "--is-default",
+   "--min-driver-version",
+   "--port-range",
+   "--set",
+   "--status",
+   "--version"
+  ]
+ },
+ "gpu-instances connection": {
+  "arguments": 1,
+  "options": []
+ },
+ "gpu-instances create": {
+  "arguments": 0,
+  "options": [
+   "--allowed-source-cidrs",
+   "--authorized-keys",
+   "--cluster-id",
+   "--container-port",
+   "--description",
+   "--file",
+   "--gpu-count",
+   "--idle-timeout-seconds",
+   "--image",
+   "--name",
+   "--set",
+   "--slice-compute-pct",
+   "--slice-id",
+   "--slice-vram-bytes",
+   "--ssh-port",
+   "--ssh-user",
+   "--ttl-seconds",
+   "--wait-for-capacity-seconds"
+  ]
+ },
+ "gpu-instances delete": {
+  "arguments": 1,
+  "options": [
+   "--force"
+  ]
+ },
+ "gpu-instances get": {
+  "arguments": 1,
+  "options": []
+ },
+ "gpu-instances list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--cluster-id",
+   "--include-stopped",
+   "--node-id",
+   "--page",
+   "--page-size",
+   "--search",
+   "--state"
+  ]
+ },
+ "gpu-instances start": {
+  "arguments": 1,
+  "options": []
+ },
+ "gpu-instances stop": {
+  "arguments": 1,
+  "options": [
+   "--file",
+   "--force",
+   "--remove-volumes",
+   "--set"
+  ]
+ },
+ "gpu-instances update": {
+  "arguments": 1,
+  "options": [
+   "--authorized-keys",
+   "--description",
+   "--file",
+   "--idle-timeout-seconds",
+   "--set",
+   "--ttl-seconds"
+  ]
+ },
+ "instances drain": {
+  "arguments": 1,
+  "options": [
+   "--file",
+   "--set",
+   "--then",
+   "--timeout-seconds"
+  ]
+ },
+ "instances get": {
+  "arguments": 1,
+  "options": []
+ },
+ "instances list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--deployment-id",
+   "--health",
+   "--include-stopped",
+   "--node-id",
+   "--page",
+   "--page-size",
+   "--sort",
+   "--state"
+  ]
+ },
+ "instances restart": {
+  "arguments": 1,
+  "options": [
+   "--file",
+   "--set",
+   "--then",
+   "--timeout-seconds"
+  ]
+ },
+ "instances sessions": {
+  "arguments": 1,
+  "options": []
+ },
+ "instances stop": {
+  "arguments": 1,
+  "options": [
+   "--force"
+  ]
+ },
+ "instances update": {
+  "arguments": 1,
+  "options": [
+   "--file",
+   "--set",
+   "--traffic-weight"
+  ]
+ },
+ "ip-rules check": {
+  "arguments": 0,
+  "options": [
+   "--file",
+   "--ip",
+   "--scope",
+   "--set"
+  ]
+ },
+ "ip-rules create": {
+  "arguments": 0,
+  "options": [
+   "--action",
+   "--cidr",
+   "--description",
+   "--enabled",
+   "--expires-at",
+   "--file",
+   "--scope",
+   "--set"
+  ]
+ },
+ "ip-rules delete": {
+  "arguments": 1,
+  "options": []
+ },
+ "ip-rules get": {
+  "arguments": 1,
+  "options": []
+ },
+ "ip-rules list": {
+  "arguments": 0,
+  "options": [
+   "--action",
+   "--all",
+   "--enabled",
+   "--page",
+   "--page-size",
+   "--scope",
+   "--sort"
+  ]
+ },
+ "ip-rules update": {
+  "arguments": 1,
+  "options": [
+   "--action",
+   "--cidr",
+   "--description",
+   "--enabled",
+   "--expires-at",
+   "--file",
+   "--scope",
+   "--set"
+  ]
+ },
+ "layouts apply": {
+  "arguments": 1,
+  "options": [
+   "--drain-timeout-seconds",
+   "--file",
+   "--prefetch-only",
+   "--set"
+  ]
+ },
+ "layouts capture": {
+  "arguments": 0,
+  "options": [
+   "--cluster-id",
+   "--description",
+   "--file",
+   "--name",
+   "--set"
+  ]
+ },
+ "layouts create": {
+  "arguments": 0,
+  "options": [
+   "--description",
+   "--file",
+   "--name",
+   "--set",
+   "--unlisted-policy"
+  ]
+ },
+ "layouts delete": {
+  "arguments": 1,
+  "options": []
+ },
+ "layouts get": {
+  "arguments": 1,
+  "options": []
+ },
+ "layouts list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--page",
+   "--page-size",
+   "--search",
+   "--sort"
+  ]
+ },
+ "layouts preview": {
+  "arguments": 1,
+  "options": []
+ },
+ "layouts update": {
+  "arguments": 1,
+  "options": [
+   "--description",
+   "--file",
+   "--name",
+   "--set",
+   "--unlisted-policy"
+  ]
+ },
+ "live events": {
+  "arguments": 0,
+  "options": [
+   "--limit",
+   "--topic"
+  ]
+ },
+ "live ws": {
+  "arguments": 0,
+  "options": []
+ },
+ "login": {
+  "arguments": 0,
+  "options": [
+   "--ca-bundle",
+   "--endpoint",
+   "--no-keyring",
+   "--password",
+   "--password-stdin",
+   "--save-as",
+   "--username"
+  ]
+ },
+ "logout": {
+  "arguments": 0,
+  "options": []
+ },
+ "logs export": {
+  "arguments": 0,
+  "options": [
+   "--from",
+   "--instance-id",
+   "--level",
+   "--node-id",
+   "--source",
+   "--to"
+  ]
+ },
+ "logs list": {
+  "arguments": 0,
+  "options": [
+   "--cursor",
+   "--deployment-id",
+   "--from",
+   "--instance-id",
+   "--level",
+   "--limit",
+   "--node-id",
+   "--request-id",
+   "--search",
+   "--source",
+   "--stream",
+   "--to"
+  ]
+ },
+ "logs stream": {
+  "arguments": 0,
+  "options": [
+   "--deployment-id",
+   "--instance-id",
+   "--level",
+   "--limit",
+   "--node-id",
+   "--search",
+   "--source"
+  ]
+ },
+ "metering batches cancel": {
+  "arguments": 1,
+  "options": []
+ },
+ "metering batches get": {
+  "arguments": 1,
+  "options": []
+ },
+ "metering batches list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--api-key-id",
+   "--page",
+   "--page-size",
+   "--status"
+  ]
+ },
+ "metering usage export": {
+  "arguments": 0,
+  "options": [
+   "--api-key-id",
+   "--cluster-id",
+   "--deployment-id",
+   "--format",
+   "--from",
+   "--group-by",
+   "--mode",
+   "--model-id",
+   "--node-id",
+   "--status",
+   "--to"
+  ]
+ },
+ "metering usage list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--api-key-id",
+   "--cluster-id",
+   "--deployment-id",
+   "--endpoint",
+   "--format",
+   "--from",
+   "--model-id",
+   "--node-id",
+   "--page",
+   "--page-size",
+   "--request-id",
+   "--sort",
+   "--status",
+   "--to"
+  ]
+ },
+ "metering usage summary": {
+  "arguments": 0,
+  "options": [
+   "--api-key-id",
+   "--cluster-id",
+   "--deployment-id",
+   "--format",
+   "--from",
+   "--group-by",
+   "--model-id",
+   "--node-id",
+   "--status",
+   "--to"
+  ]
+ },
+ "metrics catalog": {
+  "arguments": 0,
+  "options": []
+ },
+ "metrics gpu": {
+  "arguments": 0,
+  "options": [
+   "--aggregate",
+   "--cluster-id",
+   "--device-id",
+   "--from",
+   "--metrics",
+   "--node-id",
+   "--step",
+   "--to"
+  ]
+ },
+ "metrics inference": {
+  "arguments": 0,
+  "options": [
+   "--aggregate",
+   "--deployment-id",
+   "--from",
+   "--instance-id",
+   "--metrics",
+   "--model-id",
+   "--node-id",
+   "--step",
+   "--to"
+  ]
+ },
+ "metrics overview": {
+  "arguments": 0,
+  "options": []
+ },
+ "metrics prometheus": {
+  "arguments": 0,
+  "options": []
+ },
+ "metrics sessions": {
+  "arguments": 0,
+  "options": [
+   "--from",
+   "--instance-id",
+   "--request-id",
+   "--session-key",
+   "--step",
+   "--to"
+  ]
+ },
+ "metrics sessions-live": {
+  "arguments": 0,
+  "options": [
+   "--deployment-id",
+   "--instance-id",
+   "--node-id"
+  ]
+ },
+ "metrics usage": {
+  "arguments": 0,
+  "options": [
+   "--api-key-id",
+   "--deployment-id",
+   "--from",
+   "--group-by",
+   "--metrics",
+   "--model-id",
+   "--node-id",
+   "--step",
+   "--to"
+  ]
+ },
+ "models delete": {
+  "arguments": 1,
+  "options": [
+   "--evict-cache"
+  ]
+ },
+ "models get": {
+  "arguments": 1,
+  "options": []
+ },
+ "models list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--family",
+   "--page",
+   "--page-size",
+   "--priority",
+   "--search",
+   "--sort",
+   "--source",
+   "--tag",
+   "--type"
+  ]
+ },
+ "models register": {
+  "arguments": 0,
+  "options": [
+   "--aliases",
+   "--allow-pickle",
+   "--default-context-size",
+   "--description",
+   "--display-name",
+   "--family",
+   "--file",
+   "--name",
+   "--priority",
+   "--repo-id",
+   "--set",
+   "--source",
+   "--tags",
+   "--tool-parser-default",
+   "--trust-remote-code",
+   "--type"
+  ]
+ },
+ "models update": {
+  "arguments": 1,
+  "options": [
+   "--aliases",
+   "--allow-pickle",
+   "--default-context-size",
+   "--description",
+   "--display-name",
+   "--family",
+   "--file",
+   "--name",
+   "--priority",
+   "--set",
+   "--tags",
+   "--tool-parser-default",
+   "--trust-remote-code",
+   "--type"
+  ]
+ },
+ "models versions add": {
+  "arguments": 1,
+  "options": [
+   "--file",
+   "--files",
+   "--is-default",
+   "--local-path",
+   "--quantization",
+   "--revision",
+   "--set",
+   "--version"
+  ]
+ },
+ "models versions cache": {
+  "arguments": 2,
+  "options": []
+ },
+ "models versions delete": {
+  "arguments": 2,
+  "options": []
+ },
+ "models versions files": {
+  "arguments": 2,
+  "options": []
+ },
+ "models versions get": {
+  "arguments": 2,
+  "options": []
+ },
+ "models versions list": {
+  "arguments": 1,
+  "options": []
+ },
+ "models versions update": {
+  "arguments": 2,
+  "options": [
+   "--file",
+   "--is-default",
+   "--quantization",
+   "--set",
+   "--version"
+  ]
+ },
+ "models versions verify": {
+  "arguments": 2,
+  "options": []
+ },
+ "nodes cache": {
+  "arguments": 1,
+  "options": []
+ },
+ "nodes certificates list": {
+  "arguments": 1,
+  "options": []
+ },
+ "nodes certificates revoke": {
+  "arguments": 2,
+  "options": [
+   "--file",
+   "--reason",
+   "--set"
+  ]
+ },
+ "nodes certificates rotate": {
+  "arguments": 1,
+  "options": []
+ },
+ "nodes command": {
+  "arguments": 2,
+  "options": []
+ },
+ "nodes commands": {
+  "arguments": 1,
+  "options": [
+   "--all",
+   "--page",
+   "--page-size",
+   "--state"
+  ]
+ },
+ "nodes devices": {
+  "arguments": 1,
+  "options": []
+ },
+ "nodes drain": {
+  "arguments": 1,
+  "options": [
+   "--file",
+   "--move-instances",
+   "--reason",
+   "--set",
+   "--timeout-seconds"
+  ]
+ },
+ "nodes get": {
+  "arguments": 1,
+  "options": []
+ },
+ "nodes hash": {
+  "arguments": 1,
+  "options": [
+   "--file",
+   "--paths",
+   "--root",
+   "--set",
+   "--wait-seconds"
+  ]
+ },
+ "nodes instances": {
+  "arguments": 1,
+  "options": [
+   "--all",
+   "--page",
+   "--page-size"
+  ]
+ },
+ "nodes join-tokens create": {
+  "arguments": 0,
+  "options": [
+   "--cluster-id",
+   "--file",
+   "--max-uses",
+   "--node-name-hint",
+   "--set",
+   "--ttl-minutes"
+  ]
+ },
+ "nodes join-tokens list": {
+  "arguments": 0,
+  "options": [
+   "--active-only",
+   "--all",
+   "--cluster-id",
+   "--page",
+   "--page-size"
+  ]
+ },
+ "nodes join-tokens revoke": {
+  "arguments": 1,
+  "options": []
+ },
+ "nodes list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--cluster-id",
+   "--label",
+   "--os",
+   "--page",
+   "--page-size",
+   "--search",
+   "--sort",
+   "--status"
+  ]
+ },
+ "nodes remove": {
+  "arguments": 1,
+  "options": [
+   "--force"
+  ]
+ },
+ "nodes scan": {
+  "arguments": 1,
+  "options": [
+   "--file",
+   "--max-depth",
+   "--max-entries",
+   "--path",
+   "--read-metadata",
+   "--recursive",
+   "--set",
+   "--wait-seconds"
+  ]
+ },
+ "nodes undrain": {
+  "arguments": 1,
+  "options": []
+ },
+ "nodes update": {
+  "arguments": 1,
+  "options": [
+   "--cache-limit-bytes",
+   "--file",
+   "--name",
+   "--price-plan-id",
+   "--proxy-address",
+   "--proxy-port",
+   "--set"
+  ]
+ },
+ "pki ca": {
+  "arguments": 0,
+  "options": []
+ },
+ "pki certificates list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--expiring-within-days",
+   "--kind",
+   "--page",
+   "--page-size",
+   "--revoked"
+  ]
+ },
+ "pki crl": {
+  "arguments": 0,
+  "options": []
+ },
+ "pki issue": {
+  "arguments": 0,
+  "options": [
+   "--common-name",
+   "--csr-pem",
+   "--file",
+   "--kind",
+   "--sans",
+   "--set",
+   "--validity-days"
+  ]
+ },
+ "pki revoke": {
+  "arguments": 1,
+  "options": [
+   "--file",
+   "--reason",
+   "--set"
+  ]
+ },
+ "price-plans create": {
+  "arguments": 0,
+  "options": [
+   "--description",
+   "--file",
+   "--is-default",
+   "--name",
+   "--set",
+   "--usd-per-1k-cached-tokens",
+   "--usd-per-1k-input-tokens",
+   "--usd-per-1k-output-tokens",
+   "--usd-per-gpu-minute"
+  ]
+ },
+ "price-plans delete": {
+  "arguments": 1,
+  "options": []
+ },
+ "price-plans get": {
+  "arguments": 1,
+  "options": []
+ },
+ "price-plans list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--page",
+   "--page-size",
+   "--search",
+   "--sort"
+  ]
+ },
+ "price-plans update": {
+  "arguments": 1,
+  "options": [
+   "--description",
+   "--file",
+   "--is-default",
+   "--name",
+   "--set",
+   "--usd-per-1k-cached-tokens",
+   "--usd-per-1k-input-tokens",
+   "--usd-per-1k-output-tokens",
+   "--usd-per-gpu-minute"
+  ]
+ },
+ "rule-runs get": {
+  "arguments": 1,
+  "options": []
+ },
+ "rule-runs list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--deployment-id",
+   "--fired",
+   "--from",
+   "--outcome",
+   "--page",
+   "--page-size",
+   "--rule-type",
+   "--to"
+  ]
+ },
+ "rules create": {
+  "arguments": 0,
+  "options": [
+   "--cooldown-seconds",
+   "--description",
+   "--dry-run",
+   "--enabled",
+   "--evaluation-interval-seconds",
+   "--file",
+   "--name",
+   "--priority",
+   "--set",
+   "--type"
+  ]
+ },
+ "rules delete": {
+  "arguments": 1,
+  "options": []
+ },
+ "rules disable": {
+  "arguments": 1,
+  "options": []
+ },
+ "rules dry-run": {
+  "arguments": 1,
+  "options": []
+ },
+ "rules enable": {
+  "arguments": 1,
+  "options": []
+ },
+ "rules get": {
+  "arguments": 1,
+  "options": []
+ },
+ "rules list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--enabled",
+   "--page",
+   "--page-size",
+   "--search",
+   "--sort",
+   "--type"
+  ]
+ },
+ "rules run": {
+  "arguments": 1,
+  "options": []
+ },
+ "rules runs": {
+  "arguments": 1,
+  "options": [
+   "--all",
+   "--fired",
+   "--from",
+   "--outcome",
+   "--page",
+   "--page-size",
+   "--to"
+  ]
+ },
+ "rules schemas": {
+  "arguments": 0,
+  "options": []
+ },
+ "rules update": {
+  "arguments": 1,
+  "options": [
+   "--cooldown-seconds",
+   "--description",
+   "--dry-run",
+   "--enabled",
+   "--evaluation-interval-seconds",
+   "--file",
+   "--name",
+   "--priority",
+   "--set"
+  ]
+ },
+ "swaps cancel": {
+  "arguments": 1,
+  "options": []
+ },
+ "swaps create": {
+  "arguments": 0,
+  "options": [
+   "--deployment-id",
+   "--device-ids",
+   "--drain-timeout-seconds",
+   "--dry-run",
+   "--file",
+   "--force",
+   "--instance-id",
+   "--kind",
+   "--node-id",
+   "--set"
+  ]
+ },
+ "swaps get": {
+  "arguments": 1,
+  "options": []
+ },
+ "swaps list": {
+  "arguments": 0,
+  "options": [
+   "--active-only",
+   "--all",
+   "--deployment-id",
+   "--from",
+   "--kind",
+   "--node-id",
+   "--page",
+   "--page-size",
+   "--sort",
+   "--state",
+   "--to",
+   "--trigger"
+  ]
+ },
+ "swaps retry": {
+  "arguments": 1,
+  "options": []
+ },
+ "system branding": {
+  "arguments": 0,
+  "options": []
+ },
+ "system health": {
+  "arguments": 0,
+  "options": []
+ },
+ "system info": {
+  "arguments": 0,
+  "options": []
+ },
+ "system live": {
+  "arguments": 0,
+  "options": []
+ },
+ "system ready": {
+  "arguments": 0,
+  "options": []
+ },
+ "topology show": {
+  "arguments": 0,
+  "options": [
+   "--cluster-id",
+   "--include-stopped"
+  ]
+ },
+ "traces get": {
+  "arguments": 1,
+  "options": []
+ },
+ "traces list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--api-key-id",
+   "--deployment-id",
+   "--error",
+   "--format",
+   "--from",
+   "--instance-id",
+   "--min-duration-ms",
+   "--model-id",
+   "--node-id",
+   "--page",
+   "--page-size",
+   "--request-id",
+   "--service",
+   "--status-code",
+   "--to"
+  ]
+ },
+ "vault create": {
+  "arguments": 0,
+  "options": [
+   "--base-url",
+   "--description",
+   "--expires-at",
+   "--file",
+   "--name",
+   "--provider",
+   "--set",
+   "--type",
+   "--value"
+  ]
+ },
+ "vault delete": {
+  "arguments": 1,
+  "options": []
+ },
+ "vault get": {
+  "arguments": 1,
+  "options": []
+ },
+ "vault list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--include-system",
+   "--page",
+   "--page-size",
+   "--provider",
+   "--search",
+   "--sort",
+   "--status",
+   "--type"
+  ]
+ },
+ "vault metadata": {
+  "arguments": 0,
+  "options": []
+ },
+ "vault reveal": {
+  "arguments": 1,
+  "options": []
+ },
+ "vault stats": {
+  "arguments": 0,
+  "options": []
+ },
+ "vault test": {
+  "arguments": 1,
+  "options": []
+ },
+ "vault update": {
+  "arguments": 1,
+  "options": [
+   "--base-url",
+   "--description",
+   "--expires-at",
+   "--file",
+   "--name",
+   "--provider",
+   "--set",
+   "--type",
+   "--value"
+  ]
+ },
+ "vault usage": {
+  "arguments": 1,
+  "options": []
+ }
+}

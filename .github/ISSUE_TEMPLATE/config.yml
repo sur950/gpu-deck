@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/sur950/gpu-deck/discussions
+    about: Ask how something works or talk through an idea before opening an issue.
+  - name: Security vulnerability
+    url: https://github.com/sur950/gpu-deck/security/advisories/new
+    about: Please report security issues privately.
+  - name: Documentation
+    url: https://sur950.github.io/gpu-deck/
+    about: Install, operate and secure GPU Deck.

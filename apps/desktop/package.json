@@ -1,0 +1,39 @@
+{
+  "name": "desktop",
+  "version": "1.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "author": "Suresh Konakanchi",
+  "homepage": "https://sur950.github.io/gpu-deck/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sur950/gpu-deck.git",
+    "directory": "apps/desktop"
+  },
+  "bugs": "https://github.com/sur950/gpu-deck/issues",
+  "type": "module",
+  "description": "GPU Deck desktop shell (Tauri 2): native connect screen, then the server's own web UI",
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "type:check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:rust": "cd src-tauri && cargo test",
+    "tauri": "tauri",
+    "build:mac": "tauri build --bundles app && scripts/make-dmg.sh",
+    "icons": "python3 scripts/make-icons.py && tauri icon src-tauri/icons/app-icon.png && rm -rf src-tauri/icons/android src-tauri/icons/ios",
+    "release:config": "node scripts/updater-config.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.5"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.5",
+    "jsdom": "31.0.1",
+    "typescript": "6.0.3",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  }
+}

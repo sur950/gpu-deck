@@ -1,0 +1,432 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/agent-protocol/v1/command.json",
+  "title": "command (hub -> agent)",
+  "description": "An instruction for the agent. The envelope id is the command id and idempotency key: an agent that sees the same id twice (reconnect replay) must not execute twice but must re-send its latest command_result. Every command gets at least one command_result (status accepted within intervals.command_ack_timeout_seconds, then a terminal status). Commands are executed concurrently unless they touch the same instance_id / engine_process_id, in which case they run in arrival order.",
+  "type": "object",
+  "required": ["command", "args"],
+  "properties": {
+    "command": {
+      "type": "string",
+      "enum": ["load_model", "unload_model", "drain_instance", "start_engine", "stop_engine", "restart_instance", "prefetch_model", "evict_cache", "run_benchmark", "update_config", "rotate_cert", "install_cert", "cancel", "scan_path", "hash_files", "start_ssh_instance", "stop_ssh_instance"]
+    },
+    "timeout_seconds": { "type": "integer", "minimum": 1, "default": 900, "description": "Agent aborts and reports failed(code=timeout) after this; the hub independently marks the row timed_out at expires_at." },
+    "swap_operation_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }], "description": "Swap this command belongs to (for log correlation only)." },
+    "args": { "type": "object" }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    { "if": { "properties": { "command": { "const": "load_model" } } },       "then": { "properties": { "args": { "$ref": "#/$defs/LoadModelArgs" } } } },
+    { "if": { "properties": { "command": { "const": "unload_model" } } },     "then": { "properties": { "args": { "$ref": "#/$defs/UnloadModelArgs" } } } },
+    { "if": { "properties": { "command": { "const": "drain_instance" } } },   "then": { "properties": { "args": { "$ref": "#/$defs/DrainInstanceArgs" } } } },
+    { "if": { "properties": { "command": { "const": "start_engine" } } },     "then": { "properties": { "args": { "$ref": "#/$defs/StartEngineArgs" } } } },
+    { "if": { "properties": { "command": { "const": "stop_engine" } } },      "then": { "properties": { "args": { "$ref": "#/$defs/StopEngineArgs" } } } },
+    { "if": { "properties": { "command": { "const": "restart_instance" } } }, "then": { "properties": { "args": { "$ref": "#/$defs/RestartInstanceArgs" } } } },
+    { "if": { "properties": { "command": { "const": "prefetch_model" } } },   "then": { "properties": { "args": { "$ref": "#/$defs/PrefetchModelArgs" } } } },
+    { "if": { "properties": { "command": { "const": "evict_cache" } } },      "then": { "properties": { "args": { "$ref": "#/$defs/EvictCacheArgs" } } } },
+    { "if": { "properties": { "command": { "const": "run_benchmark" } } },    "then": { "properties": { "args": { "$ref": "#/$defs/RunBenchmarkArgs" } } } },
+    { "if": { "properties": { "command": { "const": "update_config" } } },    "then": { "properties": { "args": { "$ref": "#/$defs/UpdateConfigArgs" } } } },
+    { "if": { "properties": { "command": { "const": "rotate_cert" } } },      "then": { "properties": { "args": { "$ref": "#/$defs/RotateCertArgs" } } } },
+    { "if": { "properties": { "command": { "const": "install_cert" } } },     "then": { "properties": { "args": { "$ref": "#/$defs/InstallCertArgs" } } } },
+    { "if": { "properties": { "command": { "const": "cancel" } } },           "then": { "properties": { "args": { "$ref": "#/$defs/CancelArgs" } } } },
+    { "if": { "properties": { "command": { "const": "scan_path" } } },        "then": { "properties": { "args": { "$ref": "#/$defs/ScanPathArgs" } } } },
+    { "if": { "properties": { "command": { "const": "hash_files" } } },       "then": { "properties": { "args": { "$ref": "#/$defs/HashFilesArgs" } } } },
+    { "if": { "properties": { "command": { "const": "start_ssh_instance" } } }, "then": { "properties": { "args": { "$ref": "#/$defs/StartSshInstanceArgs" } } } },
+    { "if": { "properties": { "command": { "const": "stop_ssh_instance" } } },  "then": { "properties": { "args": { "$ref": "#/$defs/StopSshInstanceArgs" } } } }
+  ],
+  "$defs": {
+    "LoadModelArgs": {
+      "type": "object",
+      "description": "Make instance_id serve model on devices. Steps on the agent: ensure cache (download missing files from source, verify sha256, refuse pickle unless allow_pickle), ensure engine artifact, start process (or load into engine_process_id for router mode), wait for health, report succeeded with the port. Result: {\"instance_id\",\"port\",\"pid\",\"engine_process_id\",\"served_model_name\",\"ready_at\",\"load_seconds\",\"vram_bytes_used\"} (+ \"distributed_rank\" when launch.distributed is set). Cross-node pipeline parallel: send one load_model per node of the group, same instance_id, each with its own devices and launch.distributed.rank (common.json DistributedSpec); workers (rank > 0) are ready when their stage process is up, the head when its HTTP health passes.",
+      "required": ["instance_id", "deployment_id", "engine", "model", "devices", "port", "launch"],
+      "properties": {
+        "instance_id": { "$ref": "common.json#/$defs/uuid" },
+        "deployment_id": { "$ref": "common.json#/$defs/uuid" },
+        "engine": { "$ref": "common.json#/$defs/EngineSpec" },
+        "model": { "$ref": "common.json#/$defs/ModelSpec" },
+        "devices": { "type": "array", "items": { "$ref": "common.json#/$defs/DeviceAssignment" }, "minItems": 1 },
+        "port": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "0 = agent picks a free port in engine.port_range and returns it in the result." },
+        "engine_process_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }], "description": "Router mode: load into this already running engine process (start_engine first). Null = dedicated process." },
+        "launch": { "$ref": "common.json#/$defs/LaunchSpec" },
+        "draft_model": { "oneOf": [{ "$ref": "common.json#/$defs/ModelSpec" }, { "type": "null" }], "description": "Speculative decoding draft model files, when launch.spec_decoding.method = draft_model." },
+        "health_timeout_seconds": { "type": "integer", "minimum": 5, "default": 600 }
+      },
+      "additionalProperties": false
+    },
+    "UnloadModelArgs": {
+      "type": "object",
+      "description": "Stop serving an instance. Unless force, the agent first drains (same as drain_instance) and fails with drain_timeout if sessions remain after drain_timeout_seconds. Router mode: unload the model from the router; dedicated: SIGTERM then SIGKILL after kill_grace_seconds. Result: {\"instance_id\",\"drained\":bool,\"active_at_unload\":int,\"freed_vram_bytes\"}.",
+      "required": ["instance_id"],
+      "properties": {
+        "instance_id": { "$ref": "common.json#/$defs/uuid" },
+        "force": { "type": "boolean", "default": false },
+        "drain_timeout_seconds": { "type": "integer", "minimum": 0, "default": 120 },
+        "kill_grace_seconds": { "type": "integer", "minimum": 1, "default": 15 },
+        "stop_engine_if_empty": { "type": "boolean", "default": false, "description": "Router mode: also stop the engine process when this was its last model." }
+      },
+      "additionalProperties": false
+    },
+    "DrainInstanceArgs": {
+      "type": "object",
+      "description": "Stop accepting new requests at the agent proxy for this instance (503 with Retry-After for new connections; the API layer has already removed it from routing) and wait until active+waiting sessions reach zero or the timeout passes. Emits drain_progress events every 5 s. Result: {\"instance_id\",\"drained\":bool,\"active_sessions\",\"waiting_sessions\",\"elapsed_seconds\"}. succeeded even if timed out when wait_for_zero=false; failed(code=drain_timeout) otherwise.",
+      "required": ["instance_id"],
+      "properties": {
+        "instance_id": { "$ref": "common.json#/$defs/uuid" },
+        "timeout_seconds": { "type": "integer", "minimum": 0, "default": 120 },
+        "wait_for_zero": { "type": "boolean", "default": true },
+        "resume": { "type": "boolean", "default": false, "description": "True = cancel a drain and accept traffic again (rollback path)." }
+      },
+      "additionalProperties": false
+    },
+    "StartEngineArgs": {
+      "type": "object",
+      "description": "Start a shared engine process without a model (llama.cpp router mode, or a custom engine that loads models through its own API). launch.distributed is honoured as for load_model. Result: {\"engine_process_id\",\"port\",\"pid\"}.",
+      "required": ["engine_process_id", "engine", "devices", "port"],
+      "properties": {
+        "engine_process_id": { "$ref": "common.json#/$defs/uuid" },
+        "engine": { "$ref": "common.json#/$defs/EngineSpec" },
+        "devices": { "type": "array", "items": { "$ref": "common.json#/$defs/DeviceAssignment" }, "minItems": 1 },
+        "port": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "launch": { "$ref": "common.json#/$defs/LaunchSpec" }
+      },
+      "additionalProperties": false
+    },
+    "StopEngineArgs": {
+      "type": "object",
+      "required": ["engine_process_id"],
+      "properties": {
+        "engine_process_id": { "$ref": "common.json#/$defs/uuid" },
+        "force": { "type": "boolean", "default": false },
+        "drain_timeout_seconds": { "type": "integer", "minimum": 0, "default": 120 },
+        "kill_grace_seconds": { "type": "integer", "minimum": 1, "default": 15 }
+      },
+      "additionalProperties": false
+    },
+    "RestartInstanceArgs": {
+      "type": "object",
+      "description": "drain -> unload -> load with the same spec the agent already holds for the instance (the agent keeps the last LoadModelArgs per instance on disk). Result as load_model.",
+      "required": ["instance_id"],
+      "properties": {
+        "instance_id": { "$ref": "common.json#/$defs/uuid" },
+        "drain_timeout_seconds": { "type": "integer", "minimum": 0, "default": 120 },
+        "force": { "type": "boolean", "default": false }
+      },
+      "additionalProperties": false
+    },
+    "PrefetchModelArgs": {
+      "type": "object",
+      "description": "Download files into the cache without loading. Emits cache_changed events with progress. Result: {\"model_version_id\",\"files\":[{\"model_file_id\",\"local_path\",\"size_bytes\",\"sha256_verified\"}],\"bytes_downloaded\",\"seconds\"}.",
+      "required": ["model_version_id", "files", "cache_dir"],
+      "properties": {
+        "model_version_id": { "$ref": "common.json#/$defs/uuid" },
+        "files": { "type": "array", "items": { "$ref": "common.json#/$defs/ModelFileRef" }, "minItems": 1 },
+        "cache_dir": { "type": "string" },
+        "source": { "oneOf": [{ "$ref": "common.json#/$defs/ModelSource" }, { "type": "null" }] },
+        "pin": { "type": "boolean", "default": false },
+        "pin_reason": { "type": ["string", "null"] },
+        "allow_pickle": { "type": "boolean", "default": false },
+        "max_bandwidth_bytes_per_s": { "type": ["integer", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "EvictCacheArgs": {
+      "type": "object",
+      "description": "Delete cached files. Exactly one selector. Files used by a running instance are never deleted (failed, code=cache_in_use) unless force. Result: {\"evicted\":[model_file_id],\"freed_bytes\"}.",
+      "properties": {
+        "model_version_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }] },
+        "model_file_ids": { "type": ["array", "null"], "items": { "$ref": "common.json#/$defs/uuid" } },
+        "unpinned_older_than_seconds": { "type": ["integer", "null"], "minimum": 0, "description": "LRU sweep: evict unpinned items whose last_used_at is older than this." },
+        "target_free_bytes": { "type": ["integer", "null"], "minimum": 0, "description": "LRU sweep until at least this many bytes are free." },
+        "unpin": { "type": "boolean", "default": false, "description": "Only clear the pinned flag; do not delete." },
+        "force": { "type": "boolean", "default": false }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        { "required": ["model_version_id"], "properties": { "model_version_id": { "type": "string" } } },
+        { "required": ["model_file_ids"], "properties": { "model_file_ids": { "type": "array" } } },
+        { "required": ["unpinned_older_than_seconds"], "properties": { "unpinned_older_than_seconds": { "type": "integer" } } },
+        { "required": ["target_free_bytes"], "properties": { "target_free_bytes": { "type": "integer" } } }
+      ]
+    },
+    "RunBenchmarkArgs": {
+      "type": "object",
+      "description": "Run a load test from the node against a local instance (through 127.0.0.1:port, bypassing the proxy). Emits benchmark_progress events per concurrency level. Result: benchmark_runs.results shape plus best_concurrency, slo_met, recommendation.",
+      "required": ["benchmark_run_id", "instance_id", "port", "served_model_name", "model_type", "concurrency_levels", "workload", "duration_seconds"],
+      "properties": {
+        "benchmark_run_id": { "$ref": "common.json#/$defs/uuid" },
+        "instance_id": { "$ref": "common.json#/$defs/uuid" },
+        "port": { "type": "integer" },
+        "served_model_name": { "type": "string" },
+        "model_type": { "$ref": "common.json#/$defs/model_type" },
+        "endpoint": { "type": "string", "default": "/v1/chat/completions" },
+        "concurrency_levels": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "minItems": 1 },
+        "workload": {
+          "type": "object",
+          "properties": {
+            "input_tokens": { "type": "integer", "minimum": 1, "default": 512 },
+            "output_tokens": { "type": "integer", "minimum": 1, "default": 128 },
+            "requests_per_level": { "type": "integer", "minimum": 1, "default": 32 },
+            "dataset": { "type": "string", "enum": ["synthetic", "sharegpt_sample", "custom"], "default": "synthetic" },
+            "prompts": { "type": "array", "items": { "type": "string" }, "default": [] },
+            "stream": { "type": "boolean", "default": true }
+          },
+          "additionalProperties": false
+        },
+        "duration_seconds": { "type": "integer", "minimum": 5 },
+        "target_slo": {
+          "type": "object",
+          "properties": {
+            "ttft_ms_p95": { "type": ["number", "null"] },
+            "e2e_ms_p95": { "type": ["number", "null"] },
+            "tpot_ms_p95": { "type": ["number", "null"] },
+            "min_generation_tps": { "type": ["number", "null"] },
+            "max_error_rate_pct": { "type": "number", "default": 1 }
+          },
+          "additionalProperties": false
+        },
+        "auto_tune": {
+          "type": ["object", "null"],
+          "description": "When set the agent also sweeps these launch-flag variants (restarting the instance between variants) and recommends the best one. Only allowed on instances with no live traffic.",
+          "properties": {
+            "flag_variants": { "type": "array", "items": { "type": "object" }, "maxItems": 8 }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "UpdateConfigArgs": {
+      "type": "object",
+      "description": "Change agent runtime settings without restart. Same keys as config_push.settings; only present keys change.",
+      "properties": {
+        "settings": { "$ref": "config_push.json#/$defs/Settings" }
+      },
+      "additionalProperties": false
+    },
+    "RotateCertArgs": {
+      "type": "object",
+      "description": "Agent generates a fresh key pair and returns a CSR in the result ({\"csr_pem\"}). The hub signs it and follows with install_cert. The old cert stays valid until install_cert succeeds.",
+      "properties": {
+        "key_type": { "type": "string", "enum": ["ecdsa_p256", "ed25519", "rsa_3072"], "default": "ecdsa_p256" },
+        "reason": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "InstallCertArgs": {
+      "type": "object",
+      "description": "Install the signed certificate matching the key from rotate_cert, then reconnect the hub socket with it (the hub expects a new hello within 30 s). Result: {\"fingerprint_sha256\",\"not_after\"}.",
+      "required": ["certificate_pem", "ca_bundle_pem", "not_after", "serial"],
+      "properties": {
+        "certificate_pem": { "type": "string" },
+        "ca_bundle_pem": { "type": "string" },
+        "serial": { "type": "string" },
+        "not_after": { "$ref": "common.json#/$defs/timestamp" }
+      },
+      "additionalProperties": false
+    },
+    "CancelArgs": {
+      "type": "object",
+      "description": "Cancel a running command (download, benchmark, drain wait, scan_path, hash_files). The target reports failed(code=cancelled). Result: {\"cancelled\":bool}.",
+      "required": ["target_command_id"],
+      "properties": {
+        "target_command_id": { "$ref": "common.json#/$defs/uuid" }
+      },
+      "additionalProperties": false
+    },
+    "ScanPathArgs": {
+      "type": "object",
+      "description": "List model candidates under a path on the node's disk (added 2026-11-17, agent >= 1.1.0). Read-only: nothing is written, hashed or moved. Recognises Ollama stores (manifests/ + blobs/ -> kind ollama_blob, sha256 from the manifest digest), LM Studio (~/.lmstudio[/models], incl. .internal/bundled-models -> lmstudio), Hugging Face caches (models--org--name/snapshots/<rev> -> hf_cache), MLX directories (mlx_dir) and plain GGUF files / safetensors / pickle directories (plain). `~` and `~/...` are expanded to the agent user's home. Cancellable. Result: ScanPathResult. Errors: invalid_args (relative path), path_not_found, permission_denied.",
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "maxLength": 4096, "description": "Absolute path (a file or a directory), or `~` / `~/...`." },
+        "recursive": { "type": "boolean", "default": true },
+        "max_depth": { "type": "integer", "minimum": 1, "maximum": 10, "default": 4 },
+        "max_entries": { "type": "integer", "minimum": 1, "maximum": 200000, "default": 20000, "description": "Stop after visiting this many directory entries (result.truncated = true)." },
+        "read_metadata": { "type": "boolean", "default": true, "description": "Read GGUF headers and config.json for suggestions (architecture, context size, quantization)." }
+      },
+      "additionalProperties": false
+    },
+    "ScanPathResult": {
+      "type": "object",
+      "description": "command_result.result of scan_path.",
+      "required": ["path", "candidates", "truncated"],
+      "properties": {
+        "path": { "type": "string", "description": "The expanded absolute path that was scanned." },
+        "candidates": { "type": "array", "items": { "$ref": "#/$defs/ScanCandidate" } },
+        "truncated": { "type": "boolean" },
+        "visited": { "type": "integer", "minimum": 0 },
+        "seconds": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "ScanCandidate": {
+      "type": "object",
+      "description": "One importable model (same shape as admin.yaml LocalScanCandidate plus absolute paths and raw metadata). A diffusers pipeline (model_index.json at the root) is one candidate with every component file. The agent fills suggested.family/type with the control plane's detection rules; the control plane completes what is still null.",
+      "required": ["path", "kind", "format", "files", "total_size_bytes"],
+      "properties": {
+        "path": { "type": "string", "description": "Candidate root: a file (single GGUF, Ollama blob) or a directory." },
+        "kind": { "type": "string", "enum": ["plain", "ollama_blob", "lmstudio", "hf_cache", "mlx_dir"] },
+        "format": { "$ref": "common.json#/$defs/model_file_format" },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["path", "absolute_path", "size_bytes", "format"],
+            "properties": {
+              "path": { "type": "string", "description": "Relative to the candidate root, '/'-separated (file name for single files / blobs; component/file for diffusers pipelines)." },
+              "absolute_path": { "type": "string", "description": "Real path on the node (symlinks resolved) — use as ModelSource local_path." },
+              "size_bytes": { "type": "integer", "minimum": 0 },
+              "format": { "$ref": "common.json#/$defs/model_file_format" },
+              "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "Known without hashing (Ollama digest); otherwise null — use hash_files." },
+              "is_required": { "type": "boolean", "default": true }
+            },
+            "additionalProperties": false
+          }
+        },
+        "total_size_bytes": { "type": "integer", "minimum": 0 },
+        "suggested": {
+          "type": "object",
+          "description": "Hints: name, family, type, quantization (GGUF file type, name, or config.json quantization_config: FP8, AWQ, GPTQ, ...), context_size (also from text_config), parameter_count, architecture, size_label, display_name, plus layout-specific keys ollama_name, lmstudio_name, publisher, repo_id, revision, pipeline_class (diffusers). null = unknown.",
+          "default": {}
+        },
+        "metadata": { "type": "object", "default": {}, "description": "Raw GGUF header keys (general.*, <arch>.context_length, block_count, ...) or a config.json subset." }
+      },
+      "additionalProperties": false
+    },
+    "HashFilesArgs": {
+      "type": "object",
+      "description": "sha256 of files on the node's disk (added 2026-11-17, agent >= 1.1.0). Streams progress as command_result running frames (progress_pct by bytes, progress_message \"<done>/<n> files\") at most every progress_interval_seconds. Files are hashed one at a time; a file that cannot be read gets a per-file error and does not fail the command. Cancellable. Result: HashFilesResult.",
+      "required": ["paths"],
+      "properties": {
+        "root": { "type": ["string", "null"], "description": "When set, paths are relative to root and must resolve inside it (`..` escapes -> per-file invalid_args). `~` expanded." },
+        "paths": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "maxItems": 10000 },
+        "algorithm": { "type": "string", "enum": ["sha256"], "default": "sha256" },
+        "progress_interval_seconds": { "type": "number", "minimum": 0.2, "default": 2 }
+      },
+      "additionalProperties": false
+    },
+    "HashFilesResult": {
+      "type": "object",
+      "description": "command_result.result of hash_files. hashes holds only the files that succeeded (key = the path as sent).",
+      "required": ["files", "hashes", "bytes_hashed"],
+      "properties": {
+        "root": { "type": ["string", "null"] },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "sha256", "size_bytes"],
+            "properties": {
+              "path": { "type": "string" },
+              "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+              "size_bytes": { "type": ["integer", "null"], "minimum": 0 },
+              "error": { "oneOf": [{ "$ref": "common.json#/$defs/ErrorInfo" }, { "type": "null" }] }
+            },
+            "additionalProperties": false
+          }
+        },
+        "hashes": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+        "bytes_hashed": { "type": "integer", "minimum": 0 },
+        "seconds": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "StartSshInstanceArgs": {
+      "type": "object",
+      "description": "Run an SSH-accessible GPU container (added 2026-11-17, agent >= 1.1.0; needs a container runtime, hello.capabilities.container_runtime). The agent writes authorized_keys to <state_dir>/ssh/<id>/authorized_keys (mounted read-only at /etc/gpudeck/authorized_keys, also passed as env PUBLIC_KEY / PUBLIC_KEY_FILE / USER_NAME for linuxserver-style images), runs `image` with the devices attached (NVIDIA --gpus device=<idx>, AMD /dev/kfd + /dev/dri/renderD*, Apple: no GPU passthrough in containers) and the limits applied, publishes container_port on 127.0.0.1 only, and exposes it through its own TCP forwarder on bind_address:ssh_port (protocol.md §8). Idempotent per ssh_instance_id: a running instance is reported, not restarted. Result: SshInstanceResult. Errors: no_container_runtime, image_pull_failed, port_in_use, engine_start_failed, health_timeout, invalid_args.",
+      "required": ["ssh_instance_id", "image", "authorized_keys"],
+      "properties": {
+        "ssh_instance_id": { "$ref": "common.json#/$defs/uuid" },
+        "name": { "type": ["string", "null"], "maxLength": 63, "description": "Display name; the container is always named gpudeck-ssh-<ssh_instance_id>." },
+        "image": { "type": "string", "minLength": 1, "description": "Container image running sshd (see protocol.md §8 image contract)." },
+        "devices": { "type": "array", "items": { "$ref": "common.json#/$defs/DeviceAssignment" }, "default": [], "description": "GPUs to attach; a DeviceAssignment.slice sets that device's VRAM / compute limit." },
+        "limits": { "$ref": "#/$defs/SshInstanceLimits" },
+        "authorized_keys": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 16384 }, "minItems": 1, "maxItems": 64, "description": "OpenSSH public key lines." },
+        "ssh_user": { "type": "string", "pattern": "^[a-z_][a-z0-9_-]{0,31}$", "default": "gpudeck" },
+        "ssh_port": { "type": "integer", "minimum": 0, "maximum": 65535, "default": 0, "description": "Host port of the agent's forwarder; 0 = first free port in the agent's ssh_port_range (default 2200-2299)." },
+        "container_port": { "type": "integer", "minimum": 1, "maximum": 65535, "default": 22, "description": "Port sshd listens on inside the container (default image ghcr.io/sur950/gpu-deck-ssh: 2222)." },
+        "bind_address": { "type": ["string", "null"], "description": "IP the forwarder listens on. Null = the agent's ssh_bind setting, else the node's advertised proxy address, else 0.0.0.0." },
+        "allowed_source_cidrs": { "type": "array", "items": { "type": "string" }, "default": [], "description": "Client CIDRs accepted by the forwarder; empty = any (the node firewall still applies)." },
+        "env": { "type": "object", "additionalProperties": { "type": "string" }, "default": {} },
+        "volumes": { "type": "array", "items": { "$ref": "#/$defs/SshVolume" }, "default": [], "maxItems": 16 },
+        "ttl_seconds": { "type": ["integer", "null"], "minimum": 60, "description": "Agent stops the instance this long after start (the hub enforces TTL too)." },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" }, "default": {} },
+        "health_timeout_seconds": { "type": "integer", "minimum": 5, "default": 180, "description": "Pull + start + first SSH banner." }
+      },
+      "additionalProperties": false
+    },
+    "SshInstanceLimits": {
+      "type": "object",
+      "description": "Resource limits. vram_bytes / compute_pct apply to every attached device without its own slice: NVIDIA via CUDA MPS env (CUDA_MPS_PINNED_DEVICE_MEM_LIMIT, CUDA_MPS_ACTIVE_THREAD_PERCENTAGE; enforced only when the node runs the MPS daemon), AMD via GPUDECK_DEVICE_CORES / HSA env hints; always exported as GPUDECK_VRAM_LIMIT_BYTES / GPUDECK_COMPUTE_PCT. cpu/memory/shm/pids are enforced by the container runtime.",
+      "properties": {
+        "vram_bytes": { "type": ["integer", "null"], "minimum": 1 },
+        "compute_pct": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
+        "cpu_cores": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "memory_bytes": { "type": ["integer", "null"], "minimum": 4194304 },
+        "shm_bytes": { "type": ["integer", "null"], "minimum": 1048576 },
+        "pids": { "type": ["integer", "null"], "minimum": 16 }
+      },
+      "additionalProperties": false
+    },
+    "SshVolume": {
+      "type": "object",
+      "description": "volume = named container volume gpudeck-ssh-<ssh_instance_id>-<source> (removed on stop unless keep); bind = host path, only under the agent cache_dir (forced read-only) or a root in the agent's ssh_bind_roots setting; tmpfs = memory-backed scratch.",
+      "required": ["target"],
+      "properties": {
+        "type": { "type": "string", "enum": ["volume", "bind", "tmpfs"], "default": "volume" },
+        "source": { "type": ["string", "null"], "description": "volume: name suffix [a-z0-9_.-]; bind: absolute host path; tmpfs: ignored." },
+        "target": { "type": "string", "pattern": "^/", "description": "Absolute path inside the container." },
+        "read_only": { "type": "boolean", "default": false },
+        "keep": { "type": "boolean", "default": false, "description": "volume only: keep the named volume when the instance stops." },
+        "size_bytes": { "type": ["integer", "null"], "minimum": 1048576, "description": "tmpfs size." }
+      },
+      "additionalProperties": false
+    },
+    "SshInstanceResult": {
+      "type": "object",
+      "description": "command_result.result of start_ssh_instance. Connect with `ssh -p <host_port> <ssh_user>@<host_address>` and verify the host key against host_key_fingerprint (OpenSSH `SHA256:<base64>` form).",
+      "required": ["ssh_instance_id", "host_address", "host_port", "ssh_user", "host_key_fingerprint"],
+      "properties": {
+        "ssh_instance_id": { "$ref": "common.json#/$defs/uuid" },
+        "container_id": { "type": ["string", "null"] },
+        "host_address": { "type": "string", "description": "Address the forwarder listens on (the node's private address when bound to 0.0.0.0)." },
+        "host_port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "ssh_user": { "type": "string" },
+        "host_key_fingerprint": { "type": "string", "pattern": "^SHA256:[A-Za-z0-9+/]{43}$" },
+        "host_keys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "fingerprint"],
+            "properties": {
+              "type": { "type": "string", "description": "ssh-ed25519, ecdsa-sha2-nistp256, ssh-rsa, ..." },
+              "fingerprint": { "type": "string", "pattern": "^SHA256:[A-Za-z0-9+/]{43}$" },
+              "public_key": { "type": ["string", "null"] }
+            },
+            "additionalProperties": false
+          },
+          "default": []
+        },
+        "ssh_command": { "type": ["string", "null"] },
+        "device_ids": { "type": "array", "items": { "$ref": "common.json#/$defs/uuid" }, "default": [] },
+        "gpu_attached": { "type": "boolean", "default": false, "description": "False when the runtime cannot pass the GPU through (Apple, no NVIDIA toolkit)." },
+        "started_at": { "oneOf": [{ "$ref": "common.json#/$defs/timestamp" }, { "type": "null" }] },
+        "expires_at": { "oneOf": [{ "$ref": "common.json#/$defs/timestamp" }, { "type": "null" }] },
+        "warnings": { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "additionalProperties": false
+    },
+    "StopSshInstanceArgs": {
+      "type": "object",
+      "description": "Stop the forwarder (open sessions are cut), stop and remove the container, remove non-kept volumes and the authorized_keys file. Idempotent: an unknown id succeeds with stopped=false. Result: {\"ssh_instance_id\",\"stopped\":bool,\"container_removed\":bool,\"volumes_removed\":[name]}.",
+      "required": ["ssh_instance_id"],
+      "properties": {
+        "ssh_instance_id": { "$ref": "common.json#/$defs/uuid" },
+        "force": { "type": "boolean", "default": false, "description": "SIGKILL immediately instead of SIGTERM + kill_grace_seconds." },
+        "kill_grace_seconds": { "type": "integer", "minimum": 1, "default": 10 },
+        "remove_volumes": { "type": "boolean", "default": true, "description": "False = keep every named volume regardless of SshVolume.keep." }
+      },
+      "additionalProperties": false
+    }
+  }
+}

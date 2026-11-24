@@ -1,0 +1,53 @@
+# GPU Deck node agent (Linux). Install: binary at /usr/local/bin/gpudeck-agent, user `gpudeck`
+# (member of the GPU device groups, e.g. `video`, `render`), config /etc/gpudeck/agent.toml,
+# then: gpudeck-agent join --url https://<hub>:8443 --token gdj_... --ca-fingerprint <sha256>
+[Unit]
+Description=GPU Deck node agent
+Documentation=https://github.com/sur950/gpu-deck
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=gpudeck
+Group=gpudeck
+SupplementaryGroups=video render
+ExecStart=/usr/local/bin/gpudeck-agent --config /etc/gpudeck/agent.toml --log-json run
+Restart=always
+RestartSec=5
+# Engines (vLLM, llama.cpp, ...) outlive the agent: a restart or upgrade stops only the agent
+# process; the next start re-adopts the running engines (pid + start time + health) instead of
+# reloading them. `gpudeck-agent stop-engines` stops them (before maintenance / uninstall).
+# The agent also moves each engine into its own transient scope when it may (root / polkit).
+KillMode=process
+TimeoutStopSec=60
+LimitNOFILE=65536
+# Hardening: read-only system, writable state/cache only.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/gpudeck
+StateDirectory=gpudeck gpudeck/tmp
+StateDirectoryMode=0700
+# Engines write to /tmp (torch inductor, triton, vLLM IPC). A private /tmp that outlives agent
+# restarts (PrivateTmp= would be wiped under the running engines on every restart).
+BindPaths=/var/lib/gpudeck/tmp:/tmp
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+# GPU device nodes (NVIDIA, AMD/Hygon KFD+DRI, Moore Threads, MetaX).
+DeviceAllow=/dev/nvidiactl rw
+DeviceAllow=/dev/nvidia-uvm rw
+DeviceAllow=char-nvidia-frontend rw
+DeviceAllow=/dev/kfd rw
+DeviceAllow=char-drm rw
+DeviceAllow=/dev/mtgpu rw
+DeviceAllow=/dev/mxcd rw
+# The egress lock (`run --apply-egress-lock`) needs CAP_NET_ADMIN; grant it only when used:
+# AmbientCapabilities=CAP_NET_ADMIN
+# CapabilityBoundingSet=CAP_NET_ADMIN
+
+[Install]
+WantedBy=multi-user.target

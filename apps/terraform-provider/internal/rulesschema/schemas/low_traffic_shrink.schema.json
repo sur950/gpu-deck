@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/rules/v1/low_traffic_shrink.schema.json",
+  "title": "Low traffic shrink — params",
+  "description": "Under N requests per minute for M minutes: remove a replica (down to min_replicas) or move the deployment to a smaller slice.",
+  "type": "object",
+  "required": ["requests_per_minute_below", "for_minutes"],
+  "properties": {
+    "requests_per_minute_below": { "type": "number", "minimum": 0, "maximum": 100000, "default": 1, "title": "N: requests per minute below", "description": "Compared with metric_rollups_engine_1m.requests_delta summed over the deployment, every minute in the window must be below N." },
+    "for_minutes": { "type": "integer", "minimum": 1, "maximum": 1440, "default": 15, "title": "M: for (minutes)" },
+    "action": { "type": "string", "enum": ["remove_replica", "shrink_slice"], "default": "remove_replica", "title": "Action" },
+    "step_replicas": { "type": "integer", "minimum": 1, "maximum": 16, "default": 1, "title": "Replicas to remove per fire" },
+    "min_replicas": { "type": "integer", "minimum": 0, "maximum": 64, "default": 1, "title": "Never go below (replicas)", "description": "0 is allowed only for normal/evictable models; always_on is clamped to 1." },
+    "shrink_slice": {
+      "type": ["object", "null"],
+      "default": null,
+      "title": "Smaller slice",
+      "description": "Required when action = shrink_slice.",
+      "properties": {
+        "vram_bytes": { "type": "integer", "minimum": 1 },
+        "compute_pct": { "type": "integer", "minimum": 1, "maximum": 100 }
+      },
+      "required": ["vram_bytes"],
+      "additionalProperties": false
+    },
+    "drain_timeout_seconds": { "type": "integer", "minimum": 0, "maximum": 3600, "default": 120 }
+  },
+  "additionalProperties": false,
+  "if": { "required": ["action"], "properties": { "action": { "const": "shrink_slice" } } },
+  "then": { "required": ["shrink_slice"], "properties": { "shrink_slice": { "type": "object" } } }
+}

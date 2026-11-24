@@ -1,0 +1,318 @@
+{{- include "gpudeck.validate" . -}}
+{{- $root := . -}}
+{{- range $key, $c := .Values.components }}
+{{- if $c.enabled }}
+{{- $name := include "gpudeck.componentName" $key }}
+{{- $isWeb := eq $key "web" }}
+{{- $img := ternary $root.Values.image.web $root.Values.image.api $isWeb }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gpudeck.fullname" $root }}-{{ $name }}
+  labels:
+    {{- include "gpudeck.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  {{- if not (and $c.autoscaling $c.autoscaling.enabled) }}
+  replicas: {{ $c.replicas }}
+  {{- end }}
+  revisionHistoryLimit: 5
+  {{- if $c.singleton }}
+  strategy:
+    type: Recreate
+  {{- else }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "gpudeck.componentSelector" (list $root $name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gpudeck.componentSelector" (list $root $name) | nindent 8 }}
+        {{- with $root.Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- if not $isWeb }}
+        checksum/config: {{ include (print $root.Template.BasePath "/config.yaml") $root | sha256sum }}
+        {{- end }}
+        {{- with $root.Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "gpudeck.serviceAccountName" $root }}
+      automountServiceAccountToken: false
+      {{- include "gpudeck.imagePullSecrets" $root | nindent 6 }}
+      {{- with $root.Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ $root.Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- if $isWeb }}
+        {{- toYaml (merge (dict "runAsUser" 1001 "runAsGroup" 1001 "fsGroup" 1001) $root.Values.podSecurityContext) | nindent 8 }}
+        {{- else }}
+        {{- toYaml $root.Values.podSecurityContext | nindent 8 }}
+        {{- end }}
+      {{- if gt (int $c.replicas) 1 }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "gpudeck.componentSelector" (list $root $name) | nindent 14 }}
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "gpudeck.componentSelector" (list $root $name) | nindent 14 }}
+      {{- end }}
+      {{- with $root.Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $root.Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $root.Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          image: {{ include "gpudeck.image" (list $root $img) }}
+          imagePullPolicy: {{ $img.pullPolicy }}
+          {{- with $c.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if or $c.port $c.metricsPort }}
+          ports:
+            {{- if $c.port }}
+            - name: {{ ternary "hub" "http" (eq $key "agentHub") }}
+              containerPort: {{ $c.port }}
+              protocol: TCP
+            {{- end }}
+            {{- if $c.metricsPort }}
+            - name: metrics
+              containerPort: {{ $c.metricsPort }}
+              protocol: TCP
+            {{- end }}
+          {{- end }}
+          {{- if not $isWeb }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "gpudeck.fullname" $root }}-config
+            - secretRef:
+                name: {{ include "gpudeck.secretName" $root }}
+          {{- end }}
+          env:
+            - name: HA_INSTANCE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            {{- if not $isWeb }}
+            - name: OTEL_SERVICE_NAME
+              value: gpudeck-{{ $name }}
+            - name: PKI_CA_DIR
+              value: /app/certs
+            - name: AGENT_CACHE_DIR
+              value: /app/agent-cache
+            - name: LOG_FILE_PATH
+              value: /app/logs/app.log
+            - name: TMPDIR
+              value: /tmp
+            {{- if $c.metricsPort }}
+            # Worker / scheduler Prometheus listener (no HTTP app in these processes).
+            - name: METRICS_BIND_HOST
+              value: 0.0.0.0
+            - name: {{ ternary "WORKER_METRICS_PORT" "SCHEDULER_METRICS_PORT" (eq $key "worker") }}
+              value: {{ $c.metricsPort | quote }}
+            {{- end }}
+            {{- else }}
+            - name: PORT
+              value: {{ $c.port | quote }}
+            - name: HOSTNAME
+              value: 0.0.0.0
+            # The image's gateway serves the UI and forwards /api/* here (one origin, any host).
+            - name: GPUDECK_API_INTERNAL_URL
+              value: http://{{ include "gpudeck.fullname" $root }}-admin-api:{{ $root.Values.components.adminApi.port }}
+            {{- end }}
+            {{- range $k, $v := $c.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- with $c.probes }}
+          {{- range $probe, $p := . }}
+          {{ $probe }}Probe:
+            {{- if $p.tcp }}
+            tcpSocket:
+              port: {{ $c.port }}
+            {{- else if $p.exec }}
+            exec:
+              command:
+                {{- toYaml $p.exec | nindent 16 }}
+            {{- else }}
+            httpGet:
+              path: {{ $p.path }}
+              port: {{ $c.port }}
+              scheme: {{ default "HTTP" $p.scheme }}
+            {{- end }}
+            initialDelaySeconds: {{ default 10 $p.initialDelaySeconds }}
+            periodSeconds: {{ default 15 $p.periodSeconds }}
+            timeoutSeconds: {{ default 5 $p.timeoutSeconds }}
+            failureThreshold: {{ default 3 $p.failureThreshold }}
+          {{- end }}
+          {{- end }}
+          {{- if and $c.port (not $c.probes) }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ $c.port }}
+          {{- end }}
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $root.Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if $isWeb }}
+            - name: next-cache
+              mountPath: /app/apps/web/.next/cache
+            {{- else }}
+            - name: logs
+              mountPath: /app/logs
+            - name: certs
+              mountPath: /app/certs
+            - name: agent-cache
+              mountPath: /app/agent-cache
+            {{- if $root.Values.secrets.certsSecret }}
+            - name: external-certs
+              mountPath: /app/external-certs
+              readOnly: true
+            {{- end }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi
+        {{- if $isWeb }}
+        - name: next-cache
+          emptyDir:
+            sizeLimit: 512Mi
+        {{- else }}
+        - name: logs
+          emptyDir:
+            sizeLimit: 256Mi
+        # The CA bundle, hub and client certificates (API layer, control plane) are
+        # re-materialised from the vault at start: nothing to provision by hand.
+        - name: certs
+          emptyDir:
+            medium: Memory
+            sizeLimit: 8Mi
+        # Node-agent builds fetched from the GitHub release (or mount an offline copy and set
+        # AGENT_DIST_DIR, see agentDownloads in values.yaml).
+        - name: agent-cache
+          {{- if $root.Values.agentDownloads.persistentVolumeClaim }}
+          persistentVolumeClaim:
+            claimName: {{ $root.Values.agentDownloads.persistentVolumeClaim }}
+          {{- else }}
+          emptyDir:
+            sizeLimit: {{ $root.Values.agentDownloads.cacheSizeLimit }}
+          {{- end }}
+        {{- if $root.Values.secrets.certsSecret }}
+        - name: external-certs
+          secret:
+            secretName: {{ $root.Values.secrets.certsSecret }}
+            defaultMode: 0440
+        {{- end }}
+        {{- end }}
+{{- if $c.port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gpudeck.fullname" $root }}-{{ $name }}
+  labels:
+    {{- include "gpudeck.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+  {{- if eq $key "agentHub" }}
+  {{- with $root.Values.services.agentHub.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+spec:
+  {{- if eq $key "agentHub" }}
+  type: {{ $root.Values.services.agentHub.type }}
+  {{- if ne $root.Values.services.agentHub.type "ClusterIP" }}
+  externalTrafficPolicy: {{ $root.Values.services.agentHub.externalTrafficPolicy }}
+  {{- end }}
+  {{- with $root.Values.services.agentHub.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- else }}
+  type: ClusterIP
+  {{- end }}
+  selector:
+    {{- include "gpudeck.componentSelector" (list $root $name) | nindent 4 }}
+  ports:
+    - name: {{ ternary "hub" "http" (eq $key "agentHub") }}
+      port: {{ ternary $root.Values.services.agentHub.port $c.port (eq $key "agentHub") }}
+      targetPort: {{ ternary "hub" "http" (eq $key "agentHub") }}
+      protocol: TCP
+{{- end }}
+{{- if and (not $c.singleton) $c.pdb (gt (int $c.replicas) 1) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "gpudeck.fullname" $root }}-{{ $name }}
+  labels:
+    {{- include "gpudeck.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  {{- if $c.pdb.maxUnavailable }}
+  maxUnavailable: {{ $c.pdb.maxUnavailable }}
+  {{- else }}
+  minAvailable: {{ min (int $c.pdb.minAvailable) (sub (int $c.replicas) 1) }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "gpudeck.componentSelector" (list $root $name) | nindent 6 }}
+{{- end }}
+{{- if and $c.autoscaling $c.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "gpudeck.fullname" $root }}-{{ $name }}
+  labels:
+    {{- include "gpudeck.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "gpudeck.fullname" $root }}-{{ $name }}
+  minReplicas: {{ $c.autoscaling.minReplicas }}
+  maxReplicas: {{ $c.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $c.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}
+{{- end }}
+{{- end }}

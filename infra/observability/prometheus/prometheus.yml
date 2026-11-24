@@ -1,0 +1,75 @@
+# Prometheus for the docker compose stack (infra/docker/docker-compose.full.yml, profile
+# observability). The Helm chart scrapes the same endpoints with ServiceMonitors (admin-api,
+# api-layer, agent-hub) and PodMonitors (worker, scheduler): metrics.serviceMonitor.enabled.
+#
+# Fleet metrics (gpudeck_gpu_*, gpudeck_engine_*, gpudeck_node_*, gpudeck_agent_*,
+# gpudeck_usage_*) come from the admin API exporter; node agents only listen on loopback.
+# Process metrics (http_*, celery_*, gpudeck_hub_*, gpudeck_rules_*, gpudeck_swaps_*,
+# gpudeck_serving_*) come from each process's /metrics; the Celery worker (WORKER_METRICS_PORT
+# 9464) and the jobs scheduler (SCHEDULER_METRICS_PORT 9465) have their own listeners.
+#
+# When PROMETHEUS_SCRAPE_TOKEN is set on the control plane, add to each job:
+#   authorization: { type: Bearer, credentials_file: /etc/prometheus/scrape-token }
+global:
+  scrape_interval: 15s
+  evaluation_interval: 30s
+  external_labels:
+    deployment: gpu-deck
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  - job_name: gpudeck-fleet
+    metrics_path: /api/v1/metrics/prometheus
+    scrape_interval: 10s
+    static_configs:
+      - targets: ["admin-api:8180"]
+        labels: { component: admin-api }
+
+  - job_name: gpudeck-admin-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["admin-api:8180"]
+        labels: { component: admin-api }
+
+  - job_name: gpudeck-api-layer
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api-layer:8181"]
+        labels: { component: api-layer }
+
+  - job_name: gpudeck-agent-hub
+    metrics_path: /metrics
+    scheme: https
+    tls_config:
+      # The hub serves a certificate from the internal CA; mount the CA bundle and use
+      # ca_file in production instead of skipping verification.
+      insecure_skip_verify: true
+    static_configs:
+      - targets: ["agent-hub:8443"]
+        labels: { component: agent-hub }
+
+  # Celery worker: celery_tasks_total{task,state} (prefork children aggregated through
+  # PROMETHEUS_MULTIPROC_DIR) and the metrics of anything the tasks run.
+  - job_name: gpudeck-worker
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["worker:9464"]
+        labels: { component: worker }
+
+  # Jobs scheduler: gpudeck_rules_*, gpudeck_swaps_*, gpudeck_jobs_leader (one series per replica).
+  - job_name: gpudeck-scheduler
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["scheduler:9465"]
+        labels: { component: scheduler }
+
+  - job_name: otel-collector
+    static_configs:
+      - targets: ["otel-collector:8888"]
+        labels: { component: otel-collector }
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

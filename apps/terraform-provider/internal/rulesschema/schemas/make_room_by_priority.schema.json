@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/rules/v1/make_room_by_priority.schema.json",
+  "title": "Make room by priority — params",
+  "description": "When a higher-priority deployment (in target, or any pending one) cannot be placed for lack of VRAM, unload the lowest-priority idle model(s) on the best candidate GPU. always_on is never a victim. Evaluated on demand (placement failure) as well as on the interval.",
+  "type": "object",
+  "properties": {
+    "evict_priorities": {
+      "type": "array",
+      "title": "May evict models with priority",
+      "default": ["evictable"],
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "enum": ["evictable", "normal"] },
+      "description": "always_on is not allowed here. A victim must also have lower priority than the model that needs room."
+    },
+    "victim_idle_minutes": { "type": "integer", "minimum": 0, "maximum": 1440, "default": 5, "title": "Victim must be idle for (minutes)", "description": "0 = may evict a busy model (it is drained first)." },
+    "max_evictions_per_run": { "type": "integer", "minimum": 1, "maximum": 16, "default": 1, "title": "Max evictions per fire" },
+    "trigger": { "type": "string", "enum": ["placement_failure", "interval", "both"], "default": "both", "title": "Trigger", "description": "placement_failure = only when the scheduler reports insufficient VRAM; interval = also scan on every evaluation for pending higher-priority deployments." },
+    "drain_timeout_seconds": { "type": "integer", "minimum": 0, "maximum": 3600, "default": 120 },
+    "protect_always_on": { "type": "boolean", "const": true, "default": true, "description": "Always true; present so the UI shows the guarantee." }
+  },
+  "additionalProperties": false
+}

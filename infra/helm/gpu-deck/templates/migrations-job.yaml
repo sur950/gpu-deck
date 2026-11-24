@@ -1,0 +1,55 @@
+{{- if .Values.migrations.enabled }}
+# alembic upgrade head before every install/upgrade (SQL-first migrations, additive).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "gpudeck.fullname" . }}-migrate
+  labels:
+    {{- include "gpudeck.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migrations.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        {{- include "gpudeck.componentSelector" (list . "migrate") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "gpudeck.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      {{- include "gpudeck.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "gpudeck.image" (list . .Values.image.api) }}
+          imagePullPolicy: {{ .Values.image.api.pullPolicy }}
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            # The hook runs before the release's ConfigMap exists, so only the Secret is used
+            # (DATABASE_URL, POSTGRES_SSLMODE etc. must be in it).
+            - secretRef:
+                name: {{ include "gpudeck.secretName" . }}
+          env:
+            - name: TMPDIR
+              value: /tmp
+            - name: LOG_FILE_PATH
+              value: /tmp/migrate.log
+          resources:
+            {{- toYaml .Values.migrations.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+{{- end }}

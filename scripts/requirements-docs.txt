@@ -1,0 +1,10 @@
+# Pinned packages for scripts/build_docs.py (the documentation pages of the website).
+#
+#   python3 -m venv .venv-docs && .venv-docs/bin/pip install -r scripts/requirements-docs.txt
+#   .venv-docs/bin/python scripts/build_docs.py
+markdown-it-py==4.3.0
+mdit-py-plugins==0.7.0
+linkify-it-py==2.2.0
+uc-micro-py==2.0.0
+mdurl==0.1.2
+pygments==2.21.0

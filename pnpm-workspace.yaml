@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - libs/*
+
+# apps/fastapi (Python), apps/node-agent (Rust), apps/cli (Python) and
+# apps/terraform-provider (Go) have no package.json and are ignored by pnpm.
+
+# Security pins for transitive dependencies (pnpm audit). Keep each within the
+# parent's major and explain the advisory it closes.
+# overrides:
+#   example@>=1 <1.2.3: ^1.2.3   # GHSA-xxxx

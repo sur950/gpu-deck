@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/rules/v1/auto_heal.schema.json",
+  "title": "Auto heal — params",
+  "description": "Health check fails (consecutively) or error rate over X % for M minutes: restart the instance, or move it to another GPU/node. Applies to always_on models too (healing never reduces capacity).",
+  "type": "object",
+  "required": ["action"],
+  "properties": {
+    "health_failures": { "type": ["integer", "null"], "minimum": 1, "maximum": 100, "default": 3, "title": "Consecutive health failures", "description": "instances.health = unhealthy for this many consecutive agent health checks. null disables." },
+    "error_rate_pct_above": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "default": 20, "title": "X: error rate above (%)", "description": "metric_rollups_engine_1m.error_rate_pct per instance. null disables." },
+    "for_minutes": { "type": "integer", "minimum": 1, "maximum": 1440, "default": 5, "title": "M: for (minutes)", "description": "Window for the error-rate condition." },
+    "min_requests_in_window": { "type": "integer", "minimum": 1, "maximum": 100000, "default": 10, "title": "Min requests in window", "description": "Error rate is ignored when fewer requests were seen." },
+    "action": { "type": "string", "enum": ["restart", "move", "restart_then_move"], "default": "restart_then_move", "title": "Action" },
+    "max_restarts_per_hour": { "type": "integer", "minimum": 1, "maximum": 60, "default": 3, "title": "Max restarts per hour", "description": "After this many restarts of the same instance within an hour, restart_then_move escalates to move; move/restart stop and raise a critical alert." },
+    "move_placement_strategy": { "type": ["string", "null"], "enum": ["spread", "pack", null], "default": null },
+    "exclude_failed_device": { "type": "boolean", "default": true, "title": "Avoid the same device when moving" },
+    "drain_timeout_seconds": { "type": "integer", "minimum": 0, "maximum": 3600, "default": 30 }
+  },
+  "additionalProperties": false,
+  "anyOf": [
+    { "properties": { "health_failures": { "type": "integer" } }, "required": ["health_failures"] },
+    { "properties": { "error_rate_pct_above": { "type": "number" } }, "required": ["error_rate_pct_above"] }
+  ]
+}

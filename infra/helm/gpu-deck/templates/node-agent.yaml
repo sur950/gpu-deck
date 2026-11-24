@@ -1,0 +1,184 @@
+{{- if .Values.nodeAgent.enabled }}
+{{- $na := .Values.nodeAgent -}}
+# GPU Deck node agent on Kubernetes GPU nodes (systemd/launchd elsewhere). Every pod joins with
+# the same multi-use enrolment token on first start (state persisted under stateDir on the
+# host, so a restarted pod keeps its identity), supervises the engines and serves the mTLS proxy
+# on the node IP (hostNetwork). Native engines (llama.cpp, whisper.cpp, sd.cpp) are downloaded
+# into stateDir; container engines (vLLM, SGLang, TensorRT-LLM) need containerRuntime.enabled:
+# the agent then starts them as sibling containers through the node's Docker-compatible socket,
+# with the same host paths for the model cache.
+{{- $cr := $na.containerRuntime }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "gpudeck.fullname" . }}-node-agent
+  labels:
+    {{- include "gpudeck.labels" . | nindent 4 }}
+    app.kubernetes.io/component: node-agent
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "gpudeck.fullname" . }}-node-agent
+  labels:
+    {{- include "gpudeck.labels" . | nindent 4 }}
+    app.kubernetes.io/component: node-agent
+spec:
+  selector:
+    matchLabels:
+      {{- include "gpudeck.componentSelector" (list . "node-agent") | nindent 6 }}
+  updateStrategy:
+    {{- toYaml $na.updateStrategy | nindent 4 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gpudeck.componentSelector" (list . "node-agent") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "gpudeck.fullname" . }}-node-agent
+      automountServiceAccountToken: false
+      {{- include "gpudeck.imagePullSecrets" . | nindent 6 }}
+      {{- with $na.runtimeClassName }}
+      runtimeClassName: {{ . }}
+      {{- end }}
+      hostNetwork: {{ $na.hostNetwork }}
+      dnsPolicy: {{ ternary "ClusterFirstWithHostNet" "ClusterFirst" $na.hostNetwork }}
+      priorityClassName: system-node-critical
+      terminationGracePeriodSeconds: 120
+      {{- with $na.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $na.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ $na.runAsUser }}
+        runAsGroup: {{ $na.runAsGroup }}
+        fsGroup: {{ $na.runAsGroup }}
+        {{- $groups := $na.supplementalGroups }}
+        {{- if and $cr.enabled $cr.socketGroupId }}
+        {{- $groups = append $groups (int $cr.socketGroupId) }}
+        {{- end }}
+        supplementalGroups: {{ toJson $groups }}
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # The state dir is a hostPath; make it owned by the agent user once.
+        - name: state-perms
+          image: {{ include "gpudeck.image" (list . .Values.image.nodeAgent) }}
+          imagePullPolicy: {{ .Values.image.nodeAgent.pullPolicy }}
+          command: ["sh", "-c", "mkdir -p /state /cache && chown {{ $na.runAsUser }}:{{ $na.runAsGroup }} /state /cache && chmod 0750 /state"]
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+              add: [CHOWN, FOWNER, DAC_OVERRIDE]
+          volumeMounts:
+            - { name: state, mountPath: /state }
+            - { name: cache, mountPath: /cache }
+      containers:
+        - name: agent
+          image: {{ include "gpudeck.image" (list . .Values.image.nodeAgent) }}
+          imagePullPolicy: {{ .Values.image.nodeAgent.pullPolicy }}
+          args: ["run"{{ if ne $na.egressLock "none" }}, "--apply-egress-lock"{{ end }}]
+          env:
+            - name: GPUDECK_AGENT_HUB_URL
+              value: {{ default .Values.config.AGENT_HUB_PUBLIC_URL $na.hubUrl | quote }}
+            - name: GPUDECK_AGENT_JOIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $na.joinTokenSecret }}
+                  key: {{ $na.joinTokenKey }}
+            # Same paths as on the host: container engines bind-mount model files by host path.
+            - name: GPUDECK_AGENT_STATE_DIR
+              value: {{ $na.stateDir | quote }}
+            - name: GPUDECK_AGENT_CACHE_DIR
+              value: {{ $na.cacheDir | quote }}
+            - name: HOME
+              value: {{ $na.stateDir | quote }}
+            {{- if $cr.enabled }}
+            - name: GPUDECK_AGENT_CONTAINER_RUNTIME
+              value: docker
+            - name: DOCKER_HOST
+              value: unix://{{ $cr.socketPath }}
+            {{- end }}
+            - name: GPUDECK_AGENT_PROXY_PORT
+              value: {{ $na.proxyPort | quote }}
+            - name: GPUDECK_AGENT_EGRESS_LOCK
+              value: {{ $na.egressLock | quote }}
+            {{- with $na.caFingerprint }}
+            - name: GPUDECK_AGENT_CA_FINGERPRINT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if $na.labels }}
+            - name: GPUDECK_AGENT_LABELS
+              value: {{ include "gpudeck.kvList" $na.labels | quote }}
+            {{- end }}
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            {{- range $k, $v := $na.vendorEnv }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          ports:
+            - name: proxy
+              containerPort: {{ $na.proxyPort }}
+              {{- if $na.hostNetwork }}
+              hostPort: {{ $na.proxyPort }}
+              {{- end }}
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: proxy
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          livenessProbe:
+            exec:
+              command: ["gpudeck-agent", "status"]
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            timeoutSeconds: 20
+          resources:
+            {{- toYaml $na.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+              {{- if ne $na.egressLock "none" }}
+              add: [NET_ADMIN]
+              {{- end }}
+          volumeMounts:
+            - { name: state, mountPath: {{ $na.stateDir | quote }} }
+            - { name: cache, mountPath: {{ $na.cacheDir | quote }} }
+            - { name: tmp, mountPath: /tmp }
+            {{- if $cr.enabled }}
+            - { name: container-socket, mountPath: {{ $cr.socketPath | quote }} }
+            {{- end }}
+            {{- range $i, $d := $na.hostDevices }}
+            - { name: dev-{{ $i }}, mountPath: {{ $d }} }
+            {{- end }}
+      volumes:
+        - name: state
+          hostPath: { path: {{ $na.stateDir | quote }}, type: DirectoryOrCreate }
+        - name: cache
+          hostPath: { path: {{ $na.cacheDir | quote }}, type: DirectoryOrCreate }
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        {{- if $cr.enabled }}
+        - name: container-socket
+          hostPath: { path: {{ $cr.socketPath | quote }}, type: Socket }
+        {{- end }}
+        {{- range $i, $d := $na.hostDevices }}
+        - name: dev-{{ $i }}
+          hostPath: { path: {{ $d | quote }} }
+        {{- end }}
+{{- end }}

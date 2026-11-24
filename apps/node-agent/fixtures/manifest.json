@@ -1,0 +1,277 @@
+{
+  "description": "Provenance of every fixture: verified=true means captured from the real tool on the reference Mac; false means derived from vendor documentation / public output samples and must be re-checked on hardware.",
+  "files": {
+    "devices/amd/amd-smi_list.json": {
+      "source": "amd-smi / rocm-smi JSON shapes per ROCm 6.x documentation and public logs; values synthetic",
+      "verified": false
+    },
+    "devices/amd/amd-smi_metric.json": {
+      "source": "amd-smi / rocm-smi JSON shapes per ROCm 6.x documentation and public logs; values synthetic",
+      "verified": false
+    },
+    "devices/amd/amd-smi_metric_gpu_data.json": {
+      "source": "amd-smi / rocm-smi JSON shapes per ROCm 6.x documentation and public logs; values synthetic",
+      "verified": false
+    },
+    "devices/amd/amd-smi_process.json": {
+      "source": "amd-smi / rocm-smi JSON shapes per ROCm 6.x documentation and public logs; values synthetic",
+      "verified": false
+    },
+    "devices/amd/amd-smi_static.json": {
+      "source": "amd-smi / rocm-smi JSON shapes per ROCm 6.x documentation and public logs; values synthetic",
+      "verified": false
+    },
+    "devices/amd/amd-smi_version.json": {
+      "source": "amd-smi / rocm-smi JSON shapes per ROCm 6.x documentation and public logs; values synthetic",
+      "verified": false
+    },
+    "devices/amd/rocm-smi.json": {
+      "source": "amd-smi / rocm-smi JSON shapes per ROCm 6.x documentation and public logs; values synthetic",
+      "verified": false
+    },
+    "devices/apple/ioreg_ioaccelerator.txt": {
+      "source": "captured on this Mac (Apple M5, macOS 27.2), 2026-11-17",
+      "verified": true
+    },
+    "devices/apple/system_profiler_displays.json": {
+      "source": "captured on this Mac (Apple M5, macOS 27.2), 2026-11-17",
+      "verified": true
+    },
+    "devices/hygon/hy-smi.json": {
+      "source": "hy-smi (rocm-smi fork) per DTK documentation / public logs; values synthetic",
+      "verified": false
+    },
+    "devices/hygon/hy-smi.txt": {
+      "source": "hy-smi (rocm-smi fork) per DTK documentation / public logs; values synthetic",
+      "verified": false
+    },
+    "devices/hygon/hy-smi_meminfo.txt": {
+      "source": "hy-smi (rocm-smi fork) per DTK documentation / public logs; values synthetic",
+      "verified": false
+    },
+    "devices/metax/mx-smi.txt": {
+      "source": "mx-smi summary table per MetaX documentation / public logs; values synthetic",
+      "verified": false
+    },
+    "devices/moorethreads/mthreads-gmi-q.txt": {
+      "source": "mthreads-gmi -q per MUSA SDK documentation / public logs; values synthetic",
+      "verified": false
+    },
+    "devices/nvidia/nvidia-smi_banner.txt": {
+      "source": "nvidia-smi --query-gpu CSV format per NVIDIA nvidia-smi documentation; values synthetic",
+      "verified": false
+    },
+    "devices/nvidia/nvidia-smi_query.csv": {
+      "source": "nvidia-smi --query-gpu CSV format per NVIDIA nvidia-smi documentation; values synthetic",
+      "verified": false
+    },
+    "devices/nvidia/nvidia-smi_query_minimal.csv": {
+      "source": "nvidia-smi --query-gpu CSV format per NVIDIA nvidia-smi documentation; values synthetic",
+      "verified": false
+    },
+    "devices/thead/ppu-smi_banner.txt": {
+      "source": "assumed nvidia-smi-compatible ppu-smi CSV; no public reference available",
+      "verified": false
+    },
+    "devices/thead/ppu-smi_query.csv": {
+      "source": "assumed nvidia-smi-compatible ppu-smi CSV; no public reference available",
+      "verified": false
+    },
+    "engines/custom/engine_config.json": {
+      "source": "example custom engine configs (TGI-style Prometheus, JSON stats) for adapter tests",
+      "verified": false
+    },
+    "engines/custom/json_engine_config.json": {
+      "source": "example custom engine configs (TGI-style Prometheus, JSON stats) for adapter tests",
+      "verified": false
+    },
+    "engines/custom/metrics.txt": {
+      "source": "example custom engine configs (TGI-style Prometheus, JSON stats) for adapter tests",
+      "verified": false
+    },
+    "engines/custom/stats.json": {
+      "source": "example custom engine configs (TGI-style Prometheus, JSON stats) for adapter tests",
+      "verified": false
+    },
+    "engines/generic/uvicorn_access.log": {
+      "source": "uvicorn / gunicorn / nginx combined access-log formats per their documentation, tqdm progress output; values synthetic",
+      "verified": false
+    },
+    "engines/llama_cpp/chat_completion.json": {
+      "source": "captured from llama-server b8798 (e39eba26f), qwen3:0.6b GGUF from ~/.ollama blobs, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/chat_completion_stream.sse": {
+      "source": "captured from llama-server b8798 (e39eba26f), qwen3:0.6b GGUF from ~/.ollama blobs, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/health.json": {
+      "source": "captured from llama-server b8798 (e39eba26f), qwen3:0.6b GGUF from ~/.ollama blobs, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/metrics_after.txt": {
+      "source": "captured from llama-server b8798 (e39eba26f), qwen3:0.6b GGUF from ~/.ollama blobs, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/metrics_busy.txt": {
+      "source": "captured from llama-server b8798 (e39eba26f), qwen3:0.6b GGUF from ~/.ollama blobs, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/metrics_idle.txt": {
+      "source": "captured from llama-server b8798 (e39eba26f), qwen3:0.6b GGUF from ~/.ollama blobs, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/props.json": {
+      "source": "captured from llama-server b8798 (e39eba26f), qwen3:0.6b GGUF from ~/.ollama blobs, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/router/chat_completion.json": {
+      "source": "captured from llama-server b8798 router mode (--models-dir, --no-models-autoload), 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/router/load_response.json": {
+      "source": "captured from llama-server b8798 router mode (--models-dir, --no-models-autoload), 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/router/metrics.txt": {
+      "source": "captured from llama-server b8798 router mode (--models-dir, --no-models-autoload), 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/router/missing_model_error.json": {
+      "source": "captured from llama-server b8798 router mode (--models-dir, --no-models-autoload), 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/router/models_loaded.json": {
+      "source": "captured from llama-server b8798 router mode (--models-dir, --no-models-autoload), 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/router/models_loading.json": {
+      "source": "captured from llama-server b8798 router mode (--models-dir, --no-models-autoload), 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/router/models_unloaded.json": {
+      "source": "captured from llama-server b8798 router mode (--models-dir, --no-models-autoload), 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/router/props.json": {
+      "source": "captured from llama-server b8798 router mode (--models-dir, --no-models-autoload), 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/router/slots.json": {
+      "source": "captured from llama-server b8798 router mode (--models-dir, --no-models-autoload), 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/router/unload_response.json": {
+      "source": "captured from llama-server b8798 router mode (--models-dir, --no-models-autoload), 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/slots_busy.json": {
+      "source": "captured from llama-server b8798 (e39eba26f), qwen3:0.6b GGUF from ~/.ollama blobs, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/slots_idle.json": {
+      "source": "captured from llama-server b8798 (e39eba26f), qwen3:0.6b GGUF from ~/.ollama blobs, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/llama_cpp/v1_models.json": {
+      "source": "captured from llama-server b8798 (e39eba26f), qwen3:0.6b GGUF from ~/.ollama blobs, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/mlx/chat_completion.json": {
+      "source": "captured from mlx_lm.server 0.29.1 (mlx 0.30.6), gemma-3-1b-it-qat-4bit, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/mlx/chat_completion_stream.sse": {
+      "source": "captured from mlx_lm.server 0.29.1 (mlx 0.30.6), gemma-3-1b-it-qat-4bit, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/mlx/health.json": {
+      "source": "captured from mlx_lm.server 0.29.1 (mlx 0.30.6), gemma-3-1b-it-qat-4bit, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/mlx/v1_models.json": {
+      "source": "captured from mlx_lm.server 0.29.1 (mlx 0.30.6), gemma-3-1b-it-qat-4bit, Apple M5, 2026-11-17",
+      "verified": true
+    },
+    "engines/mlx_audio/health.json": {
+      "source": "mlx-audio server OpenAI-style responses per project README",
+      "verified": false
+    },
+    "engines/mlx_audio/transcription_response.json": {
+      "source": "mlx-audio server OpenAI-style responses per project README",
+      "verified": false
+    },
+    "engines/mlx_audio/v1_models.json": {
+      "source": "mlx-audio server OpenAI-style responses per project README",
+      "verified": false
+    },
+    "engines/sglang/metrics_1.txt": {
+      "source": "SGLang Prometheus metric names per SGLang docs (production metrics); values synthetic",
+      "verified": false
+    },
+    "engines/sglang/metrics_2.txt": {
+      "source": "SGLang Prometheus metric names per SGLang docs (production metrics); values synthetic",
+      "verified": false
+    },
+    "engines/sglang_diffusion/health.json": {
+      "source": "OpenAI images response shape",
+      "verified": false
+    },
+    "engines/sglang_diffusion/images_generations_response.json": {
+      "source": "OpenAI images response shape",
+      "verified": false
+    },
+    "engines/stable_diffusion_cpp/images_generations_response.json": {
+      "source": "OpenAI images response shape",
+      "verified": false
+    },
+    "engines/tensorrt_llm/stats_1.json": {
+      "source": "trtllm-serve /metrics iteration stats JSON per TensorRT-LLM docs; values synthetic",
+      "verified": false
+    },
+    "engines/tensorrt_llm/stats_2.json": {
+      "source": "trtllm-serve /metrics iteration stats JSON per TensorRT-LLM docs; values synthetic",
+      "verified": false
+    },
+    "engines/tgi/metrics_1.txt": {
+      "source": "text-generation-inference Prometheus metric names per the TGI metrics documentation (v2/v3); values synthetic",
+      "verified": false
+    },
+    "engines/tgi/metrics_2.txt": {
+      "source": "text-generation-inference Prometheus metric names per the TGI metrics documentation (v2/v3); values synthetic",
+      "verified": false
+    },
+    "engines/vllm/metrics_1.txt": {
+      "source": "vLLM V1 Prometheus metric names per vLLM docs (metrics design); values synthetic",
+      "verified": false
+    },
+    "engines/vllm/metrics_2.txt": {
+      "source": "vLLM V1 Prometheus metric names per vLLM docs (metrics design); values synthetic",
+      "verified": false
+    },
+    "engines/vllm/server_log.txt": {
+      "source": "vLLM server log line formats (V0 metrics.py, V1 loggers.py 0.8-0.11, startup lines) per vLLM source and public logs; 0.34.0 lines follow the current format; values synthetic",
+      "verified": false
+    },
+    "engines/vllm/v1_models.json": {
+      "source": "vLLM OpenAI-compatible GET /v1/models response shape per vLLM docs; values synthetic",
+      "verified": false
+    },
+    "engines/vllm_omni/metrics.txt": {
+      "source": "vLLM metric format + assumed vllm_omni: job gauge; OpenAI videos response shape",
+      "verified": false
+    },
+    "engines/vllm_omni/videos_create_response.json": {
+      "source": "vLLM metric format + assumed vllm_omni: job gauge; OpenAI videos response shape",
+      "verified": false
+    },
+    "engines/whisper_cpp/transcription_response.json": {
+      "source": "whisper-server JSON / verbose_json responses per whisper.cpp server README",
+      "verified": false
+    },
+    "engines/whisper_cpp/transcription_verbose_json.json": {
+      "source": "whisper-server JSON / verbose_json responses per whisper.cpp server README",
+      "verified": false
+    }
+  }
+}

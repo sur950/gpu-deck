@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/rules/v1/idle_unload.schema.json",
+  "title": "Idle unload — params",
+  "description": "Fires when a targeted deployment has had no requests for N minutes. Action: unload its instances (drain first) and free the GPU. Never fires for always_on models.",
+  "type": "object",
+  "required": ["idle_minutes"],
+  "properties": {
+    "idle_minutes": { "type": "integer", "minimum": 1, "maximum": 10080, "default": 30, "title": "N: idle for (minutes)", "description": "Minutes since the deployment's last request (deployments.last_request_at, updated by metering and by engine samples with active_sessions > 0)." },
+    "min_loaded_minutes": { "type": "integer", "minimum": 0, "maximum": 10080, "default": 10, "title": "Grace after load (minutes)", "description": "Never unload an instance that became ready less than this many minutes ago." },
+    "keep_replicas": { "type": "integer", "minimum": 0, "maximum": 64, "default": 0, "title": "Keep replicas", "description": "Leave this many replicas running (0 = unload everything)." },
+    "drain_timeout_seconds": { "type": "integer", "minimum": 0, "maximum": 3600, "default": 120, "title": "Drain timeout (seconds)" },
+    "respect_time_windows": {
+      "type": "array",
+      "default": [],
+      "title": "Only during",
+      "description": "Optional windows (HH:MM-HH:MM in the rule timezone) in which the rule may fire; empty = always.",
+      "items": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d$" }
+    },
+    "timezone": { "type": "string", "default": "UTC", "description": "IANA zone for respect_time_windows." }
+  },
+  "additionalProperties": false
+}

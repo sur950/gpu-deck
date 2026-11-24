@@ -1,0 +1,44 @@
+name: Feature request
+description: Suggest an idea for GPU Deck
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Control plane (admin API, hub, jobs)
+        - API layer (serving API)
+        - Web UI
+        - Node agent
+        - Desktop app
+        - CLI
+        - Terraform provider
+        - Helm / Docker
+        - Docs
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that is hard or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How should it work?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Other ways you have tried or considered.
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to work on this myself

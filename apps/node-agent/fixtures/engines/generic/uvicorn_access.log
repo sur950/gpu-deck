@@ -1,0 +1,16 @@
+INFO:     Started server process [4021]
+INFO:     Waiting for application startup.
+Loading pipeline components...:  43%|████▎     | 3/7 [00:02<00:03,  1.21it/s]
+Loading pipeline components...: 100%|██████████| 7/7 [00:05<00:00,  1.30it/s]
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8100 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50110 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50112 - "POST /v1/edit HTTP/1.1" 200 OK
+ 30%|███       | 15/50 [00:04<00:09,  3.62it/s]
+100%|██████████| 50/50 [00:13<00:00,  3.70it/s]
+INFO:     127.0.0.1:50114 - "POST /v1/edit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50116 - "POST /v1/edit?seed=7 HTTP/1.1" 500 Internal Server Error
+10.0.0.9 - - [23/Nov/2026:10:00:00 +0000] "POST /v1/embeddings HTTP/1.1" 200 2048 "-" "python-requests/2.32"
+10.0.0.9 - - [23/Nov/2026:10:00:01 +0000] "GET /docs HTTP/1.1" 200 950 "-" "Mozilla/5.0"
+INFO:     127.0.0.1:50118 - "POST /v1/embed HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:50120 - "GET /metrics HTTP/1.1" 404 Not Found

@@ -1,0 +1,98 @@
+name: Hardware report
+description: Tell us how GPU Deck behaves on your GPUs, engines or cloud
+title: "[Hardware] "
+labels: [hardware-report]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        GPU Deck is verified end to end on Apple Silicon. Everything else is tested against recorded fixtures, so reports from real hardware are very valuable, whether it works or not. A report with a failure should also use the Bug report form if you want it fixed.
+  - type: input
+    id: version
+    attributes:
+      label: GPU Deck version
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: vendor
+    attributes:
+      label: GPU vendor
+      options:
+        - NVIDIA
+        - AMD
+        - Apple Silicon
+        - Hygon
+        - MetaX
+        - Moore Threads
+        - T-Head
+        - CPU only
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: gpus
+    attributes:
+      label: GPU models and count
+      description: For example 8x H100 80GB SXM, 2x RX 7900 XTX, M3 Max 64 GB.
+    validations:
+      required: true
+  - type: input
+    id: driver
+    attributes:
+      label: Driver, CUDA / ROCm and OS versions
+      placeholder: Driver 570.x, CUDA 12.8, Ubuntu 24.04, kernel 6.8
+    validations:
+      required: true
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Engines tested
+      multiple: true
+      options:
+        - llama.cpp
+        - vLLM
+        - SGLang
+        - TensorRT-LLM
+        - MLX
+        - MLX Audio
+        - whisper.cpp
+        - stable-diffusion.cpp
+        - Custom engine
+    validations:
+      required: true
+  - type: dropdown
+    id: topology
+    attributes:
+      label: Topology
+      options:
+        - Single node
+        - Multi-node, same cluster
+        - Cloud GPU VMs (AWS, Azure or GCP)
+        - Kubernetes node agent
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Overall result
+      options:
+        - Works as expected
+        - Works with problems
+        - Does not work
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: What you tested and what happened
+      description: Detection, deployment, serving, metrics, slicing, swaps, SSH instances, anything else. Model names and sizes are useful. Include throughput or time to first token if you measured it.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Device inventory or logs
+      description: The node's device list from the Nodes screen, or relevant agent logs. Redact API keys (gd-...), join tokens (gdj_...), certificates and hostnames you want private.
+      render: text

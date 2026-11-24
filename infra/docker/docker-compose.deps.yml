@@ -1,0 +1,130 @@
+# GPU Deck local dev dependencies: Postgres 17 + Redis 7.4 (+ optional Caddy reverse proxy).
+#
+# The app processes run on the host (infra/scripts/bootstrap.dev.sh); only their dependencies run
+# here. Works with any Docker engine that has `docker compose` (OrbStack, Docker Desktop, Colima,
+# Docker on Linux).
+#
+#   ./infra/scripts/bootstrap.dev.sh deps up       # writes infra/docker/.env on first run, starts, waits healthy
+#   ./infra/scripts/bootstrap.dev.sh deps status | down | reset
+#   ./infra/scripts/bootstrap.dev.sh caddy         # same as: ... --profile proxy up -d caddy
+#
+# Variables come from infra/docker/.env (gitignored; compose reads it from the project directory).
+# bootstrap.dev.sh generates it with random passwords; to write it by hand:
+#
+#   GPUDECK_DEPS_PG_PORT=55432               # host port (127.0.0.1 only)
+#   GPUDECK_DEPS_PG_SUPERUSER_PASSWORD=...   # user `postgres` (integration tests create scratch DBs)
+#   GPUDECK_DEPS_PG_USER=gpu_deck            # app role, owner of GPUDECK_DEPS_PG_DB
+#   GPUDECK_DEPS_PG_PASSWORD=...
+#   GPUDECK_DEPS_PG_DB=gpu_deck_dev
+#   GPUDECK_DEPS_REDIS_PORT=56379            # host port (127.0.0.1 only)
+#   GPUDECK_DEPS_REDIS_USER=gpu-deck         # ACL user: keys under gpu-deck:* only
+#   GPUDECK_DEPS_REDIS_PASSWORD=...
+#   GPUDECK_PROXY_HTTPS_PORT=58443           # proxy profile only
+#
+# The network is named `gpu-deck-deps` so infra/docker/docker-compose.yml (the containerised app
+# stack) can join it and reach `gpu-deck-deps-postgres:5432` / `gpu-deck-deps-redis:6379`.
+# Data lives in the named volumes gpu-deck-deps_postgres-data / gpu-deck-deps_redis-data
+# (`deps reset` deletes them).
+
+name: gpu-deck-deps
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${GPUDECK_DEPS_PG_SUPERUSER_PASSWORD:?set in infra/docker/.env (bootstrap.dev.sh deps up writes it)}
+      POSTGRES_DB: postgres
+      # Read by the init script (creates the app role + database, idempotent).
+      APP_DB_USER: ${GPUDECK_DEPS_PG_USER:-gpu_deck}
+      APP_DB_PASSWORD: ${GPUDECK_DEPS_PG_PASSWORD:?set in infra/docker/.env (bootstrap.dev.sh deps up writes it)}
+      APP_DB_NAME: ${GPUDECK_DEPS_PG_DB:-gpu_deck_dev}
+      TZ: UTC
+      PGTZ: UTC
+    command:
+      - postgres
+      - -c
+      - max_connections=200
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - timezone=UTC
+    ports:
+      - "127.0.0.1:${GPUDECK_DEPS_PG_PORT:-55432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./deps/postgres-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      default:
+        aliases: [gpu-deck-deps-postgres]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres -h 127.0.0.1"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 5s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    environment:
+      REDIS_USER: ${GPUDECK_DEPS_REDIS_USER:-gpu-deck}
+      REDIS_PASSWORD: ${GPUDECK_DEPS_REDIS_PASSWORD:?set in infra/docker/.env (bootstrap.dev.sh deps up writes it)}
+    # `default` is disabled; the app user may touch keys under gpu-deck:* only (the
+    # REDIS_KEY_PREFIX convention is enforced, NOPERM otherwise) and any pub/sub channel.
+    command:
+      - sh
+      - -c
+      - >-
+        exec redis-server --appendonly yes --save 60 1000
+        --user default off
+        --user "$$REDIS_USER" on ">$$REDIS_PASSWORD" "~gpu-deck:*" allchannels +@all
+    ports:
+      - "127.0.0.1:${GPUDECK_DEPS_REDIS_PORT:-56379}:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      default:
+        aliases: [gpu-deck-deps-redis]
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - redis-cli --user "$$REDIS_USER" --pass "$$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+
+  # Optional HTTPS reverse proxy for the host processes (profile `proxy`):
+  #   https://gpu-deck.localhost:58443        -> web 3180
+  #   https://gpu-deck-api.localhost:58443    -> serving API 8181
+  #   https://gpu-deck-admin.localhost:58443  -> admin API 8180
+  # Certificates come from Caddy's internal CA (`tls internal`); trust it with
+  #   docker compose -f infra/docker/docker-compose.deps.yml cp caddy:/data/caddy/pki/authorities/local/root.crt .
+  # Upstreams are reached through host.docker.internal (OrbStack / Docker Desktop / Colima; on
+  # Linux the host processes must listen on an address the bridge gateway can reach).
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["proxy"]
+    environment:
+      UPSTREAM_HOST: ${GPUDECK_PROXY_UPSTREAM_HOST:-host.docker.internal}
+      WEB_PORT: ${WEB_PORT:-3180}
+      API_LAYER_PORT: ${API_LAYER_PORT:-8181}
+      ADMIN_PORT: ${ADMIN_PORT:-8180}
+    ports:
+      - "127.0.0.1:${GPUDECK_PROXY_HTTPS_PORT:-58443}:443"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./deps/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    restart: unless-stopped
+
+networks:
+  default:
+    name: gpu-deck-deps
+
+volumes:
+  postgres-data: {}
+  redis-data: {}
+  caddy-data: {}

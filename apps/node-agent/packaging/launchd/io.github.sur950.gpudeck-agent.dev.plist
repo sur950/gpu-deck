@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Per-user LaunchAgent for development (no root). Replace __HOME__ and __BIN__, copy to
+     ~/Library/LaunchAgents/ and load with:
+       launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.github.sur950.gpudeck-agent.dev.plist
+     Stop: launchctl bootout gui/$(id -u)/io.github.sur950.gpudeck-agent.dev -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>io.github.sur950.gpudeck-agent.dev</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__BIN__/gpudeck-agent</string>
+    <string>--config</string><string>__HOME__/.gpudeck/agent.toml</string>
+    <string>run</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>GPUDECK_AGENT_STATE_DIR</key><string>__HOME__/.gpudeck/state</string>
+    <key>GPUDECK_AGENT_ENGINE_PATHS_LLAMA_CPP</key><string>__HOME__/.unsloth/llama.cpp/build/bin/llama-server</string>
+    <key>GPUDECK_AGENT_ENGINE_PATHS_MLX</key><string>__HOME__/.venv/bin/mlx_lm.server</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
+  <key>ThrottleInterval</key><integer>5</integer>
+  <!-- Engines run in their own sessions and outlive the agent (restart / upgrade); never kill
+       what is left of the job's process group when the agent exits. -->
+  <key>AbandonProcessGroup</key><true/>
+  <key>StandardOutPath</key><string>__HOME__/.gpudeck/agent.log</string>
+  <key>StandardErrorPath</key><string>__HOME__/.gpudeck/agent.log</string>
+</dict>
+</plist>

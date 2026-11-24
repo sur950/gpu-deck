@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/rules/v1/layout.schema.json",
+  "title": "GPU layout",
+  "description": "A named placement of deployments on nodes/devices (layouts + layout_items tables). Applying a layout: for every item, reconcile the deployment's instances to the item's node/devices/replicas/slice/weight; deployments not listed are left untouched unless unlisted_policy says otherwise. Request/response shape for POST /layouts and the time_schedule rule.",
+  "type": "object",
+  "required": ["name", "items"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "description": { "type": ["string", "null"], "maxLength": 2048 },
+    "unlisted_policy": { "type": "string", "enum": ["keep", "unload"], "default": "keep", "description": "What happens to running deployments that are not in items when the layout is applied. unload never touches always_on models." },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["deployment_id"],
+        "properties": {
+          "deployment_id": { "type": "string", "format": "uuid" },
+          "node_id": { "type": ["string", "null"], "format": "uuid", "description": "null = scheduler chooses." },
+          "device_ids": { "type": "array", "items": { "type": "string", "format": "uuid" }, "uniqueItems": true, "default": [], "description": "Must all belong to node_id. Empty = scheduler chooses on that node." },
+          "replicas": { "type": "integer", "minimum": 0, "maximum": 64, "default": 1, "description": "0 = unloaded in this layout." },
+          "slice": {
+            "type": ["object", "null"],
+            "default": null,
+            "properties": {
+              "vram_bytes": { "type": "integer", "minimum": 1 },
+              "compute_pct": { "type": "integer", "minimum": 1, "maximum": 100, "default": 100 }
+            },
+            "required": ["vram_bytes"],
+            "additionalProperties": false
+          },
+          "traffic_weight": { "type": "integer", "minimum": 0, "maximum": 1000, "default": 100 },
+          "position": { "type": "integer", "minimum": 0, "description": "Apply order (lower first); defaults to array index." }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,24 @@
+# Secrets and host-specific files are injected at runtime (env_file / mounts),
+# never baked into the image.
+.env
+.env.*
+!.env.example
+*.crt
+*.pem
+*.key
+certs/
+
+.git
+.gitignore
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+venv/
+.venv/
+logs/
+.run/
+celerybeat-schedule*

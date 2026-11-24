@@ -1,0 +1,19 @@
+{
+    "card0": {
+        "Card Series": "Hygon DCU K100_AI",
+        "Unique ID": "0x6f3a1b2c4d5e6f70",
+        "PCI Bus": "0000:9F:00.0",
+        "DCU use (%)": "35",
+        "DCU memory use (%)": "62",
+        "VRAM Total Memory (B)": "68702699520",
+        "VRAM Total Used Memory (B)": "42596474880",
+        "Average Graphics Package Power (W)": "156.0",
+        "Max Graphics Package Power (W)": "400.0",
+        "Temperature (Sensor edge) (C)": "49.0",
+        "Temperature (Sensor junction) (C)": "58.0",
+        "Temperature (Sensor memory) (C)": "53.0",
+        "sclk clock speed:": "(1500Mhz)",
+        "mclk clock speed:": "(1200Mhz)"
+    },
+    "system": {"Driver version": "6.3.8-V1.5.2"}
+}

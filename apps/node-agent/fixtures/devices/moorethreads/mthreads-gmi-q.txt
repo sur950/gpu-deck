@@ -1,0 +1,57 @@
+
+==============MTHREADS-GMI LOG==============
+
+Timestamp                           : Tue Nov 17 10:20:30 2026
+Driver Version                      : 2.7.0
+MUSA Version                        : 3.1.0
+Attached GPUs                       : 2
+
+GPU 00000000:3B:00.0
+    Index                           : 0
+    Product Name                    : MTT S4000
+    Product Brand                   : MTT
+    GPU UUID                        : 7a1b2c3d-4e5f-6071-8293-a4b5c6d7e8f9
+    Serial Number                   : MT2405000123
+    MUSA Cores                      : 8192
+    PCI
+        Bus Id                      : 00000000:3B:00.0
+        Device Id                   : 0x0327
+    Fan Speed                       : 0%
+    Memory Usage
+        Total                       : 49152MiB
+        Used                        : 1052MiB
+        Free                        : 48100MiB
+    Utilization
+        Gpu                         : 3%
+        Memory                      : 2%
+    Temperature
+        Gpu                         : 39C
+    Power Readings
+        Power Draw                  : 47.66W
+        Power Limit                 : 450.00W
+        Max Power Limit             : 450.00W
+    Clocks
+        Graphics                    : 1750MHz
+        Memory                      : 1750MHz
+
+GPU 00000000:5E:00.0
+    Index                           : 1
+    Product Name                    : MTT S4000
+    GPU UUID                        : 1f2e3d4c-5b6a-4798-8a7b-6c5d4e3f2a1b
+    PCI
+        Bus Id                      : 00000000:5E:00.0
+    Fan Speed                       : N/A
+    Memory Usage
+        Total                       : 49152MiB
+        Used                        : 30020MiB
+    Utilization
+        Gpu                         : 91%
+        Memory                      : 64%
+    Temperature
+        Gpu                         : 71C
+    Power Readings
+        Power Draw                  : 402.10W
+        Power Limit                 : 450.00W
+    Clocks
+        Graphics                    : 1750MHz
+        Memory                      : 1750MHz

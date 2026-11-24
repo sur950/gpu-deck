@@ -1,0 +1,27 @@
+# BuildKit reads <Dockerfile>.dockerignore. Context: repository root; only the backend and the
+# contracts it reads at runtime are sent. Secrets and host files are injected at runtime.
+*
+!apps/fastapi
+!libs/contracts
+apps/fastapi/.env
+apps/fastapi/.env.*
+!apps/fastapi/.env.example
+apps/fastapi/venv
+apps/fastapi/.venv
+apps/fastapi/logs
+apps/fastapi/.run
+apps/fastapi/certs
+apps/fastapi/reports
+apps/fastapi/htmlcov
+apps/fastapi/.coverage
+apps/fastapi/celerybeat-schedule*
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.pem
+**/*.key
+**/*.crt
+**/.DS_Store
+apps/fastapi/.hypothesis

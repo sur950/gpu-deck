@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+wheels/
+*.egg-info/
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables (real values live only in .env; .env.example is committed)
+.env
+.env.local
+.env.*.local
+# .env backups
+.env.*.bak
+.env.bak*
+
+# Dev process state written by infra/scripts/bootstrap.dev.sh
+.run/
+
+# Logs (root-anchored — a bare "logs/" would also match app/services/logs/)
+/logs/
+*.log
+
+# Testing
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.hypothesis/
+
+# Celery
+celerybeat-schedule
+celerybeat-schedule.*
+celerybeat.pid
+
+# ORM models: generated_models.py is COMMITTED (generate_models.sh, checked in CI);
+# any other file here is local scratch
+app/db/postgres/models/*.py
+!app/db/postgres/models/generated_models.py
+!app/db/postgres/models/__init__.py
+
+# Type checkers
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# Local certs / CA (dev PKI)
+certs/
+*.pem
+*.key
+*.crt
+
+# Misc
+.cache/
+*.pid

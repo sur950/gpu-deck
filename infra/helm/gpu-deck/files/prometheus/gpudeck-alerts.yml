@@ -1,0 +1,82 @@
+# Alerting rules on the metric names in libs/contracts/metrics.md. GPU Deck also raises its own
+# alerts (Slack/email/webhook channels); these are for teams that route through Alertmanager.
+groups:
+  - name: gpudeck-fleet
+    rules:
+      - alert: GpuDeckGpuHot
+        expr: max by (node, device_name, index) (gpudeck_gpu_temperature_celsius) > 88
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "GPU {{ $labels.device_name }} #{{ $labels.index }} on {{ $labels.node }} at {{ $value }} °C"
+      - alert: GpuDeckGpuThrottled
+        expr: max by (node, index, reason) (gpudeck_gpu_throttled{reason=~"hw_slowdown|sw_thermal|hw_thermal"}) == 1
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "GPU #{{ $labels.index }} on {{ $labels.node }} throttled ({{ $labels.reason }})"
+      - alert: GpuDeckGpuEccErrors
+        expr: increase(gpudeck_gpu_ecc_errors_total[15m]) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "Uncorrectable ECC errors on {{ $labels.node }} GPU #{{ $labels.index }}"
+      - alert: GpuDeckEngineUnhealthy
+        expr: min by (deployment, instance_id, node) (gpudeck_engine_healthy) == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Instance {{ $labels.instance_id }} of {{ $labels.deployment }} on {{ $labels.node }} is unhealthy"
+      - alert: GpuDeckEngineErrorRate
+        expr: |
+          sum by (deployment) (rate(gpudeck_engine_errors_total[5m]))
+            / clamp_min(sum by (deployment) (rate(gpudeck_engine_requests_total[5m])), 1e-9) > 0.05
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.deployment }} error ratio above 5 %"
+      - alert: GpuDeckQueueBuilding
+        expr: sum by (deployment) (gpudeck_engine_waiting_sessions) > 10
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.deployment }} has {{ $value }} waiting requests"
+      - alert: GpuDeckKvCacheFull
+        expr: max by (deployment, instance_id) (gpudeck_engine_kv_cache_usage_ratio) > 0.95
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "KV cache of {{ $labels.deployment }} ({{ $labels.instance_id }}) above 95 %"
+
+  - name: gpudeck-control-plane
+    rules:
+      - alert: GpuDeckTargetDown
+        expr: up{job=~"gpudeck-.*"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.job }} ({{ $labels.instance }}) is down"
+      - alert: GpuDeckNoConnectedNodes
+        expr: sum(gpudeck_hub_connected_nodes) == 0
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "No node agent is connected to the agent hub"
+      - alert: GpuDeckIngestLag
+        expr: max(gpudeck_hub_ingest_lag_seconds) > 30
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Metrics ingest is {{ $value }} s behind"
+      - alert: GpuDeckNoJobsLeader
+        expr: sum(gpudeck_jobs_leader) == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "No jobs process holds the leader lease (rules and schedules are not running)"
+      - alert: GpuDeckHighApiLatency
+        expr: |
+          histogram_quantile(0.95, sum by (le, job) (rate(http_request_duration_seconds_bucket{job=~"gpudeck-admin-api|gpudeck-api-layer"}[5m]))) > 2
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "p95 latency of {{ $labels.job }} above 2 s"

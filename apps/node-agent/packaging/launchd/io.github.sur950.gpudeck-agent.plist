@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- System LaunchDaemon (production Mac worker). Install to /Library/LaunchDaemons/, runs as the
+     dedicated `_gpudeck` user. Metal access works for any user; no root needed except for
+     `--apply-egress-lock` (pf). Load: sudo launchctl bootstrap system /Library/LaunchDaemons/io.github.sur950.gpudeck-agent.plist -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>io.github.sur950.gpudeck-agent</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/gpudeck-agent</string>
+    <string>--config</string><string>/usr/local/etc/gpudeck/agent.toml</string>
+    <string>--log-json</string>
+    <string>run</string>
+  </array>
+  <key>UserName</key><string>_gpudeck</string>
+  <key>GroupName</key><string>_gpudeck</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>5</integer>
+  <!-- Engines run in their own sessions and outlive the agent (restart / upgrade); never kill
+       what is left of the job's process group when the agent exits. -->
+  <key>AbandonProcessGroup</key><true/>
+  <key>ExitTimeOut</key><integer>60</integer>
+  <key>ProcessType</key><string>Interactive</string>
+  <key>StandardOutPath</key><string>/usr/local/var/log/gpudeck-agent.log</string>
+  <key>StandardErrorPath</key><string>/usr/local/var/log/gpudeck-agent.log</string>
+  <key>SoftResourceLimits</key><dict><key>NumberOfFiles</key><integer>65536</integer></dict>
+</dict>
+</plist>

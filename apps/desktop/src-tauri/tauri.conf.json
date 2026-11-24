@@ -1,0 +1,85 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "GPU Deck",
+  "mainBinaryName": "gpu-deck",
+  "version": "1.0.0",
+  "identifier": "io.github.sur950.gpudeck",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "connect",
+        "title": "GPU Deck",
+        "url": "index.html",
+        "width": 1040,
+        "height": 760,
+        "minWidth": 860,
+        "minHeight": 560,
+        "center": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "backgroundColor": "#0E0F12"
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' https://api.fontshare.com",
+        "font-src": "'self' https://cdn.fontshare.com",
+        "img-src": "'self' data:",
+        "connect-src": "ipc: http://ipc.localhost",
+        "object-src": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'",
+        "frame-src": "'none'"
+      },
+      "freezePrototype": false,
+      "capabilities": ["connect-screen"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "publisher": "Suresh Konakanchi",
+    "copyright": "Copyright 2026 Suresh Konakanchi",
+    "homepage": "https://sur950.github.io/gpu-deck/",
+    "license": "Apache-2.0",
+    "category": "DeveloperTool",
+    "shortDescription": "GPU Deck control plane desktop app",
+    "longDescription": "Native shell for GPU Deck: connect to a control plane, use its web UI, get native notifications and a tray status.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "createUpdaterArtifacts": false,
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": "-",
+      "hardenedRuntime": true,
+      "entitlements": null
+    },
+    "windows": {
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "nsis": { "installMode": "currentUser" }
+    },
+    "linux": {
+      "deb": { "section": "devel" }
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": { "schemes": ["gpudeck"] }
+    }
+  }
+}

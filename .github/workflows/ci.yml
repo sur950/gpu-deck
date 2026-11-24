@@ -1,0 +1,538 @@
+name: CI
+
+# Lint, test and build every component on pull requests and on main. Each component job runs
+# only when its paths change (the `changes` job); a manual run checks everything. The last job,
+# `CI passed`, is the one to mark as required in the branch protection rules.
+# scripts/ci_local.sh runs the same checks on your machine before you push.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "24.21.0"
+  TERRAFORM_VERSION: "1.13.4"
+  HELM_VERSION: "v3.19.0"
+  KUBECONFORM_VERSION: "v0.8.0"
+  ZIG_VERSION: "0.13.0"
+  CARGO_ZIGBUILD_VERSION: "0.20.1"
+  CARGO_TERM_COLOR: always
+  FORCE_COLOR: "1"
+
+jobs:
+  changes:
+    name: Changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.backend }}
+      web: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.web }}
+      agent: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.agent }}
+      desktop: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.desktop }}
+      cli: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.cli }}
+      terraform: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.terraform }}
+      infra: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.infra }}
+      images: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.images }}
+      docs: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.docs }}
+      website: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.website }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            shared: &shared
+              - .github/workflows/ci.yml
+            backend:
+              - *shared
+              - apps/fastapi/**
+              - libs/contracts/**
+              - scripts/check_env_docs.py
+              - scripts/ci_deps.sh
+              - infra/docker/docker-compose.deps.yml
+              - infra/docker/deps/**
+            web:
+              - *shared
+              - apps/web/**
+              - libs/contracts/**
+              - package.json
+              - pnpm-lock.yaml
+              - pnpm-workspace.yaml
+              - .npmrc
+            agent:
+              - *shared
+              - apps/node-agent/**
+              - libs/contracts/agent-protocol/**
+              - infra/scripts/cross-compile-agent.sh
+            desktop:
+              - *shared
+              - apps/desktop/**
+              - package.json
+              - pnpm-lock.yaml
+              - pnpm-workspace.yaml
+            cli:
+              - *shared
+              - apps/cli/**
+              - libs/contracts/openapi/**
+            terraform:
+              - *shared
+              - apps/terraform-provider/**
+            infra:
+              - *shared
+              - infra/**
+              - apps/node-agent/packaging/**
+            images:
+              - *shared
+              - infra/docker/**
+              - apps/fastapi/**
+              - apps/web/**
+              - apps/node-agent/**
+              - libs/contracts/**
+              - package.json
+              - pnpm-lock.yaml
+            docs:
+              - *shared
+              - "**/*.md"
+            website:
+              - *shared
+              - website/**
+              - scripts/build_docs.py
+              - scripts/requirements-docs.txt
+              - "**/*.md"
+              - docs/screenshots/**
+              - assets/brand/social-preview.png
+
+  # ---------------------------------------------------------------------------------------------
+  version:
+    name: Versions and scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Every manifest carries the VERSION file's version
+        run: python3 scripts/version.py --check
+      - name: CHANGELOG.md has a section for that version
+        run: scripts/release_notes.sh --section "$(cat VERSION)" > /dev/null
+      - name: Shell scripts parse
+        run: for f in scripts/*.sh; do bash -n "$f"; done
+
+  # ---------------------------------------------------------------------------------------------
+  backend:
+    name: Backend (FastAPI)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: apps/fastapi
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: apps/fastapi/requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          venv/bin/pip install --quiet --upgrade pip
+          venv/bin/pip install --quiet -r requirements.txt
+      - name: black / isort / flake8
+        run: |
+          venv/bin/black --check -l 100 app tests
+          venv/bin/isort --check-only --profile black -l 100 app tests
+          venv/bin/flake8 app tests
+      - name: Start Postgres 17 + Redis 7.4 (dev compose file, CI project)
+        working-directory: .
+        run: scripts/ci_deps.sh up
+      - name: Migrations apply (alembic upgrade head)
+        run: venv/bin/alembic upgrade head
+      - name: generated_models.py matches the migrations
+        run: ./app/db/postgres/scripts/generate_models.sh --check
+      - name: env.md, settings and .env.example agree
+        run: venv/bin/python ../../scripts/check_env_docs.py
+      - name: pytest (unit + integration + e2e, one run)
+        run: venv/bin/pytest tests -p no:cacheprovider --junitxml=reports/pytest.xml
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-pytest-report
+          path: apps/fastapi/reports/
+          retention-days: 7
+      - name: Stop containers
+        if: always()
+        working-directory: .
+        run: scripts/ci_deps.sh down
+
+  # ---------------------------------------------------------------------------------------------
+  web:
+    name: Web UI
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter web...
+      - name: Lint
+        run: pnpm --filter web lint
+      - name: Type check
+        run: pnpm --filter web type:check
+      - name: Generated API types match libs/contracts/openapi/admin.yaml
+        working-directory: apps/web
+        run: node scripts/gen-api.mjs --check
+      - name: Unit tests
+        run: pnpm --filter web test
+      - name: Build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: pnpm --filter web build
+
+  # ---------------------------------------------------------------------------------------------
+  agent:
+    name: Node agent (Rust)
+    needs: changes
+    if: needs.changes.outputs.agent == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: apps/node-agent
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: apps/node-agent
+      - name: rustfmt
+        run: cargo fmt --all --check
+      - name: clippy (warnings are errors)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Tests
+        run: cargo test --workspace --locked
+
+  agent-cross:
+    name: Node agent cross-compile (${{ matrix.target }})
+    needs: changes
+    if: needs.changes.outputs.agent == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64-unknown-linux-gnu.2.28, aarch64-unknown-linux-gnu.2.28]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          toolchain: stable
+          targets: x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: apps/node-agent
+          key: ${{ matrix.target }}
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Install cargo-zigbuild
+        run: pipx install "cargo-zigbuild==${CARGO_ZIGBUILD_VERSION}"
+      - name: Build
+        run: infra/scripts/cross-compile-agent.sh --targets "${{ matrix.target }}" --version ci --out "$RUNNER_TEMP/agent"
+
+  # ---------------------------------------------------------------------------------------------
+  desktop:
+    name: Desktop app (Tauri)
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - name: WebKitGTK and bundler packages
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf file
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: apps/desktop/src-tauri
+      - run: pnpm install --frozen-lockfile --filter desktop...
+      - name: Type check, tests and build (connect screen)
+        run: |
+          pnpm --filter desktop type:check
+          pnpm --filter desktop test
+          pnpm --filter desktop build
+      - name: Rust fmt, tests and clippy
+        working-directory: apps/desktop/src-tauri
+        run: |
+          cargo fmt --check
+          cargo test --locked
+          cargo clippy --all-targets --locked -- -D warnings
+
+  # ---------------------------------------------------------------------------------------------
+  cli:
+    name: CLI (Python)
+    needs: changes
+    if: needs.changes.outputs.cli == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/cli
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: apps/cli/pyproject.toml
+      - name: Install
+        run: uv venv .venv && uv pip install --python .venv/bin/python -e '.[dev]'
+      - name: black / isort / flake8 / mypy
+        run: |
+          .venv/bin/black --check gpudeck tests
+          .venv/bin/isort --check-only gpudeck tests
+          .venv/bin/flake8 gpudeck tests
+          .venv/bin/mypy gpudeck
+      - name: Tests
+        run: .venv/bin/python -m pytest
+      - name: Build wheel and sdist
+        run: uv build --out-dir "$RUNNER_TEMP/cli-dist"
+      - name: Wheel carries the bundled spec and runs from a clean venv
+        run: |
+          wheel="$(ls "$RUNNER_TEMP"/cli-dist/gpudeck_cli-*-py3-none-any.whl)"
+          unzip -l "$wheel" | grep -q 'gpudeck/_spec/admin.yaml'
+          uv venv "$RUNNER_TEMP/cli-smoke"
+          uv pip install --python "$RUNNER_TEMP/cli-smoke/bin/python" "$wheel"
+          export GPUDECK_CONFIG_DIR="$RUNNER_TEMP/cli-smoke-home" GPUDECK_CACHE_DIR="$RUNNER_TEMP/cli-smoke-home"
+          "$RUNNER_TEMP/cli-smoke/bin/gpudeck" --version
+          GPUDECK_SPEC=bundled "$RUNNER_TEMP/cli-smoke/bin/gpudeck" -o json config spec | grep -q '"source": "bundled"'
+          GPUDECK_SPEC=bundled "$RUNNER_TEMP/cli-smoke/bin/gpudeck" clusters create --help >/dev/null
+
+  # ---------------------------------------------------------------------------------------------
+  terraform:
+    name: Terraform provider (Go)
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/terraform-provider
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: apps/terraform-provider/go.mod
+          cache-dependency-path: apps/terraform-provider/go.sum
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - name: go vet
+        run: go vet ./...
+      - name: Tests
+        run: go test ./... -count=1
+      - name: Build
+        run: go build -trimpath -o "$RUNNER_TEMP/terraform-provider-gpudeck" .
+
+  # ---------------------------------------------------------------------------------------------
+  infra:
+    name: Helm, Compose and scripts
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: Install kubeconform
+        run: |
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP" kubeconform
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: helm lint
+        run: helm lint infra/helm/gpu-deck --strict --set secrets.existingSecret=ci
+      - name: Rendered chart is valid Kubernetes (kubeconform)
+        run: |
+          for args in "" "--set nodeAgent.enabled=true --set nodeAgent.joinTokenSecret=jt" \
+              "--set nodeAgent.enabled=true --set nodeAgent.joinTokenSecret=jt --set nodeAgent.containerRuntime.enabled=true --set nodeAgent.containerRuntime.socketGroupId=999"; do
+            # shellcheck disable=SC2086
+            helm template ci infra/helm/gpu-deck --set secrets.existingSecret=ci $args \
+              | kubeconform -strict -summary -ignore-missing-schemas -kubernetes-version 1.31.0
+          done
+      - name: Grafana dashboards are up to date
+        run: python3 infra/observability/grafana/build_dashboards.py --check
+      - name: Shell scripts parse
+        run: |
+          for f in infra/scripts/*.sh infra/offline/*.sh infra/docker/scripts/*.sh \
+                   apps/node-agent/packaging/*.sh apps/node-agent/packaging/*/*.sh; do
+            [ -f "$f" ] && bash -n "$f"
+          done
+      - name: Compose files are valid
+        run: |
+          touch apps/fastapi/.env
+          docker compose -f infra/docker/docker-compose.yml config -q
+          GPUDECK_DEPS_PG_SUPERUSER_PASSWORD=x GPUDECK_DEPS_PG_PASSWORD=x GPUDECK_DEPS_REDIS_PASSWORD=x \
+            docker compose -f infra/docker/docker-compose.deps.yml --profile proxy config -q
+
+  # ---------------------------------------------------------------------------------------------
+  images:
+    name: Image ${{ matrix.image }} (build only)
+    needs: changes
+    if: needs.changes.outputs.images == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: gpu-deck-api
+            dockerfile: infra/docker/api/Dockerfile
+            context: .
+          - image: gpu-deck-web
+            dockerfile: infra/docker/web/Dockerfile
+            context: .
+          - image: gpu-deck-agent
+            dockerfile: infra/docker/node-agent/Dockerfile
+            context: apps/node-agent
+          - image: gpu-deck-ssh
+            dockerfile: apps/node-agent/packaging/ssh-image/Dockerfile
+            context: apps/node-agent/packaging/ssh-image
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: ${{ matrix.image }}:ci
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+      - name: Scan for critical vulnerabilities (Trivy, fixed ones only)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.67.2 \
+            image --no-progress --exit-code 1 --severity CRITICAL --ignore-unfixed "${{ matrix.image }}:ci"
+
+  security:
+    name: Lockfiles, IaC and secrets (Trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: trivy fs (critical, fixed only)
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src aquasec/trivy:0.67.2 fs --no-progress \
+            --scanners vuln,secret,misconfig --exit-code 1 --severity CRITICAL --ignore-unfixed .
+
+  # ---------------------------------------------------------------------------------------------
+  links:
+    name: Markdown links (relative)
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Relative links in public Markdown resolve
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: >-
+            --offline --no-progress
+            --exclude-path node_modules --exclude-path target --exclude-path apps/web/.next
+            './**/*.md'
+          fail: true
+
+  # ---------------------------------------------------------------------------------------------
+  website:
+    name: Website (docs build and site links)
+    needs: changes
+    if: needs.changes.outputs.website == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: scripts/requirements-docs.txt
+      - name: Install the site tools (pinned)
+        run: |
+          python -m venv "$RUNNER_TEMP/site-venv"
+          "$RUNNER_TEMP/site-venv/bin/pip" install --quiet --requirement scripts/requirements-docs.txt
+          echo "$RUNNER_TEMP/site-venv/bin" >> "$GITHUB_PATH"
+      - name: Screenshots (display SVGs from docs/screenshots)
+        run: website/sync-screenshots.sh
+      - name: Build the docs in check mode (links, anchors, assets, diagrams, NAV, CSP hash)
+        run: python scripts/build_docs.py --check
+
+  # ---------------------------------------------------------------------------------------------
+  ci-passed:
+    name: CI passed
+    if: always()
+    needs:
+      - changes
+      - version
+      - backend
+      - web
+      - agent
+      - agent-cross
+      - desktop
+      - cli
+      - terraform
+      - infra
+      - images
+      - security
+      - links
+      - website
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Every job passed or was skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          for r in $RESULTS; do
+            case "$r" in success|skipped) ;; *) echo "a job ended with: $r" >&2; exit 1 ;; esac
+          done

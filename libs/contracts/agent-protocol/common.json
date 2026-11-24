@@ -1,0 +1,575 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/agent-protocol/v1/common.json",
+  "title": "GPU Deck agent protocol — shared definitions",
+  "description": "Reusable types referenced by every message schema. Field names match the Postgres columns in 001_init/up.sql so ingest is a straight copy.",
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 with timezone, millisecond precision recommended (2026-11-16T10:20:30.123Z)."
+    },
+    "node_os": { "type": "string", "enum": ["linux", "macos"] },
+    "node_arch": { "type": "string", "enum": ["x86_64", "aarch64"] },
+    "device_vendor": {
+      "type": "string",
+      "enum": ["nvidia", "amd", "hygon", "metax", "moorethreads", "thead", "apple"]
+    },
+    "device_health": { "type": "string", "enum": ["healthy", "degraded", "unhealthy", "unknown"] },
+    "instance_state": {
+      "type": "string",
+      "enum": ["pending", "loading", "ready", "draining", "unloading", "stopped", "error"]
+    },
+    "instance_health": { "type": "string", "enum": ["healthy", "unhealthy", "unknown"] },
+    "observed_engine_kind": {
+      "type": "string",
+      "enum": ["vllm", "sglang", "llamacpp", "tgi", "openai", "generic"],
+      "description": "Engine family of an observed (external) model server (added 2026-11-23). Picks the /metrics parser: vllm, sglang, llamacpp and tgi Prometheus; openai = OpenAI-compatible server without engine metrics (health and models only); generic = health only."
+    },
+    "engine_name": {
+      "type": "string",
+      "enum": ["llama_cpp", "vllm", "vllm_omni", "sglang", "sglang_diffusion", "tensorrt_llm", "mlx", "mlx_audio", "whisper_cpp", "stable_diffusion_cpp", "custom"]
+    },
+    "engine_runtime": { "type": "string", "enum": ["native", "container"] },
+    "model_type": {
+      "type": "string",
+      "enum": ["chat", "thinking", "vision", "embedding", "rerank", "stt", "tts", "image", "video"]
+    },
+    "model_file_format": { "type": "string", "enum": ["gguf", "safetensors", "mlx", "pickle", "other"] },
+    "model_source": { "type": "string", "enum": ["huggingface", "modelscope", "local_path"] },
+    "cache_state": { "type": "string", "enum": ["queued", "downloading", "ready", "evicting", "evicted", "error"] },
+    "log_level": { "type": "string", "enum": ["debug", "info", "warn", "error"] },
+    "log_stream": { "type": "string", "enum": ["stdout", "stderr", "app"] },
+
+    "Device": {
+      "type": "object",
+      "description": "Common Device format produced by every vendor plugin. Maps 1:1 to the devices table.",
+      "required": ["vendor", "index", "name", "vram_total_bytes", "health"],
+      "properties": {
+        "device_id": { "oneOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }], "description": "Stable device id (added 2026-11-17, agent >= 1.1.0) = uuid5(namespace = node_id, name = \"<vendor>:<index>\"), e.g. Python uuid.uuid5(UUID(node_id), \"nvidia:0\"). The same id is used in GpuSample.device_id, InstanceStatus.device_ids and events; the hub must use it as devices.id (protocol.md §10)." },
+        "vendor": { "$ref": "#/$defs/device_vendor" },
+        "index": { "type": "integer", "minimum": 0, "description": "Vendor ordinal (CUDA_VISIBLE_DEVICES index, amd-smi gpu id, 0 on Apple)." },
+        "uuid": { "type": ["string", "null"], "maxLength": 128, "description": "Vendor UUID; stable across reboots when available (NVML GPU-xxxx, amd-smi unique_id, Apple: apple-<chip>-<hw.serial>)." },
+        "name": { "type": "string", "maxLength": 255 },
+        "vram_total_bytes": { "type": "integer", "minimum": 0, "description": "Apple: Metal recommendedMaxWorkingSetSize (wired limit)." },
+        "is_unified_memory": { "type": "boolean", "default": false },
+        "driver_version": { "type": ["string", "null"], "maxLength": 100 },
+        "runtime_version": { "type": ["string", "null"], "maxLength": 100, "description": "CUDA / ROCm / MUSA / Metal version." },
+        "compute_capability": { "type": ["string", "null"], "maxLength": 32, "description": "NVIDIA \"8.9\", AMD \"gfx942\", Apple \"metal3\"." },
+        "pci_bus_id": { "type": ["string", "null"], "maxLength": 64 },
+        "numa_node": { "type": ["integer", "null"] },
+        "max_power_watts": { "type": ["number", "null"] },
+        "core_count": { "type": ["integer", "null"], "description": "SMs / CUs / Apple GPU cores." },
+        "health": { "$ref": "#/$defs/device_health" },
+        "health_reason": { "type": ["string", "null"], "maxLength": 1024 },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" }, "default": {} },
+        "extra": { "type": "object", "description": "Vendor-specific raw fields (never required by the control plane).", "default": {} }
+      },
+      "additionalProperties": false
+    },
+
+    "Disk": {
+      "type": "object",
+      "required": ["mount", "total_bytes", "free_bytes"],
+      "properties": {
+        "mount": { "type": "string" },
+        "device": { "type": ["string", "null"] },
+        "fs": { "type": ["string", "null"] },
+        "total_bytes": { "type": "integer", "minimum": 0 },
+        "free_bytes": { "type": "integer", "minimum": 0 },
+        "is_cache_dir": { "type": "boolean", "default": false, "description": "True for the mount holding the model cache dir." }
+      },
+      "additionalProperties": false
+    },
+
+    "CacheItem": {
+      "type": "object",
+      "description": "One cached model file on the node (node_model_cache row).",
+      "required": ["model_file_id", "model_version_id", "local_path", "size_bytes", "state"],
+      "properties": {
+        "model_file_id": { "$ref": "#/$defs/uuid" },
+        "model_version_id": { "$ref": "#/$defs/uuid" },
+        "local_path": { "type": "string", "maxLength": 1024 },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "state": { "$ref": "#/$defs/cache_state" },
+        "progress_pct": { "type": "number", "minimum": 0, "maximum": 100, "default": 0 },
+        "sha256_verified": { "type": "boolean", "default": false },
+        "pinned": { "type": "boolean", "default": false },
+        "last_used_at": { "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }] },
+        "error_message": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+
+    "Slice": {
+      "type": "object",
+      "description": "GPU slice for one instance on one device. null slice = whole device.",
+      "required": ["vram_bytes", "compute_pct"],
+      "properties": {
+        "vram_bytes": { "type": "integer", "minimum": 1 },
+        "compute_pct": { "type": "integer", "minimum": 1, "maximum": 100 }
+      },
+      "additionalProperties": false
+    },
+
+    "DeviceAssignment": {
+      "type": "object",
+      "required": ["device_id", "index", "vendor"],
+      "properties": {
+        "device_id": { "$ref": "#/$defs/uuid" },
+        "index": { "type": "integer", "minimum": 0 },
+        "vendor": { "$ref": "#/$defs/device_vendor" },
+        "slice": { "oneOf": [{ "$ref": "#/$defs/Slice" }, { "type": "null" }] }
+      },
+      "additionalProperties": false
+    },
+
+    "Artifact": {
+      "type": "object",
+      "description": "Pinned native engine build for the node's platform and GPU, installed under <state_dir>/engines/<engine>/<version>/. The agent refuses an all-zero sha256.",
+      "required": ["url", "sha256", "kind"],
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "kind": {
+          "type": "string",
+          "enum": ["tarball", "zip", "binary", "wheel", "python_venv", "source"],
+          "description": "tarball/zip: unpacked; binary: the executable; wheel: pip --target; python_venv: a venv (python -m venv) with the wheel and its dependencies installed; source: a source archive built with CMake (see build)."
+        },
+        "entrypoint": { "type": ["string", "null"], "description": "Relative path of the executable inside the install folder (e.g. llama-b12500/llama-server, venv/bin/mlx_lm.server, build/bin/whisper-server)." },
+        "size_bytes": { "type": ["integer", "null"] },
+        "strip_components": { "type": ["integer", "null"], "minimum": 0, "maximum": 8, "description": "Leading path components dropped when unpacking (tarball/zip/source)." },
+        "parts": {
+          "type": "array",
+          "description": "Further archives unpacked after the main one (e.g. the CUDA runtime bundle of a llama.cpp CUDA build), each verified by sha256.",
+          "items": {
+            "type": "object",
+            "required": ["url", "sha256", "kind"],
+            "properties": {
+              "url": { "type": "string", "format": "uri" },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "kind": { "type": "string", "enum": ["tarball", "zip"] },
+              "size_bytes": { "type": ["integer", "null"] },
+              "dest": { "type": ["string", "null"], "description": "Sub-folder (relative, no ..) to unpack into." },
+              "strip_components": { "type": ["integer", "null"], "minimum": 0, "maximum": 8 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "pip_extras": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }, "description": "python_venv: extras installed with the wheel (wheel[extra,...])." },
+        "python": { "type": ["string", "null"], "pattern": "^(==|>=)?3\\.[0-9]+$", "description": "python_venv: interpreter version, \"==3.12\" (exact) or \">=3.11\" (minimum)." },
+        "build": {
+          "type": ["object", "null"],
+          "description": "source: how to build it.",
+          "required": ["system"],
+          "properties": {
+            "system": { "type": "string", "enum": ["cmake"] },
+            "args": { "type": "array", "items": { "type": "string", "pattern": "^-D[A-Za-z0-9_]+=[A-Za-z0-9_.-]*$" } },
+            "targets": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+$" } }
+          },
+          "additionalProperties": false
+        },
+        "min_glibc": { "type": ["string", "null"], "pattern": "^[0-9]+\\.[0-9]+$", "description": "Linux: oldest host glibc the build runs on (e.g. \"2.38\" for a build made on Ubuntu 24.04). The agent compares it with the host's glibc (getconf GNU_LIBC_VERSION) before downloading and skips a build the host cannot run (added 2026-11-23)." },
+        "fallbacks": {
+          "type": "array",
+          "description": "Builds of the same accelerator for older systems (e.g. an older pinned release built on Ubuntu 22.04), tried in order when the host cannot run this one. Same shape as Artifact without further fallbacks or container (added 2026-11-23).",
+          "items": { "$ref": "#/$defs/Artifact" }
+        },
+        "container": {
+          "type": ["object", "null"],
+          "description": "Official container image of the same engine, used when no native build fits the host (glibc) and the node has a container runtime; the agent then runs the engine as a container (added 2026-11-23).",
+          "required": ["image"],
+          "properties": {
+            "image": { "type": "string", "description": "image:tag@sha256:<index digest>" },
+            "entrypoint": { "type": ["string", "null"], "description": "Program inside the image that replaces the launch template's first word (e.g. /app/llama-server)." },
+            "version": { "type": ["string", "null"], "description": "Engine build inside the image when it differs from the engine version (images are published for some builds only)." }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "HealthConfig": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "default": "/health" },
+        "method": { "type": "string", "enum": ["GET", "POST"], "default": "GET" },
+        "interval_seconds": { "type": "number", "minimum": 1, "default": 5 },
+        "timeout_seconds": { "type": "number", "minimum": 0.5, "default": 3 },
+        "healthy_statuses": { "type": "array", "items": { "type": "integer" }, "default": [200] },
+        "startup_timeout_seconds": { "type": "number", "minimum": 5, "default": 600, "description": "Time allowed from process start to first healthy check (model load)." },
+        "failure_threshold": { "type": "integer", "minimum": 1, "default": 3 }
+      },
+      "additionalProperties": false
+    },
+
+    "MetricsConfig": {
+      "type": "object",
+      "properties": {
+        "path": { "type": ["string", "null"], "default": "/metrics", "description": "Prometheus text endpoint; null when the engine has none." },
+        "format": { "type": "string", "enum": ["prometheus", "json", "none"], "default": "prometheus" },
+        "slots_path": { "type": ["string", "null"], "description": "llama.cpp /slots or equivalent per-session endpoint." },
+        "scrape_interval_seconds": { "type": "number", "minimum": 1, "default": 2 },
+        "derive_from_proxy": { "type": "boolean", "default": false, "description": "True = the agent derives request/latency/token metrics from its mTLS proxy (MLX, whisper.cpp, sd.cpp, custom)." },
+        "metric_prefix": { "type": ["string", "null"], "description": "llamacpp:, vllm:, sglang:, ... used by the scraper mapping in metrics.md." }
+      },
+      "additionalProperties": false
+    },
+
+    "EngineSpec": {
+      "type": "object",
+      "description": "Everything the agent needs to run an engine version. Copied from engine_versions + engines.",
+      "required": ["engine_version_id", "name", "version", "runtime", "launch_template", "health", "metrics"],
+      "properties": {
+        "engine_version_id": { "$ref": "#/$defs/uuid" },
+        "name": { "$ref": "#/$defs/engine_name" },
+        "version": { "type": "string" },
+        "runtime": { "$ref": "#/$defs/engine_runtime" },
+        "image": { "type": ["string", "null"], "description": "Container image ref for runtime=container." },
+        "artifact": { "oneOf": [{ "$ref": "#/$defs/Artifact" }, { "type": "null" }], "description": "Native artifact for this node's os/arch, already selected by the control plane." },
+        "launch_template": {
+          "type": "object",
+          "required": ["command"],
+          "properties": {
+            "command": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "argv with {{var}} placeholders: port, model_path, model_dir, context_size, served_model_name, tp_size, pp_size, device_indices, cache_dir, flags (expanded from launch.flags as --key value pairs)." },
+            "env": { "type": "object", "additionalProperties": { "type": "string" }, "default": {} },
+            "working_dir": { "type": ["string", "null"] },
+            "router_mode": { "type": "boolean", "default": false, "description": "llama.cpp: one server process hosts many models (load/unload via its admin API, agent-only)." }
+          },
+          "additionalProperties": false
+        },
+        "health": { "$ref": "#/$defs/HealthConfig" },
+        "metrics": { "$ref": "#/$defs/MetricsConfig" },
+        "port_range": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2, "default": [10240, 10340] },
+        "capabilities": { "type": "object", "default": {} }
+      },
+      "additionalProperties": false
+    },
+
+    "ModelFileRef": {
+      "type": "object",
+      "required": ["model_file_id", "path", "size_bytes"],
+      "properties": {
+        "model_file_id": { "$ref": "#/$defs/uuid" },
+        "path": { "type": "string", "description": "Path relative to the repo/snapshot root." },
+        "format": { "$ref": "#/$defs/model_file_format" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "is_required": { "type": "boolean", "default": true }
+      },
+      "additionalProperties": false
+    },
+
+    "ModelSource": {
+      "type": "object",
+      "description": "Where to fetch files from. token is a plaintext HF/ModelScope token resolved from the vault by the control plane; it travels only over mTLS and must never be logged or persisted by the agent.",
+      "required": ["kind", "repo_id"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/model_source" },
+        "repo_id": { "type": "string" },
+        "revision": { "type": ["string", "null"] },
+        "endpoint": { "type": ["string", "null"], "format": "uri", "description": "Mirror base URL (HF_ENDPOINT / MODELSCOPE endpoint) for offline sites." },
+        "token": { "type": ["string", "null"], "writeOnly": true }
+      },
+      "additionalProperties": false
+    },
+
+    "ModelSpec": {
+      "type": "object",
+      "required": ["model_id", "model_version_id", "name", "served_model_name", "type", "format", "files", "cache_dir"],
+      "properties": {
+        "model_id": { "$ref": "#/$defs/uuid" },
+        "model_version_id": { "$ref": "#/$defs/uuid" },
+        "name": { "type": "string" },
+        "served_model_name": { "type": "string", "description": "Model id the engine answers to (written to instances.served_model_name)." },
+        "type": { "$ref": "#/$defs/model_type" },
+        "format": { "$ref": "#/$defs/model_file_format" },
+        "files": { "type": "array", "items": { "$ref": "#/$defs/ModelFileRef" }, "minItems": 1 },
+        "cache_dir": { "type": "string", "description": "Absolute directory on the node holding this version's files: <cache_root>/<model_version_id>/." },
+        "source": { "oneOf": [{ "$ref": "#/$defs/ModelSource" }, { "type": "null" }] },
+        "config": { "type": "object", "default": {}, "description": "model_versions.config (n_layers, n_kv_heads, head_dim, ...) for KV-cache size estimates." },
+        "trust_remote_code": { "type": "boolean", "default": false },
+        "allow_pickle": { "type": "boolean", "default": false }
+      },
+      "additionalProperties": false
+    },
+
+    "LaunchSpec": {
+      "type": "object",
+      "description": "Per-deployment launch settings (deployments.* columns).",
+      "properties": {
+        "flags": { "type": "object", "default": {}, "description": "Engine CLI flags as {\"flag\": value}; true = bare flag; arrays repeat the flag. Expanded into the {{flags}} placeholder." },
+        "env": { "type": "object", "additionalProperties": { "type": "string" }, "default": {} },
+        "context_size": { "type": ["integer", "null"], "minimum": 1 },
+        "tool_parser": { "type": ["string", "null"] },
+        "control_vectors": { "type": "array", "default": [], "items": { "type": "object", "required": ["path"], "properties": { "path": { "type": "string" }, "scale": { "type": "number", "default": 1 }, "layer_range": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 } } } },
+        "tp_size": { "type": "integer", "minimum": 1, "default": 1 },
+        "pp_size": { "type": "integer", "minimum": 1, "default": 1 },
+        "preset": { "type": ["string", "null"], "enum": ["low_latency", "high_throughput", null] },
+        "pd_split": { "type": "boolean", "default": false },
+        "pd_role": { "type": ["string", "null"], "enum": ["prefill", "decode", null] },
+        "pd_config": { "type": "object", "default": {} },
+        "spec_decoding": { "type": "object", "default": {} },
+        "kv_sharing": { "type": "boolean", "default": false },
+        "kv_sharing_config": { "type": "object", "default": {} },
+        "max_concurrency": { "type": ["integer", "null"], "minimum": 1, "description": "Parallel slots / max-num-seqs hint." },
+        "distributed": { "oneOf": [{ "$ref": "#/$defs/DistributedSpec" }, { "type": "null" }], "description": "Cross-node pipeline-parallel group membership of this node (added 2026-11-17). Null = single node." }
+      },
+      "additionalProperties": false
+    },
+
+    "DistributedSpec": {
+      "type": "object",
+      "description": "Cross-node pipeline parallel launch (added 2026-11-17, agent >= 1.1.0). The hub sends load_model (or start_engine) to EVERY node of the group with the same instance_id, each listing only its own devices and its own rank. Rank 0 (head) serves the HTTP API and is the only rank in the proxy routing table; ranks > 0 are headless workers, reported in inventory with InstanceStatus.distributed_rank > 0. Start order: workers first, then the head (the agent does not wait for peers; vLLM/SGLang rendezvous on master_addr:master_port, the llama.cpp head retries RPC peers until health_timeout_seconds). Per engine: vLLM `--nnodes W --node-rank R --master-addr A --master-port P` (+ `--headless` on workers; --pipeline-parallel-size from launch.pp_size), SGLang `--nnodes W --node-rank R --dist-init-addr A:P`, llama.cpp: workers run `ggml-rpc-server --host <bind_address> --port <rpc_port>` (`rpc-server` in builds before the rename) and the head, a single-model llama-server outside any router, adds `--rpc <peer.address:peer.rpc_port,...>`; other engines get only the env. Env on every rank: MASTER_ADDR, MASTER_PORT, WORLD_SIZE, RANK, NODE_RANK, GPUDECK_DISTRIBUTED (this object as JSON), NCCL_SOCKET_IFNAME / GLOO_SOCKET_IFNAME when set. Template placeholders: {{rank}}, {{world_size}}, {{master_addr}}, {{master_port}}, {{rpc_peers}}. Network rule: protocol.md §9.",
+      "required": ["rank", "world_size", "master_addr", "master_port"],
+      "properties": {
+        "group_id": { "oneOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }], "description": "Head instance id (log correlation)." },
+        "rank": { "type": "integer", "minimum": 0, "description": "This node's rank; 0 = head." },
+        "world_size": { "type": "integer", "minimum": 2, "maximum": 64, "description": "Number of nodes (ranks) in the group." },
+        "master_addr": { "type": "string", "minLength": 1, "description": "Head node's private address (its proxy_address)." },
+        "master_port": { "type": "integer", "minimum": 1, "maximum": 65535, "description": "Rendezvous port on the head (torch.distributed / SGLang dist-init)." },
+        "bind_address": { "type": ["string", "null"], "description": "This node's address for group traffic (workers' ggml-rpc-server listen address). Null = the agent's proxy_address / first private IP." },
+        "rpc_port": { "type": ["integer", "null"], "minimum": 1, "maximum": 65535, "description": "llama.cpp: ggml-rpc-server port on this worker rank (default 50052)." },
+        "nccl_socket_ifname": { "type": ["string", "null"], "description": "Network interface for NCCL/Gloo (exported as NCCL_SOCKET_IFNAME and GLOO_SOCKET_IFNAME)." },
+        "peers": {
+          "type": "array",
+          "default": [],
+          "description": "Every rank of the group (including this one).",
+          "items": {
+            "type": "object",
+            "required": ["rank", "node_id", "address"],
+            "properties": {
+              "rank": { "type": "integer", "minimum": 0 },
+              "node_id": { "$ref": "#/$defs/uuid" },
+              "address": { "type": "string", "description": "Peer's private address (nodes.proxy_address)." },
+              "rpc_port": { "type": ["integer", "null"], "minimum": 1, "maximum": 65535 },
+              "device_ids": { "type": "array", "items": { "$ref": "#/$defs/uuid" }, "default": [] }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "GpuSample": {
+      "type": "object",
+      "description": "metric_samples_gpu row.",
+      "required": ["ts", "device_id"],
+      "properties": {
+        "ts": { "$ref": "#/$defs/timestamp" },
+        "device_id": { "$ref": "#/$defs/uuid" },
+        "utilization_pct": { "type": ["number", "null"] },
+        "memory_util_pct": { "type": ["number", "null"] },
+        "memory_used_bytes": { "type": ["integer", "null"] },
+        "memory_total_bytes": { "type": ["integer", "null"] },
+        "power_watts": { "type": ["number", "null"] },
+        "power_limit_watts": { "type": ["number", "null"] },
+        "temperature_c": { "type": ["number", "null"] },
+        "memory_temperature_c": { "type": ["number", "null"] },
+        "sm_clock_mhz": { "type": ["integer", "null"] },
+        "memory_clock_mhz": { "type": ["integer", "null"] },
+        "fan_pct": { "type": ["number", "null"] },
+        "encoder_pct": { "type": ["number", "null"] },
+        "decoder_pct": { "type": ["number", "null"] },
+        "pcie_tx_bytes_per_s": { "type": ["integer", "null"] },
+        "pcie_rx_bytes_per_s": { "type": ["integer", "null"] },
+        "ecc_errors_total": { "type": ["integer", "null"] },
+        "error_count": { "type": ["integer", "null"] },
+        "throttle_reasons": { "type": ["array", "null"], "items": { "type": "string" } },
+        "process_count": { "type": ["integer", "null"] },
+        "processes": {
+          "type": ["array", "null"],
+          "items": { "$ref": "#/$defs/GpuProcess" },
+          "description": "Processes holding memory on this GPU (added 2026-11-23; NVIDIA via NVML running compute processes). null = the plugin cannot list them."
+        },
+        "extra": { "type": ["object", "null"] }
+      },
+      "additionalProperties": false
+    },
+
+    "GpuProcess": {
+      "type": "object",
+      "description": "One process using a GPU (added 2026-11-23). name is the executable basename (/proc/<pid>/comm or the basename of argv[0]); the agent never reports command line arguments.",
+      "required": ["pid"],
+      "properties": {
+        "pid": { "type": "integer", "minimum": 0 },
+        "used_memory_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "name": { "type": ["string", "null"], "maxLength": 255 },
+        "instance_id": { "oneOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }], "description": "Managed instance (or observed engine, its observe_id) whose process tree holds this process; for a shared router process one of its instances. null = a process GPU Deck neither runs nor observes. The hub counts memory of processes that are not GPU Deck's as used outside GPU Deck when placing." }
+      },
+      "additionalProperties": false
+    },
+
+    "ObservedEngine": {
+      "type": "object",
+      "description": "A model server GPU Deck did not start and only observes (agent.toml [[observe]], added 2026-11-23). Strictly read-only: the agent only sends GET /metrics, /health and /v1/models (or tails a log file), never signals the process or binds its port. The hub registers it as an external deployment + instance and never sends commands for it (protocol.md \u00a712).",
+      "required": ["observe_id", "deployment_id", "name", "engine", "health"],
+      "properties": {
+        "observe_id": { "$ref": "#/$defs/uuid", "description": "uuid5(namespace = node_id, name = \"observe:<name>\"); the instance id used in EngineSample.instance_id." },
+        "deployment_id": { "$ref": "#/$defs/uuid", "description": "uuid5(namespace = node_id, name = \"observe-deployment:<name>\"); EngineSample.deployment_id." },
+        "name": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+        "engine": { "$ref": "#/$defs/observed_engine_kind" },
+        "endpoint": { "type": ["string", "null"], "maxLength": 255, "description": "host:port of the configured url (no scheme, path, query or credentials); null when only a log file is observed." },
+        "sources": { "type": "array", "items": { "type": "string", "enum": ["metrics", "health", "models", "log"] }, "default": [], "description": "What the agent reads for this engine." },
+        "models": { "type": "array", "items": { "type": "string", "maxLength": 512 }, "maxItems": 64, "default": [], "description": "Model ids from GET <url>/v1/models (or the configured model / the log's startup lines)." },
+        "version": { "type": ["string", "null"], "maxLength": 100 },
+        "health": { "$ref": "#/$defs/instance_health" },
+        "message": { "type": ["string", "null"], "maxLength": 1024 },
+        "last_ok_at": { "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }], "description": "Last successful read." },
+        "pid": { "type": ["integer", "null"], "minimum": 0, "description": "Main process found by listen_port / pid_cmd_contains (read-only /proc lookup); null when not matched." },
+        "device_ids": { "type": "array", "items": { "$ref": "#/$defs/uuid" }, "default": [], "description": "Devices where the matched process tree holds GPU memory (NVML process list)." }
+      },
+      "additionalProperties": false
+    },
+
+    "EngineSample": {
+      "type": "object",
+      "description": "metric_samples_engine row. *_total are monotonic counters since engine start.",
+      "required": ["ts", "instance_id", "deployment_id"],
+      "properties": {
+        "ts": { "$ref": "#/$defs/timestamp" },
+        "instance_id": { "$ref": "#/$defs/uuid" },
+        "deployment_id": { "$ref": "#/$defs/uuid" },
+        "active_sessions": { "type": ["integer", "null"] },
+        "waiting_sessions": { "type": ["integer", "null"] },
+        "slots_total": { "type": ["integer", "null"] },
+        "slots_idle": { "type": ["integer", "null"] },
+        "requests_total": { "type": ["integer", "null"] },
+        "requests_success_total": { "type": ["integer", "null"] },
+        "errors_total": { "type": ["integer", "null"] },
+        "prompt_tokens_total": { "type": ["integer", "null"] },
+        "generated_tokens_total": { "type": ["integer", "null"] },
+        "cached_tokens_total": { "type": ["integer", "null"] },
+        "prompt_tps": { "type": ["number", "null"] },
+        "generation_tps": { "type": ["number", "null"] },
+        "ttft_ms_avg": { "type": ["number", "null"] },
+        "ttft_ms_p50": { "type": ["number", "null"] },
+        "ttft_ms_p95": { "type": ["number", "null"] },
+        "e2e_ms_avg": { "type": ["number", "null"] },
+        "e2e_ms_p50": { "type": ["number", "null"] },
+        "e2e_ms_p95": { "type": ["number", "null"] },
+        "tpot_ms_avg": { "type": ["number", "null"] },
+        "queue_ms_avg": { "type": ["number", "null"] },
+        "kv_cache_used_tokens": { "type": ["integer", "null"] },
+        "kv_cache_total_tokens": { "type": ["integer", "null"] },
+        "kv_cache_usage_pct": { "type": ["number", "null"] },
+        "kv_cache_bytes": { "type": ["integer", "null"] },
+        "prefix_cache_hit_rate": { "type": ["number", "null"] },
+        "spec_accept_rate": { "type": ["number", "null"] },
+        "process_vram_bytes": { "type": ["integer", "null"] },
+        "process_rss_bytes": { "type": ["integer", "null"] },
+        "health": { "oneOf": [{ "$ref": "#/$defs/instance_health" }, { "type": "null" }] },
+        "observed": { "type": "boolean", "default": false, "description": "True for an observed (external) engine (added 2026-11-23): instance_id / deployment_id are the ObservedEngine ids." },
+        "extra": { "type": ["object", "null"] }
+      },
+      "additionalProperties": false
+    },
+
+    "SessionSample": {
+      "type": "object",
+      "description": "metric_samples_session row (one per active slot/session per scrape).",
+      "required": ["ts", "instance_id", "session_key", "state"],
+      "properties": {
+        "ts": { "$ref": "#/$defs/timestamp" },
+        "instance_id": { "$ref": "#/$defs/uuid" },
+        "slot_id": { "type": ["integer", "null"] },
+        "session_key": { "type": "string", "maxLength": 128 },
+        "request_id": { "oneOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }], "description": "X-Request-ID seen by the agent proxy, when the sample can be tied to a request." },
+        "state": { "type": "string", "enum": ["idle", "waiting", "processing", "generating"] },
+        "prompt_tokens": { "type": ["integer", "null"] },
+        "generated_tokens": { "type": ["integer", "null"] },
+        "cached_tokens": { "type": ["integer", "null"] },
+        "kv_cache_tokens": { "type": ["integer", "null"] },
+        "kv_cache_bytes": { "type": ["integer", "null"] },
+        "context_size": { "type": ["integer", "null"] },
+        "ttft_ms": { "type": ["number", "null"] },
+        "elapsed_ms": { "type": ["number", "null"] },
+        "tokens_per_second": { "type": ["number", "null"] },
+        "extra": { "type": ["object", "null"] }
+      },
+      "additionalProperties": false
+    },
+
+    "InstanceStatus": {
+      "type": "object",
+      "required": ["instance_id", "state", "health"],
+      "properties": {
+        "instance_id": { "$ref": "#/$defs/uuid" },
+        "deployment_id": { "oneOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }] },
+        "engine_process_id": { "oneOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }] },
+        "state": { "$ref": "#/$defs/instance_state" },
+        "health": { "$ref": "#/$defs/instance_health" },
+        "port": { "type": ["integer", "null"] },
+        "served_model_name": { "type": ["string", "null"] },
+        "pid": { "type": ["integer", "null"] },
+        "container_id": { "type": ["string", "null"] },
+        "device_ids": { "type": "array", "items": { "$ref": "#/$defs/uuid" }, "default": [] },
+        "active_sessions": { "type": ["integer", "null"] },
+        "waiting_sessions": { "type": ["integer", "null"] },
+        "message": { "type": ["string", "null"] },
+        "distributed_rank": { "type": ["integer", "null"], "minimum": 0, "description": "Set when this node runs one rank of a cross-node group (launch.distributed). > 0 = headless worker stage of the head's instance: the hub must not move instances.node_id or overwrite instances.device_ids from it." }
+      },
+      "additionalProperties": false
+    },
+
+    "SshInstanceStatus": {
+      "type": "object",
+      "description": "One SSH GPU container on the node (added 2026-11-17). Reported in inventory.ssh_instances and in ssh_instance_state_changed events.",
+      "required": ["ssh_instance_id", "state", "health"],
+      "properties": {
+        "ssh_instance_id": { "$ref": "#/$defs/uuid" },
+        "state": { "type": "string", "enum": ["starting", "running", "stopping", "stopped", "error"] },
+        "health": { "$ref": "#/$defs/instance_health" },
+        "container_id": { "type": ["string", "null"] },
+        "image": { "type": ["string", "null"] },
+        "host_address": { "type": ["string", "null"] },
+        "host_port": { "type": ["integer", "null"] },
+        "ssh_user": { "type": ["string", "null"] },
+        "host_key_fingerprint": { "type": ["string", "null"] },
+        "device_ids": { "type": "array", "items": { "$ref": "#/$defs/uuid" }, "default": [] },
+        "gpu_attached": { "type": "boolean", "default": false },
+        "active_connections": { "type": "integer", "minimum": 0, "default": 0 },
+        "connections_total": { "type": "integer", "minimum": 0, "default": 0 },
+        "last_connection_at": { "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }], "description": "Last time a client connected or a session was open (idle detection for the hub)." },
+        "started_at": { "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }] },
+        "expires_at": { "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }] },
+        "message": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+
+    "LogLine": {
+      "type": "object",
+      "required": ["ts", "text"],
+      "properties": {
+        "ts": { "$ref": "#/$defs/timestamp" },
+        "level": { "$ref": "#/$defs/log_level" },
+        "stream": { "$ref": "#/$defs/log_stream" },
+        "text": { "type": "string", "maxLength": 16384 }
+      },
+      "additionalProperties": false
+    },
+
+    "ErrorInfo": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Stable machine code. Known: invalid_args, unsupported_engine, artifact_download_failed, artifact_checksum_mismatch, model_download_failed, model_checksum_mismatch, pickle_blocked, insufficient_vram, insufficient_disk, port_in_use, engine_start_failed, engine_crashed, health_timeout, drain_timeout, instance_not_found, engine_process_not_found, cache_item_not_found, egress_blocked, timeout, cancelled, internal; since 2026-11-17: path_not_found, permission_denied, no_container_runtime, image_pull_failed, ssh_instance_not_found, distributed_unsupported."
+        },
+        "message": { "type": "string", "maxLength": 2048 },
+        "retryable": { "type": "boolean", "default": false },
+        "details": { "type": ["object", "null"] }
+      },
+      "additionalProperties": false
+    }
+  }
+}

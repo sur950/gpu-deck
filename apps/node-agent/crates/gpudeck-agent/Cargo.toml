@@ -1,0 +1,76 @@
+[package]
+name = "gpudeck-agent"
+description = "GPU Deck node agent: engine supervisor, metrics collector, mTLS proxy, cache manager"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+default-run = "gpudeck-agent"
+
+[lib]
+name = "gpudeck_agent"
+path = "src/lib.rs"
+
+[[bin]]
+name = "gpudeck-agent"
+path = "src/main.rs"
+
+[[bin]]
+name = "gpudeck-fake-hub"
+path = "src/bin/fake_hub.rs"
+
+# Test fixture: OpenAI-style engine + llama.cpp-router-style admin API (used by tests/).
+[[bin]]
+name = "gpudeck-fake-engine"
+path = "src/bin/fake_engine.rs"
+
+[features]
+default = ["plugins"]
+# Real device plugins and engine adapters (gpudeck-devices / gpudeck-engines).
+# Without it the agent runs with no device plugins and the generic HTTP engine driver.
+plugins = ["dep:gpudeck-devices", "dep:gpudeck-engines"]
+
+[dependencies]
+gpudeck-protocol = { workspace = true }
+gpudeck-devices = { path = "../gpudeck-devices", optional = true }
+gpudeck-engines = { path = "../gpudeck-engines", optional = true }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+base64 = { workspace = true }
+bytes = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true }
+futures = { workspace = true }
+hex = { workspace = true }
+http = { workspace = true }
+ipnet = { workspace = true }
+http-body = { workspace = true }
+http-body-util = { workspace = true }
+hyper = { workspace = true }
+hyper-util = { workspace = true }
+libc = { workspace = true }
+rand = { workspace = true }
+rcgen = { workspace = true }
+reqwest = { workspace = true }
+rustls = { workspace = true }
+rustls-pemfile = { workspace = true }
+rustls-pki-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+sysinfo = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tokio-rustls = { workspace = true }
+tokio-tungstenite = { workspace = true }
+tokio-util = { workspace = true }
+toml = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+urlencoding = { workspace = true }
+uuid = { workspace = true }
+x509-parser = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+jsonschema = { workspace = true }

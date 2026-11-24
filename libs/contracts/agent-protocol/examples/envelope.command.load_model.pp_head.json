@@ -1,0 +1,88 @@
+{
+  "v": 1,
+  "id": "7f8a9b0c-1d2e-4f3a-8b4c-5d6e7f8a9b0c",
+  "ts": "2026-11-17T10:20:30.123Z",
+  "node_id": "6f1c2b2e-0b2b-4d8e-9e0e-1b2c3d4e5f60",
+  "correlation_id": null,
+  "type": "command",
+  "payload": {
+    "command": "load_model",
+    "args": {
+      "instance_id": "4c5d6e7f-8a9b-4c0d-9e1f-2a3b4c5d6e7f",
+      "deployment_id": "5d6e7f8a-9b0c-4d1e-8f2a-3b4c5d6e7f8a",
+      "engine": {
+        "engine_version_id": "0e1f2a3b-4c5d-4e6f-8a7b-8c9d0e1f2a3b",
+        "name": "llama_cpp",
+        "version": "b8798",
+        "runtime": "native",
+        "launch_template": {
+          "command": [
+            "{{adapter}}"
+          ]
+        },
+        "health": {},
+        "metrics": {
+          "path": "/metrics",
+          "slots_path": "/slots",
+          "metric_prefix": "llamacpp:"
+        }
+      },
+      "model": {
+        "model_id": "1f2a3b4c-5d6e-4f7a-8b9c-0d1e2f3a4b5c",
+        "model_version_id": "2a3b4c5d-6e7f-4a8b-9c0d-1e2f3a4b5c6d",
+        "name": "qwen3-32b",
+        "served_model_name": "qwen3-32b",
+        "type": "chat",
+        "format": "gguf",
+        "files": [
+          {
+            "model_file_id": "3b4c5d6e-7f8a-4b9c-8d0e-1f2a3b4c5d6e",
+            "path": "Qwen3-32B-Q4_K_M.gguf",
+            "format": "gguf",
+            "size_bytes": 19762149376
+          }
+        ],
+        "cache_dir": "/var/lib/gpudeck/cache/2a3b4c5d-6e7f-4a8b-9c0d-1e2f3a4b5c6d"
+      },
+      "devices": [
+        {
+          "device_id": "9a8b7c6d-5e4f-5a3b-9c2d-1e0f9a8b7c6d",
+          "index": 0,
+          "vendor": "nvidia",
+          "slice": null
+        }
+      ],
+      "port": 0,
+      "launch": {
+        "pp_size": 2,
+        "context_size": 8192,
+        "distributed": {
+          "group_id": "4c5d6e7f-8a9b-4c0d-9e1f-2a3b4c5d6e7f",
+          "rank": 0,
+          "world_size": 2,
+          "master_addr": "10.0.0.5",
+          "master_port": 29500,
+          "peers": [
+            {
+              "rank": 0,
+              "node_id": "6f1c2b2e-0b2b-4d8e-9e0e-1b2c3d4e5f60",
+              "address": "10.0.0.5",
+              "device_ids": [
+                "9a8b7c6d-5e4f-5a3b-9c2d-1e0f9a8b7c6d"
+              ]
+            },
+            {
+              "rank": 1,
+              "node_id": "7c8d9e0f-1a2b-4c3d-8e4f-5a6b7c8d9e0f",
+              "address": "10.0.0.6",
+              "rpc_port": 50052,
+              "device_ids": [
+                "8d9e0f1a-2b3c-5d4e-8f5a-6b7c8d9e0f1a"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

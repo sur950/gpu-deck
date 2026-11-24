@@ -1,0 +1,21 @@
+# BuildKit reads <Dockerfile>.dockerignore for this Dockerfile. Context: repository root; only
+# apps/web and libs/contracts (the web app imports the rule JSON Schemas) are sent.
+*
+!apps/web
+!libs/contracts
+!package.json
+!pnpm-workspace.yaml
+!pnpm-lock.yaml
+!.npmrc
+apps/web/node_modules
+apps/web/.next
+apps/web/.next-*
+apps/web/out
+apps/web/coverage
+apps/web/*.tsbuildinfo
+apps/web/.env
+apps/web/.env.*
+!apps/web/.env.example
+apps/web/playwright-report
+apps/web/test-results
+**/.DS_Store

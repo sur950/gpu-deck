@@ -1,0 +1,18 @@
+{
+  "command": ["/opt/tgi/bin/text-generation-launcher", "--model-id", "{{model_path}}", "--hostname", "{{host}}", "--port", "{{port}}", "--max-input-tokens", "{{context_size}}", "{{flags}}"],
+  "env": {"HF_HUB_ENABLE_HF_TRANSFER": "0"},
+  "health": {"path": "/health", "interval_seconds": 5, "timeout_seconds": 3, "healthy_statuses": [200], "startup_timeout_seconds": 900, "failure_threshold": 3},
+  "metrics": {"path": "/metrics", "format": "prometheus", "scrape_interval_seconds": 2, "derive_from_proxy": false},
+  "metric_map": {
+    "tgi_batch_current_size": "active_sessions",
+    "tgi_queue_size": "waiting_sessions",
+    "tgi_request_input_length_sum": "prompt_tokens_total",
+    "tgi_request_generated_tokens_sum": "generated_tokens_total",
+    "tgi_request_success": "requests_success_total",
+    "tgi_request_queue_duration": "queue_ms_hist",
+    "tgi_request_duration": "e2e_ms_hist",
+    "tgi_batch_current_max_tokens": "kv_cache_used_tokens"
+  },
+  "allowed_path_prefixes": ["/v1/", "/generate"],
+  "supports_hot_swap": false
+}

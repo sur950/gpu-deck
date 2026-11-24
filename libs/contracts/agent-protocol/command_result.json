@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/agent-protocol/v1/command_result.json",
+  "title": "command_result (agent -> hub)",
+  "description": "Progress and outcome of a command. envelope.correlation_id = command id. Sequence per command: accepted (or rejected) -> zero or more running (with progress) -> exactly one terminal (succeeded | failed | cancelled). Terminal results are retried on reconnect until the hub has consumed them (the hub replies with nothing; the agent forgets a result once it has been sent on a connection that stayed open for 5 s, or when the hub re-sends the same command id and the agent answers with the stored terminal result).",
+  "type": "object",
+  "required": ["command", "status"],
+  "properties": {
+    "command": { "$ref": "command.json#/properties/command" },
+    "status": { "type": "string", "enum": ["accepted", "running", "succeeded", "failed", "rejected", "cancelled"] },
+    "progress_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+    "progress_message": { "type": ["string", "null"], "maxLength": 512 },
+    "result": { "type": ["object", "null"], "description": "Command-specific result (shapes documented on each args type in command.json). Present on succeeded; may be partial on failed." },
+    "error": { "oneOf": [{ "$ref": "common.json#/$defs/ErrorInfo" }, { "type": "null" }], "description": "Required when status is failed or rejected." },
+    "started_at": { "oneOf": [{ "$ref": "common.json#/$defs/timestamp" }, { "type": "null" }] },
+    "finished_at": { "oneOf": [{ "$ref": "common.json#/$defs/timestamp" }, { "type": "null" }] },
+    "instance_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }] }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    { "if": { "properties": { "status": { "enum": ["failed", "rejected"] } } }, "then": { "required": ["error"], "properties": { "error": { "type": "object" } } } },
+    { "if": { "properties": { "status": { "enum": ["succeeded", "failed", "cancelled"] } } }, "then": { "required": ["finished_at"], "properties": { "finished_at": { "type": "string" } } } }
+  ]
+}

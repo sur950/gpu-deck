@@ -1,0 +1,248 @@
+# GPU Deck control plane on Docker, using the dev dependency containers (Postgres + Redis from
+# docker-compose.deps.yml, joined through the external network `gpu-deck-deps`).
+#
+#   ./infra/scripts/bootstrap.dev.sh deps up                                  # Postgres + Redis
+#   docker compose -f infra/docker/docker-compose.yml --profile tools run --rm migrate
+#   docker compose -f infra/docker/docker-compose.yml up -d --build
+#
+# Other Postgres/Redis: set GPUDECK_DATABASE_URL / GPUDECK_REDIS_URL (or GPUDECK_DB_HOST,
+# GPUDECK_DB_PORT, GPUDECK_REDIS_HOST, GPUDECK_REDIS_PORT). Credentials (POSTGRES_USER/PASSWORD/DB,
+# REDIS_USERNAME/PASSWORD) come from the env file below either way.
+#
+# Self-contained stack (its own Postgres 17 + Redis, optional Prometheus/Grafana/OTel):
+#   docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.full.yml up -d
+#   ... --profile observability up -d
+#
+# Settings come from apps/fastapi/.env (override with GPUDECK_ENV_FILE). Any remaining loopback
+# hosts in that file (e.g. an OTLP collector on the host) are rewritten to host.docker.internal by
+# scripts/container-env.sh.
+#
+# Processes (one image, gpu-deck-api): admin-api :8180, api-layer :8181, agent-hub :8443 (mTLS,
+# agents dial in), worker (Celery), beat (Celery beat, single), scheduler (APScheduler with
+# leader election). web :3180 is the Next.js standalone image.
+#
+# Hardening on every service: non-root user, read-only root filesystem with tmpfs for /tmp and
+# logs, all capabilities dropped, no-new-privileges. Admin UI/API bind to loopback by default
+# (private network only); set GPUDECK_BIND=0.0.0.0 behind a VPN/ingress.
+#
+# Nothing to provision by hand: the internal CA, the hub certificate and the API layer's client
+# certificate are created on first start (kept in the vault, written to the shared `pki`
+# volume), the web image serves the UI and /api on one origin, and node-agent builds are fetched
+# from the matching GitHub release on first download (cached in the `agent-cache` volume). For
+# an offline site mount the release's agent files and set AGENT_DIST_DIR (docs/DEPLOYMENT.md).
+
+name: gpu-deck
+
+x-api-image: &api-image
+  image: ${GPUDECK_REGISTRY:-ghcr.io/sur950}/gpu-deck-api:${GPUDECK_VERSION:-local}
+  build:
+    # Repository root: the image carries libs/contracts, which the backend reads at runtime.
+    context: ../..
+    dockerfile: infra/docker/api/Dockerfile
+
+# Database / Redis endpoints inside the compose network (the .env's 127.0.0.1:<host port> values
+# are for host processes). Empty URLs fall back to the *_HOST / *_PORT fields.
+x-deps-env: &deps-env
+  DATABASE_URL: ${GPUDECK_DATABASE_URL:-}
+  POSTGRES_HOST: ${GPUDECK_DB_HOST:-gpu-deck-deps-postgres}
+  POSTGRES_PORT: ${GPUDECK_DB_PORT:-5432}
+  REDIS_URL: ${GPUDECK_REDIS_URL:-}
+  REDIS_HOST: ${GPUDECK_REDIS_HOST:-gpu-deck-deps-redis}
+  REDIS_PORT: ${GPUDECK_REDIS_PORT:-6379}
+
+x-api-common: &api-common
+  <<: *api-image
+  env_file:
+    - path: ${GPUDECK_ENV_FILE:-../../apps/fastapi/.env}
+      required: true
+  networks: [default, deps]
+  environment:
+    <<: *deps-env
+    APP_ENV: ${APP_ENV:-production}
+    GPUDECK_HOST_ALIAS: ${GPUDECK_HOST_ALIAS:-host.docker.internal}
+    PKI_CA_DIR: /app/certs
+    AGENT_CACHE_DIR: /app/agent-cache
+    LOG_FILE_PATH: /app/logs/app.log
+    TMPDIR: /tmp
+    # Worker / scheduler Prometheus listeners must be reachable from the Prometheus container
+    # (the dev .env binds them to loopback).
+    METRICS_BIND_HOST: 0.0.0.0
+  entrypoint: ["/bin/sh", "/usr/local/bin/gpudeck-env"]
+  user: "1000:1000"
+  read_only: true
+  tmpfs:
+    - /tmp:size=256m,mode=1777
+    - /app/logs:size=128m,uid=1000,gid=1000
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  volumes:
+    - ./scripts/container-env.sh:/usr/local/bin/gpudeck-env:ro
+    # PKI_CA_DIR: the CA bundle, hub and client certificates materialised from the vault; shared
+    # so the API layer keeps its certificate across restarts even while Postgres is down.
+    - pki:/app/certs
+    # AGENT_CACHE_DIR: node-agent builds fetched from the GitHub release (admin API + hub).
+    - agent-cache:/app/agent-cache
+  restart: unless-stopped
+  stop_grace_period: 30s
+  logging:
+    driver: json-file
+    options: { max-size: "20m", max-file: "5" }
+
+services:
+  migrate:
+    <<: *api-common
+    profiles: ["tools"]
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
+
+  admin-api:
+    <<: *api-common
+    command:
+      - sh
+      - -c
+      - >-
+        exec gunicorn app.main:app --workers $${WORKERS:-2}
+        --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8180
+        --access-logfile - --error-logfile - --log-level info
+    ports:
+      - "${GPUDECK_BIND:-127.0.0.1}:${ADMIN_PORT:-8180}:8180"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8180/api/v1/health/live"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  api-layer:
+    <<: *api-common
+    command:
+      - sh
+      - -c
+      - >-
+        exec gunicorn app.api_layer_main:app --workers $${WORKERS:-2}
+        --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8181
+        --timeout 0 --access-logfile - --error-logfile - --log-level info
+    ports:
+      # Your AI gateway calls this; restrict with GATEWAY_IP_ALLOWLIST / ip_rules.
+      - "${GPUDECK_SERVING_BIND:-127.0.0.1}:${API_LAYER_PORT:-8181}:8181"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8181/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  agent-hub:
+    <<: *api-common
+    command: ["python", "-m", "app.agent_hub_main"]
+    environment:
+      <<: *deps-env
+      APP_ENV: ${APP_ENV:-production}
+      GPUDECK_HOST_ALIAS: ${GPUDECK_HOST_ALIAS:-host.docker.internal}
+      PKI_CA_DIR: /app/certs
+      AGENT_CACHE_DIR: /app/agent-cache
+      LOG_FILE_PATH: /app/logs/app.log
+      TMPDIR: /tmp
+      AGENT_HUB_HOST: 0.0.0.0
+      AGENT_HUB_PORT: "8443"
+    ports:
+      # Node agents dial out to this port (mTLS); GPU machines need no inbound port.
+      - "${GPUDECK_HUB_BIND:-0.0.0.0}:${AGENT_HUB_PORT:-8443}:8443"
+    healthcheck:
+      test: ["CMD", "curl", "-fsSk", "https://localhost:8443/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  worker:
+    <<: *api-common
+    command:
+      - sh
+      - -c
+      # Prefork children write metrics to PROMETHEUS_MULTIPROC_DIR (exported only here so the
+      # healthcheck's celery process adds no per-pid series); the main process serves the sum.
+      - >-
+        export PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus-multiproc &&
+        rm -rf "$$PROMETHEUS_MULTIPROC_DIR" && mkdir -p "$$PROMETHEUS_MULTIPROC_DIR" &&
+        exec celery -A app.workers.celery_app worker --loglevel=info
+        --concurrency $${CELERY_CONCURRENCY:-4}
+        -Q "$$(python -c 'from app.workers.celery_app import queue_names; print(",".join(queue_names()))' 2>/dev/null | tail -n 1)"
+    # Prometheus (observability profile) scrapes worker:9464/metrics on the compose network.
+    expose: ["9464"]
+    healthcheck:
+      # Through the entrypoint shim: exec'd checks do not inherit its env rewrites.
+      test: ["CMD-SHELL", "/bin/sh /usr/local/bin/gpudeck-env celery -A app.workers.celery_app inspect ping -d celery@$$HOSTNAME -t 5 >/dev/null"]
+      interval: 60s
+      timeout: 15s
+      start_period: 60s
+      retries: 3
+
+  beat:
+    <<: *api-common
+    # Exactly one beat per deployment (periodic Celery tasks); schedule state stays in /tmp.
+    command:
+      ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=info",
+       "--schedule", "/tmp/celerybeat-schedule"]
+    # No HTTP port: the image's HTTP healthcheck does not apply; the process is PID 1, so
+    # `restart: unless-stopped` already covers a crash.
+    healthcheck:
+      disable: true
+
+  scheduler:
+    <<: *api-common
+    # APScheduler jobs (rules, schedules, billing); safe to run more than one (leader election).
+    command: ["python", "-m", "app.workers.scheduler"]
+    # Prometheus (observability profile) scrapes scheduler:9465/metrics on the compose network.
+    expose: ["9465"]
+    healthcheck:
+      disable: true
+
+  web:
+    image: ${GPUDECK_REGISTRY:-ghcr.io/sur950}/gpu-deck-web:${GPUDECK_VERSION:-local}
+    build:
+      context: ../..
+      dockerfile: infra/docker/web/Dockerfile
+      args:
+        # Branding is inlined at build time. No API URL: the browser calls /api/v1 on the UI's
+        # own origin and the image's gateway forwards it to GPUDECK_API_INTERNAL_URL.
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-GPU Deck}
+        NEXT_PUBLIC_APP_BYLINE: ${NEXT_PUBLIC_APP_BYLINE:-GPU control plane}
+        NEXT_PUBLIC_BRAND_COLOR: ${NEXT_PUBLIC_BRAND_COLOR:-#B3122E}
+    user: "1001:1001"
+    environment:
+      # Runtime target of the gateway's /api/* forwarding (compose service name).
+      GPUDECK_API_INTERNAL_URL: ${GPUDECK_API_INTERNAL_URL:-http://admin-api:8180}
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /app/apps/web/.next/cache:size=256m,uid=1001,gid=1001
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    ports:
+      - "${GPUDECK_BIND:-127.0.0.1}:${WEB_PORT:-3180}:3180"
+    depends_on:
+      admin-api:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3180/login"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+volumes:
+  pki: {}
+  agent-cache: {}
+
+networks:
+  # Created by docker-compose.deps.yml (`bootstrap.dev.sh deps up`).
+  deps:
+    name: gpu-deck-deps
+    external: true

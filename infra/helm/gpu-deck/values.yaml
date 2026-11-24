@@ -1,0 +1,367 @@
+# GPU Deck Helm values. Postgres, Redis and the secrets live outside the chart (the database and
+# vault run outside it); point the chart at them with secrets.existingSecret.
+
+global:
+  # Registry prefix for all GPU Deck images (air-gapped sites: the local mirror).
+  imageRegistry: ghcr.io/sur950
+  imagePullSecrets: []
+  # Image tag for every component (defaults to .Chart.AppVersion).
+  imageTag: ""
+
+image:
+  api:
+    repository: gpu-deck-api   # one image for admin-api, api-layer, agent-hub, worker, beat, scheduler
+    pullPolicy: IfNotPresent
+    digest: ""                 # pin by digest (signed images): sha256:...
+  web:
+    repository: gpu-deck-web
+    pullPolicy: IfNotPresent
+    digest: ""
+  nodeAgent:
+    repository: gpu-deck-agent
+    pullPolicy: IfNotPresent
+    digest: ""
+
+# ----- configuration -------------------------------------------------------------------------
+
+# Non-secret settings (libs/contracts/env.md) rendered into a ConfigMap shared by all API
+# processes. Anything here can be overridden per component with components.<name>.env.
+config:
+  APP_ENV: production
+  LOG_FORMAT: json
+  LOG_LEVEL: INFO
+  API_V1_PREFIX: /api/v1
+  ADMIN_PUBLIC_URL: https://gpudeck.example.com
+  API_LAYER_PUBLIC_URL: https://gpudeck-api.example.com
+  AGENT_HUB_PUBLIC_URL: https://gpudeck-hub.example.com:8443
+  FRONTEND_URL: https://gpudeck.example.com
+  CORS_ORIGINS: https://gpudeck.example.com
+  SESSION_COOKIE_SECURE: "true"
+  POSTGRES_SSLMODE: verify-full
+  GATEWAY_IP_ALLOWLIST: ""
+  SCHEDULER_EMBEDDED: "false"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ""
+  GRAFANA_URL: ""
+
+secrets:
+  # Name of an existing Secret with at least SECRET_KEY, VAULT_KEYS, ADMIN_USERNAME,
+  # ADMIN_PASSWORD, DATABASE_URL, REDIS_URL (optionally PROMETHEUS_SCRAPE_TOKEN, SMTP/...).
+  existingSecret: ""
+  # Only for throwaway clusters: create the Secret from these values (never commit real ones).
+  create: false
+  values: {}
+  # Optional Secret with TLS material mounted read-only at /app/external-certs (e.g. db-ca.crt,
+  # or your own api-layer-client.crt/.key referenced with API_LAYER_CLIENT_CERT_PATH). Not
+  # needed for the internal PKI: the CA and the API layer / control plane / hub certificates
+  # are issued on first start and kept in the vault.
+  certsSecret: ""
+
+# Node-agent builds the admin API and the hub serve to GPU machines. Builds missing locally are
+# fetched from the GitHub release matching this chart's appVersion (config.AGENT_RELEASE_URL to
+# change or, empty, disable) and cached per pod. Offline / air-gapped: copy the release's
+# gpudeck-agent-<version>-<target>.tar.gz files and SHA256SUMS.txt into a PVC, name it below and
+# set config.AGENT_DIST_DIR=/app/agent-cache and config.AGENT_RELEASE_URL="".
+agentDownloads:
+  # Existing PVC mounted at /app/agent-cache instead of an emptyDir (shared cache).
+  persistentVolumeClaim: ""
+  cacheSizeLimit: 2Gi
+
+# ----- components ----------------------------------------------------------------------------
+
+# Shared defaults for every control-plane pod.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+priorityClassName: ""
+terminationGracePeriodSeconds: 30
+
+components:
+  adminApi:
+    enabled: true
+    replicas: 2
+    port: 8180
+    command:
+      - sh
+      - -c
+      - exec gunicorn app.main:app --workers ${WORKERS:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8180 --access-logfile - --error-logfile - --log-level info
+    probes:
+      liveness: { path: /api/v1/health/live, scheme: HTTP }
+      readiness: { path: /api/v1/health/ready, scheme: HTTP }
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { memory: 1Gi }
+    env: {}
+    pdb: { minAvailable: 1 }
+    autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 6, targetCPUUtilizationPercentage: 70 }
+  apiLayer:
+    enabled: true
+    replicas: 3
+    port: 8181
+    command:
+      - sh
+      - -c
+      - exec gunicorn app.api_layer_main:app --workers ${WORKERS:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8181 --timeout 0 --access-logfile - --error-logfile - --log-level info
+    probes:
+      liveness: { path: /health, scheme: HTTP }
+      readiness: { path: /health, scheme: HTTP }
+    resources:
+      requests: { cpu: 500m, memory: 512Mi }
+      limits: { memory: 2Gi }
+    env: {}
+    pdb: { minAvailable: 2 }
+    autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 12, targetCPUUtilizationPercentage: 65 }
+  agentHub:
+    enabled: true
+    replicas: 2
+    port: 8443
+    command: ["python", "-m", "app.agent_hub_main"]
+    probes:
+      # Plain TCP: the listener is mTLS (client certificates optional for /health and join).
+      liveness: { tcp: true }
+      readiness: { tcp: true }
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { memory: 1Gi }
+    env:
+      AGENT_HUB_HOST: 0.0.0.0
+      AGENT_HUB_PORT: "8443"
+    pdb: { minAvailable: 1 }
+    autoscaling: { enabled: false }
+  worker:
+    enabled: true
+    replicas: 2
+    command:
+      - sh
+      - -c
+      # Prefork children write their metrics to PROMETHEUS_MULTIPROC_DIR (exported here only, so
+      # the exec liveness probe does not add per-pid series); the main process serves the sum.
+      - export PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus-multiproc && rm -rf "$PROMETHEUS_MULTIPROC_DIR" && mkdir -p "$PROMETHEUS_MULTIPROC_DIR" && exec celery -A app.workers.celery_app worker --loglevel=info --concurrency ${CELERY_CONCURRENCY:-4} -Q "$(python -c 'from app.workers.celery_app import queue_names; print(",".join(queue_names()))' 2>/dev/null | tail -n 1)"
+    # Prometheus listener (WORKER_METRICS_PORT): container port "metrics", scraped by a PodMonitor.
+    metricsPort: 9464
+    probes:
+      liveness:
+        exec: ["sh", "-c", "celery -A app.workers.celery_app inspect ping -d celery@$HOSTNAME -t 10 >/dev/null"]
+        periodSeconds: 60
+        timeoutSeconds: 20
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { memory: 2Gi }
+    env: {}
+    pdb: { minAvailable: 1 }
+    autoscaling: { enabled: false }
+  beat:
+    # Celery beat must run exactly once; Recreate strategy, no PDB.
+    enabled: true
+    replicas: 1
+    singleton: true
+    command: ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=info", "--schedule", "/tmp/celerybeat-schedule"]
+    resources:
+      requests: { cpu: 50m, memory: 256Mi }
+      limits: { memory: 512Mi }
+    env: {}
+    autoscaling: { enabled: false }
+  scheduler:
+    # APScheduler jobs; replicas elect a leader (HA_LEASE_*), so 2 gives fast failover.
+    enabled: true
+    replicas: 2
+    command: ["python", "-m", "app.workers.scheduler"]
+    # Prometheus listener (SCHEDULER_METRICS_PORT): gpudeck_rules_*, gpudeck_swaps_*, gpudeck_jobs_leader.
+    metricsPort: 9465
+    resources:
+      requests: { cpu: 100m, memory: 384Mi }
+      limits: { memory: 1Gi }
+    env: {}
+    pdb: { minAvailable: 1 }
+    autoscaling: { enabled: false }
+  web:
+    enabled: true
+    replicas: 2
+    port: 3180
+    image: web
+    command: []
+    probes:
+      liveness: { path: /login, scheme: HTTP }
+      readiness: { path: /login, scheme: HTTP }
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { memory: 512Mi }
+    env: {}
+    pdb: { minAvailable: 1 }
+    autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 4, targetCPUUtilizationPercentage: 70 }
+
+# Database migrations (alembic upgrade head) as a pre-install/pre-upgrade hook.
+migrations:
+  enabled: true
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: false
+
+# ----- networking ----------------------------------------------------------------------------
+
+services:
+  agentHub:
+    # Agents dial out to the hub (mTLS, TLS terminated in the pod): expose it with a
+    # LoadBalancer/NodePort, never through an HTTP ingress.
+    type: LoadBalancer
+    port: 8443
+    annotations: {}
+    loadBalancerSourceRanges: []
+    externalTrafficPolicy: Local
+
+ingress:
+  # Admin UI + admin API: private network / VPN only (internal ingress class).
+  admin:
+    enabled: true
+    className: internal-nginx
+    host: gpudeck.example.com
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: 64m
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    tls:
+      secretName: gpudeck-admin-tls
+  # Serving API for your AI gateway: allow only the gateway's IPs (sourceRanges) + API keys.
+  serving:
+    enabled: true
+    className: nginx
+    host: gpudeck-api.example.com
+    sourceRanges: []           # e.g. ["203.0.113.10/32"]; rendered as whitelist-source-range
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: 256m
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+      nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    tls:
+      secretName: gpudeck-api-tls
+
+networkPolicy:
+  enabled: true
+  # Namespaces allowed to reach the HTTP services (ingress controllers) and to scrape metrics.
+  ingressControllerNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: ingress-nginx
+  monitoringNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: monitoring
+  # Where agents connect from (8443). Empty = anywhere (agents dial out from GPU machines).
+  agentSourceCIDRs: []
+  # Your AI gateway's addresses allowed to call the API layer directly (in addition to the ingress).
+  gatewayCIDRs: []
+  # Node agent proxies the API layer and jobs call on 9443.
+  nodeCIDRs: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+  # Managed Postgres / Redis / OTel collector addresses.
+  databaseCIDRs: ["10.0.0.0/8"]
+  databasePort: 5432
+  redisCIDRs: ["10.0.0.0/8"]
+  redisPort: 6379
+  otelCIDRs: []
+  otelPort: 4317
+  # HTTPS egress for catalog search (Hugging Face / ModelScope), alert delivery (Slack,
+  # webhooks) and SMTP. Restrict to proxies/mirrors on offline sites.
+  httpsEgressCIDRs: ["0.0.0.0/0"]
+  smtpPort: 587
+  dnsNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: kube-system
+
+# ----- node agent (GPU nodes in this cluster) ------------------------------------------------
+
+nodeAgent:
+  enabled: false
+  # Hub URL the agents dial (defaults to config.AGENT_HUB_PUBLIC_URL).
+  hubUrl: ""
+  # Secret holding GPUDECK_AGENT_JOIN_TOKEN: one multi-use enrolment token for the whole pool,
+  # e.g. `gpudeck nodes join-tokens create --cluster-id <id> --max-uses 100 --ttl-minutes 43200`
+  # (or the gpudeck_join_token Terraform resource with max_uses). Each pod uses it once on first
+  # start; revoke it when the rollout is done, issue a new one before adding nodes.
+  joinTokenSecret: ""
+  joinTokenKey: GPUDECK_AGENT_JOIN_TOKEN
+  caFingerprint: ""
+  labels: {}                 # node labels reported to GPU Deck (k=v)
+  nodeSelector:
+    gpudeck.sur950.github.io/gpu-node: "true"
+  tolerations:
+    - key: nvidia.com/gpu
+      operator: Exists
+      effect: NoSchedule
+    - key: amd.com/gpu
+      operator: Exists
+      effect: NoSchedule
+  # nvidia for NVIDIA nodes with the container toolkit; empty for AMD (/dev/kfd, /dev/dri).
+  runtimeClassName: nvidia
+  vendorEnv:
+    NVIDIA_VISIBLE_DEVICES: all
+    NVIDIA_DRIVER_CAPABILITIES: compute,utility
+  # Device nodes for AMD/Hygon/MetaX/Moore Threads (hostPath char devices).
+  hostDevices: []            # e.g. [/dev/kfd, /dev/dri]
+  # The proxy (9443) must be reachable at the node IP by the API layer.
+  hostNetwork: true
+  proxyPort: 9443
+  stateDir: /var/lib/gpudeck
+  cacheDir: /var/lib/gpudeck/cache
+  # The agent runs as its own user; supplementalGroups grant GPU device access (video/render).
+  runAsUser: 10001
+  runAsGroup: 10001
+  supplementalGroups: [44, 109]
+  # nftables egress lock needs CAP_NET_ADMIN; "none" leaves egress to NetworkPolicy/firewall.
+  egressLock: none
+  # Container engines (vLLM, SGLang, TensorRT-LLM, vLLM-Omni, custom images). Off by default:
+  # mounting a container runtime socket gives the agent root-equivalent access to the node.
+  # When on, the agent runs engines as sibling containers through the node's Docker-compatible
+  # API socket (Docker Engine with the NVIDIA Container Toolkit, or Podman's
+  # podman.socket); containerd-only nodes cannot run container engines this way.
+  containerRuntime:
+    enabled: false
+    socketPath: /var/run/docker.sock
+    # GID that owns the socket on the nodes (`stat -c %g /var/run/docker.sock`), added to the
+    # pod's supplementalGroups so the non-root agent may use it.
+    socketGroupId: null
+  resources:
+    requests: { cpu: 200m, memory: 256Mi }
+    limits: { memory: 1Gi }
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+
+# ----- observability -------------------------------------------------------------------------
+
+metrics:
+  # Prometheus Operator ServiceMonitors for admin-api / api-layer / agent-hub and PodMonitors for
+  # the worker (:9464) and scheduler (:9465) listeners (requires the monitoring.coreos.com CRDs).
+  serviceMonitor:
+    enabled: false
+    interval: 15s
+    labels: {}
+    # Secret key with PROMETHEUS_SCRAPE_TOKEN when the endpoints are token protected.
+    bearerTokenSecret: { name: "", key: PROMETHEUS_SCRAPE_TOKEN }
+  # Grafana dashboards as ConfigMaps for the Grafana sidecar (label grafana_dashboard=1).
+  dashboards:
+    enabled: true
+    labels:
+      grafana_dashboard: "1"
+    folder: GPU Deck
+  # PrometheusRule with the alerts in infra/observability/prometheus/rules.
+  prometheusRule:
+    enabled: false
+    labels: {}

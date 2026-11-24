@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/rules/v1/target-selector.schema.json",
+  "title": "Rule target selector",
+  "description": "Which deployments a rule looks at. All listed conditions are ANDed; lists inside a condition are ORed. An empty object selects every deployment (time_schedule ignores the selector).",
+  "type": "object",
+  "properties": {
+    "deployment_ids": { "type": "array", "items": { "type": "string", "format": "uuid" }, "uniqueItems": true },
+    "model_ids": { "type": "array", "items": { "type": "string", "format": "uuid" }, "uniqueItems": true },
+    "cluster_ids": { "type": "array", "items": { "type": "string", "format": "uuid" }, "uniqueItems": true },
+    "node_ids": { "type": "array", "items": { "type": "string", "format": "uuid" }, "uniqueItems": true, "description": "Deployments with at least one instance on these nodes." },
+    "model_types": { "type": "array", "items": { "type": "string", "enum": ["chat", "thinking", "vision", "embedding", "rerank", "stt", "tts", "image", "video"] }, "uniqueItems": true },
+    "priorities": { "type": "array", "items": { "type": "string", "enum": ["always_on", "normal", "evictable"] }, "uniqueItems": true, "description": "Effective priority (deployments.priority_override else models.priority)." },
+    "engines": { "type": "array", "items": { "type": "string", "enum": ["llama_cpp", "vllm", "vllm_omni", "sglang", "sglang_diffusion", "tensorrt_llm", "mlx", "mlx_audio", "whisper_cpp", "stable_diffusion_cpp", "custom"] }, "uniqueItems": true },
+    "labels": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Node labels that must all match (instances on matching nodes)." },
+    "name_glob": { "type": "string", "maxLength": 255, "description": "Glob on deployment name, e.g. chat-*." },
+    "exclude_deployment_ids": { "type": "array", "items": { "type": "string", "format": "uuid" }, "uniqueItems": true }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,9 @@
+{
+  "command": ["/opt/srv/bin/server", "--port", "{{port}}", "--model", "{{model_path}}"],
+  "health": {"path": "/status"},
+  "metrics": {"path": "/stats", "format": "json"},
+  "metric_map": {"/engine/running": "active_sessions", "engine.queued": "waiting_sessions", "/kv/usage": "kv_cache_usage_pct*100", "/tokens/prompt": "prompt_tokens_total"},
+  "supports_hot_swap": true,
+  "load_path": "/admin/load",
+  "unload_path": "/admin/unload"
+}

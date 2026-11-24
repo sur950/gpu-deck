@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/rules/v1/rule.schema.json",
+  "title": "Rule (create/update body)",
+  "description": "Full rule object as accepted by POST/PATCH /api/v1/rules and stored in the rules table. params is validated against the schema for type; target against target-selector.schema.json. The UI rule builder renders the params form from these schemas (title/description/default/min/max).",
+  "type": "object",
+  "required": ["name", "type", "params"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "description": { "type": ["string", "null"], "maxLength": 2048 },
+    "type": { "type": "string", "enum": ["idle_unload", "time_schedule", "low_traffic_shrink", "high_load_grow", "make_room_by_priority", "auto_heal"] },
+    "params": { "type": "object" },
+    "target": { "$ref": "target-selector.schema.json", "default": {} },
+    "enabled": { "type": "boolean", "default": true },
+    "dry_run": { "type": "boolean", "default": false },
+    "cooldown_seconds": { "type": "integer", "minimum": 0, "maximum": 86400, "default": 300, "description": "Minimum time between two fires of this rule on the same target deployment." },
+    "evaluation_interval_seconds": { "type": "integer", "minimum": 5, "maximum": 3600, "default": 30 },
+    "priority": { "type": "integer", "minimum": 0, "maximum": 1000, "default": 100, "description": "Lower runs first within one evaluation tick." }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    { "if": { "properties": { "type": { "const": "idle_unload" } } },            "then": { "properties": { "params": { "$ref": "idle_unload.schema.json" } } } },
+    { "if": { "properties": { "type": { "const": "time_schedule" } } },          "then": { "properties": { "params": { "$ref": "time_schedule.schema.json" } } } },
+    { "if": { "properties": { "type": { "const": "low_traffic_shrink" } } },     "then": { "properties": { "params": { "$ref": "low_traffic_shrink.schema.json" } } } },
+    { "if": { "properties": { "type": { "const": "high_load_grow" } } },         "then": { "properties": { "params": { "$ref": "high_load_grow.schema.json" } } } },
+    { "if": { "properties": { "type": { "const": "make_room_by_priority" } } },  "then": { "properties": { "params": { "$ref": "make_room_by_priority.schema.json" } } } },
+    { "if": { "properties": { "type": { "const": "auto_heal" } } },              "then": { "properties": { "params": { "$ref": "auto_heal.schema.json" } } } }
+  ]
+}

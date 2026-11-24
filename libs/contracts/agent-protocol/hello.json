@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/agent-protocol/v1/hello.json",
+  "title": "hello (agent -> hub)",
+  "description": "First frame after the WebSocket opens. The hub answers with hello_ack, then a full config_push. Sent again after every reconnect.",
+  "type": "object",
+  "required": ["agent_version", "protocol_version", "os", "arch", "hostname", "capabilities", "cache", "proxy", "started_at"],
+  "properties": {
+    "agent_version": { "type": "string", "description": "semver of gpudeck-agent, e.g. 1.0.0" },
+    "protocol_version": { "type": "integer", "const": 1 },
+    "os": { "$ref": "common.json#/$defs/node_os" },
+    "os_version": { "type": ["string", "null"] },
+    "arch": { "$ref": "common.json#/$defs/node_arch" },
+    "kernel_version": { "type": ["string", "null"] },
+    "hostname": { "type": "string", "maxLength": 255 },
+    "ip_addresses": { "type": "array", "items": { "type": "string" }, "default": [], "description": "Non-loopback addresses; the hub picks nodes.proxy_address from these unless overridden." },
+    "cpu_cores": { "type": ["integer", "null"] },
+    "memory_total_bytes": { "type": ["integer", "null"] },
+    "boot_id": { "type": ["string", "null"], "description": "Host boot identifier; a change tells the hub all previous instances are gone." },
+    "started_at": { "$ref": "common.json#/$defs/timestamp", "description": "Agent process start time." },
+    "capabilities": {
+      "type": "object",
+      "required": ["engines", "runtimes"],
+      "properties": {
+        "engines": {
+          "type": "array",
+          "description": "Engine binaries/images the agent found or can fetch on this platform.",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "$ref": "common.json#/$defs/engine_name" },
+              "versions": { "type": "array", "items": { "type": "string" }, "default": [] },
+              "runtime": { "$ref": "common.json#/$defs/engine_runtime" },
+              "path": { "type": ["string", "null"], "description": "Local binary path when preinstalled (e.g. brew llama-server)." }
+            },
+            "additionalProperties": false
+          }
+        },
+        "runtimes": { "type": "array", "items": { "$ref": "common.json#/$defs/engine_runtime" } },
+        "commands": { "type": "array", "items": { "$ref": "command.json#/properties/command" }, "default": [], "description": "Commands this agent build implements (added 2026-11-17). Absent/empty = agent < 1.1.0: assume the original 13 commands." },
+        "ssh_instances": { "type": "boolean", "default": false, "description": "True when start_ssh_instance can run here (container runtime reachable)." },
+        "container_runtime": { "type": ["string", "null"], "description": "docker | podman | containerd | apple-container | null" },
+        "glibc_version": { "type": ["string", "null"], "description": "Linux: host glibc version (e.g. \"2.35\"); null on macOS and on non-glibc hosts (musl). The control plane uses it to pick an engine build the host can run (added 2026-11-23)." },
+        "cuda_version": { "type": ["string", "null"] },
+        "rocm_version": { "type": ["string", "null"] },
+        "musa_version": { "type": ["string", "null"] },
+        "metal": { "type": "boolean", "default": false },
+        "egress_lock": { "type": "string", "enum": ["pf", "nftables", "iptables", "none"], "default": "none" },
+        "kubernetes": { "type": ["object", "null"], "properties": { "node_name": { "type": "string" }, "namespace": { "type": "string" }, "pod": { "type": "string" } } },
+        "cloud": { "type": ["object", "null"], "properties": { "provider": { "type": "string", "enum": ["aws", "azure", "gcp", "digitalocean"] }, "instance_id": { "type": "string" }, "instance_type": { "type": "string" }, "region": { "type": "string" } } }
+      },
+      "additionalProperties": false
+    },
+    "cache": {
+      "type": "object",
+      "required": ["dir", "limit_bytes", "used_bytes"],
+      "properties": {
+        "dir": { "type": "string" },
+        "limit_bytes": { "type": "integer", "minimum": 0 },
+        "used_bytes": { "type": "integer", "minimum": 0 },
+        "free_bytes": { "type": ["integer", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "proxy": {
+      "type": "object",
+      "required": ["port"],
+      "properties": {
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535, "default": 9443 },
+        "address": { "type": ["string", "null"], "description": "Advertised host for the API layer when it differs from the connection source (NAT, Kubernetes service)." },
+        "cert_fingerprint_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "Fingerprint of the client cert the agent is presenting (sanity check vs node_certificates)." }
+      },
+      "additionalProperties": false
+    },
+    "config_version": { "type": "integer", "minimum": 0, "default": 0, "description": "Last config_push.config_version the agent applied (0 = none). The hub sends a full push when it differs." },
+    "labels": { "type": "object", "additionalProperties": { "type": "string" }, "default": {}, "description": "Labels from the agent config file; merged under node labels set in the UI (UI wins)." },
+    "observed_engines": { "type": "array", "default": [], "items": { "$ref": "common.json#/$defs/ObservedEngine" }, "description": "Observed (external) model servers from agent.toml [[observe]] as last seen (added 2026-11-23); inventory carries the authoritative list." }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,32 @@
+{
+  "root": "/Users/alice/.lmstudio/models/mlx-community/Qwen3-0.6B-4bit",
+  "bytes_hashed": 335001032,
+  "seconds": 0.42,
+  "files": [
+    {
+      "path": "config.json",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "size_bytes": 1032,
+      "error": null
+    },
+    {
+      "path": "model.safetensors",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "size_bytes": 335000000,
+      "error": null
+    },
+    {
+      "path": "../escape.bin",
+      "sha256": null,
+      "size_bytes": null,
+      "error": {
+        "code": "invalid_args",
+        "message": "path escapes root"
+      }
+    }
+  ],
+  "hashes": {
+    "config.json": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "model.safetensors": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  }
+}

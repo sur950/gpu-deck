@@ -1,0 +1,12 @@
+# Grafana datasource provisioning (compose observability profile; the Helm chart ships the
+# same file in a ConfigMap). The uid is referenced by every dashboard in ../../dashboards.
+apiVersion: 1
+datasources:
+  - name: Prometheus (GPU Deck)
+    uid: gpudeck-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      timeInterval: 15s

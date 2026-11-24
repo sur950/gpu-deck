@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/agent-protocol/v1/envelope.json",
+  "title": "GPU Deck agent protocol — message envelope",
+  "description": "Every WebSocket text frame between a node agent and the agent hub is exactly one JSON object of this shape. `type` selects the payload schema (enforced below with if/then). Unknown top-level fields are rejected; unknown payload fields inside a known type are allowed only where the payload schema says so.",
+  "type": "object",
+  "required": ["v", "id", "type", "ts", "node_id", "correlation_id", "payload"],
+  "properties": {
+    "v": { "type": "integer", "const": 1, "description": "Protocol major version. Bump only on incompatible changes; additive changes keep v=1 and use optional fields." },
+    "id": { "$ref": "common.json#/$defs/uuid", "description": "Message id (UUIDv4 by sender). For `command` it is also the idempotency key the agent dedups on." },
+    "type": {
+      "type": "string",
+      "enum": ["hello", "hello_ack", "inventory", "metrics_batch", "event", "command", "command_result", "config_push", "heartbeat"]
+    },
+    "ts": { "$ref": "common.json#/$defs/timestamp", "description": "Sender wall clock. Receivers compute clock skew from it; never used for ordering." },
+    "node_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }], "description": "Node this message is about. Set on every message after join (the agent learns it from the join response). The hub rejects frames whose node_id does not match the client certificate CN." },
+    "correlation_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }], "description": "command_result: id of the command. hello_ack: id of the hello. Null otherwise." },
+    "payload": { "type": "object" }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    { "if": { "properties": { "type": { "const": "hello" } } },          "then": { "properties": { "payload": { "$ref": "hello.json" } } } },
+    { "if": { "properties": { "type": { "const": "hello_ack" } } },      "then": { "properties": { "payload": { "$ref": "hello_ack.json" } } } },
+    { "if": { "properties": { "type": { "const": "inventory" } } },      "then": { "properties": { "payload": { "$ref": "inventory.json" } } } },
+    { "if": { "properties": { "type": { "const": "metrics_batch" } } },  "then": { "properties": { "payload": { "$ref": "metrics_batch.json" } } } },
+    { "if": { "properties": { "type": { "const": "event" } } },          "then": { "properties": { "payload": { "$ref": "event.json" } } } },
+    { "if": { "properties": { "type": { "const": "command" } } },        "then": { "properties": { "payload": { "$ref": "command.json" } } } },
+    { "if": { "properties": { "type": { "const": "command_result" } } }, "then": { "properties": { "payload": { "$ref": "command_result.json" }, "correlation_id": { "$ref": "common.json#/$defs/uuid" } } } },
+    { "if": { "properties": { "type": { "const": "hello_ack" } } },      "then": { "properties": { "correlation_id": { "$ref": "common.json#/$defs/uuid" } } } },
+    { "if": { "properties": { "type": { "const": "config_push" } } },    "then": { "properties": { "payload": { "$ref": "config_push.json" } } } },
+    { "if": { "properties": { "type": { "const": "heartbeat" } } },      "then": { "properties": { "payload": { "$ref": "heartbeat.json" } } } }
+  ]
+}

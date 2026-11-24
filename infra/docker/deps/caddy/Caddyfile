@@ -1,0 +1,25 @@
+# GPU Deck dev reverse proxy (docker-compose.deps.yml, profile `proxy`).
+# *.localhost resolves to 127.0.0.1 in browsers and curl; certificates come from Caddy's
+# internal CA. Published on 127.0.0.1:${GPUDECK_PROXY_HTTPS_PORT:-58443}.
+{
+	auto_https disable_redirects
+	skip_install_trust
+}
+
+gpu-deck.localhost {
+	tls internal
+	reverse_proxy {$UPSTREAM_HOST}:{$WEB_PORT}
+}
+
+gpu-deck-api.localhost {
+	tls internal
+	# Streaming responses (SSE, NDJSON) pass through unbuffered.
+	reverse_proxy {$UPSTREAM_HOST}:{$API_LAYER_PORT} {
+		flush_interval -1
+	}
+}
+
+gpu-deck-admin.localhost {
+	tls internal
+	reverse_proxy {$UPSTREAM_HOST}:{$ADMIN_PORT}
+}

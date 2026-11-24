@@ -1,0 +1,15 @@
+GPU Deck {{ .Chart.AppVersion }} installed as "{{ .Release.Name }}" in namespace {{ .Release.Namespace }}.
+
+Admin UI / API : https://{{ .Values.ingress.admin.host }}  (private ingress class {{ .Values.ingress.admin.className }})
+Serving API    : https://{{ .Values.ingress.serving.host }}  (your AI gateway only{{ if .Values.ingress.serving.sourceRanges }}: {{ join ", " .Values.ingress.serving.sourceRanges }}{{ end }})
+Agent hub      : {{ .Values.config.AGENT_HUB_PUBLIC_URL }}  (Service {{ include "gpudeck.fullname" . }}-agent-hub, type {{ .Values.services.agentHub.type }})
+
+Next steps
+  1. Log in with ADMIN_USERNAME / ADMIN_PASSWORD from secret {{ include "gpudeck.secretName" . }}:
+       gpudeck login -e https://{{ .Values.ingress.admin.host }} -u <admin>
+  2. Issue the API layer client certificate for node proxies:
+       gpudeck pki issue --kind api_layer   (store it in secrets.certsSecret)
+  3. Join GPU machines: gpudeck nodes join-tokens create --cluster-id <id>
+{{- if .Values.nodeAgent.enabled }}
+  4. Node agents run on nodes matching {{ toJson .Values.nodeAgent.nodeSelector }}.
+{{- end }}

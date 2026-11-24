@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/agent-protocol/v1/config_push.json",
+  "title": "config_push (hub -> agent)",
+  "description": "Desired agent configuration. Sent in full after hello_ack when versions differ, then as deltas (full=false, only changed sections present) whenever routing, egress rules, engine catalog, CRL or settings change. The agent applies atomically, persists to <state_dir>/config.json, and answers with an event config_applied (or config_rejected with details). config_version is monotonic per node; the agent ignores pushes with a version <= the one it holds unless full=true.",
+  "type": "object",
+  "required": ["config_version", "full"],
+  "properties": {
+    "config_version": { "type": "integer", "minimum": 1 },
+    "full": { "type": "boolean", "description": "True = replace everything (absent sections mean empty). False = merge present sections only." },
+    "routing": {
+      "type": "array",
+      "description": "Instances the agent proxy on :9443 must expose, with their local target. The proxy maps /instances/{instance_id}/... to 127.0.0.1:{port}, rewrites the JSON body field model to served_model_name when rewrite_model=true, and allows only allowed_path_prefixes.",
+      "items": {
+        "type": "object",
+        "required": ["instance_id", "deployment_id", "port", "served_model_name", "allowed_path_prefixes"],
+        "properties": {
+          "instance_id": { "$ref": "common.json#/$defs/uuid" },
+          "deployment_id": { "$ref": "common.json#/$defs/uuid" },
+          "model_name": { "type": "string" },
+          "model_type": { "$ref": "common.json#/$defs/model_type" },
+          "engine": { "$ref": "common.json#/$defs/engine_name" },
+          "port": { "type": "integer" },
+          "served_model_name": { "type": "string" },
+          "rewrite_model": { "type": "boolean", "default": true },
+          "allowed_path_prefixes": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "e.g. [\"/v1/chat/completions\",\"/v1/completions\",\"/v1/embeddings\",\"/v1/rerank\",\"/health\"] — engine admin paths (/slots, /models/*, /props POST, /metrics) are never listed." },
+          "accepting": { "type": "boolean", "default": true, "description": "False while draining: proxy returns 503 Retry-After for new requests." },
+          "max_concurrent": { "type": ["integer", "null"], "description": "Proxy-enforced cap; excess requests queue up to settings.proxy.queue_timeout_seconds then 503." }
+        },
+        "additionalProperties": false
+      }
+    },
+    "egress_allowlist": {
+      "type": "array",
+      "description": "Hosts/CIDRs the node may reach besides the control plane. Entries: hostname, hostname:port, CIDR, or CIDR:port. The agent programs pf/nftables; anything else outbound is dropped and logged as egress_blocked.",
+      "items": { "type": "string" }
+    },
+    "engine_catalog": {
+      "type": "array",
+      "description": "Engine versions available for this node's platform (artifact already selected). Lets the agent pre-download engine binaries/images.",
+      "items": { "$ref": "common.json#/$defs/EngineSpec" }
+    },
+    "crl": {
+      "type": "object",
+      "description": "Revoked certificates. The proxy rejects client certs whose serial or fingerprint is listed, even if they chain to the CA.",
+      "required": ["generated_at", "serials"],
+      "properties": {
+        "generated_at": { "$ref": "common.json#/$defs/timestamp" },
+        "serials": { "type": "array", "items": { "type": "string" } },
+        "fingerprints_sha256": { "type": "array", "items": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "default": [] }
+      },
+      "additionalProperties": false
+    },
+    "ca_bundle_pem": { "type": ["string", "null"], "description": "Updated CA bundle (CA rotation); the agent trusts both until the next rotation completes." },
+    "settings": { "$ref": "#/$defs/Settings" },
+    "model_sources": {
+      "type": "object",
+      "description": "Mirror endpoints for offline sites (no tokens here; tokens travel inside load/prefetch commands).",
+      "properties": {
+        "huggingface_endpoint": { "type": ["string", "null"], "format": "uri" },
+        "modelscope_endpoint": { "type": ["string", "null"], "format": "uri" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Settings": {
+      "type": "object",
+      "properties": {
+        "heartbeat_interval_seconds": { "type": "integer", "minimum": 1 },
+        "metrics_interval_seconds": { "type": "number", "minimum": 0.5 },
+        "inventory_interval_seconds": { "type": "integer", "minimum": 10 },
+        "log_level": { "$ref": "common.json#/$defs/log_level" },
+        "log_forward": { "type": "boolean", "description": "Forward engine stdout/stderr as log events." },
+        "log_chunk_max_lines": { "type": "integer", "minimum": 1, "maximum": 500 },
+        "log_flush_interval_ms": { "type": "integer", "minimum": 100 },
+        "cache_limit_bytes": { "type": "integer", "minimum": 0 },
+        "cache_min_free_bytes": { "type": "integer", "minimum": 0, "description": "Agent-side LRU sweep triggers below this free space (unpinned only)." },
+        "engine_port_range": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
+        "proxy": {
+          "type": "object",
+          "properties": {
+            "allowed_client_subjects": { "type": "array", "items": { "type": "string" }, "description": "X.509 subject O/CN values accepted on :9443, default [\"O=gpudeck-services\"]." },
+            "queue_timeout_seconds": { "type": "number", "minimum": 0 },
+            "request_timeout_seconds": { "type": "number", "minimum": 1 },
+            "max_body_bytes": { "type": "integer", "minimum": 1024 }
+          },
+          "additionalProperties": false
+        },
+        "drain_default_timeout_seconds": { "type": "integer", "minimum": 0 },
+        "health_default_interval_seconds": { "type": "number", "minimum": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

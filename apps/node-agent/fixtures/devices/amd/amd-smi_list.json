@@ -1,0 +1,4 @@
+[
+    {"gpu": 0, "bdf": "0000:0c:00.0", "uuid": "1fff74a1-0000-1000-80ea-8d1b4a8a2f3b", "kfd_id": 59395, "node_id": 2, "partition_id": 0},
+    {"gpu": 1, "bdf": "0000:22:00.0", "uuid": "4bff74a1-0000-1000-8064-4e2c1a3b5d6f", "kfd_id": 18478, "node_id": 3, "partition_id": 0}
+]

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/agent-protocol/v1/hello_ack.json",
+  "title": "hello_ack (hub -> agent)",
+  "description": "Reply to hello (correlation_id = hello id). If accepted=false the hub closes the socket with code 4003 after sending this; the agent backs off and retries (see protocol.md).",
+  "type": "object",
+  "required": ["accepted", "server_time", "node_id", "intervals", "config_version"],
+  "properties": {
+    "accepted": { "type": "boolean" },
+    "reason": { "type": ["string", "null"], "description": "Set when accepted=false: cert_revoked | node_removed | node_unknown | protocol_unsupported | hub_draining." },
+    "server_time": { "$ref": "common.json#/$defs/timestamp" },
+    "node_id": { "$ref": "common.json#/$defs/uuid" },
+    "node_name": { "type": ["string", "null"] },
+    "cluster_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }] },
+    "intervals": {
+      "type": "object",
+      "required": ["heartbeat_seconds", "metrics_seconds", "inventory_seconds"],
+      "properties": {
+        "heartbeat_seconds": { "type": "integer", "minimum": 1, "default": 10 },
+        "metrics_seconds": { "type": "number", "minimum": 0.5, "default": 2, "description": "Scrape + batch flush interval." },
+        "inventory_seconds": { "type": "integer", "minimum": 10, "default": 60 },
+        "command_ack_timeout_seconds": { "type": "integer", "minimum": 1, "default": 10 }
+      },
+      "additionalProperties": false
+    },
+    "config_version": { "type": "integer", "minimum": 0, "description": "Current config version on the hub; a config_push follows immediately when it differs from hello.config_version." },
+    "min_agent_version": { "type": ["string", "null"], "description": "Agents below this should self-update (informational; no auto-update in v1)." },
+    "drain": { "type": "boolean", "default": false, "description": "True when the node is in draining/drained state: the agent must keep serving current instances but accept no load_model." },
+    "features": { "type": "array", "items": { "type": "string" }, "default": [], "description": "Optional protocol features this hub accepts (added 2026-11-23): observed_engines (hello/inventory.observed_engines, EngineSample.observed) and gpu_processes (GpuSample.processes). Agents send those fields only when the hub lists them, so a newer agent keeps working with an older hub; unknown names are ignored." }
+  },
+  "additionalProperties": false
+}

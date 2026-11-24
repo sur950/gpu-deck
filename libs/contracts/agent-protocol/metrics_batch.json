@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sur950.github.io/gpu-deck/schemas/agent-protocol/v1/metrics_batch.json",
+  "title": "metrics_batch (agent -> hub)",
+  "description": "One scrape cycle of samples. Fire-and-forget: the hub never acks and the agent never retries (a lost batch is a 2 s gap). Each sample carries its own ts. The hub inserts rows into metric_samples_gpu / metric_samples_engine / metric_samples_session adding node_id from the envelope. Batches larger than 1 MiB are split by the agent.",
+  "type": "object",
+  "required": ["interval_seconds", "gpu", "engine", "sessions"],
+  "properties": {
+    "interval_seconds": { "type": "number", "minimum": 0.5 },
+    "sequence": { "type": "integer", "minimum": 0, "description": "Per-connection increasing counter; the hub logs gaps for diagnostics only." },
+    "gpu": { "type": "array", "items": { "$ref": "common.json#/$defs/GpuSample" } },
+    "engine": { "type": "array", "items": { "$ref": "common.json#/$defs/EngineSample" } },
+    "sessions": { "type": "array", "items": { "$ref": "common.json#/$defs/SessionSample" } },
+    "agent": {
+      "type": "object",
+      "description": "Agent self-metrics (exported on the agent's Prometheus endpoint too).",
+      "properties": {
+        "cpu_pct": { "type": ["number", "null"] },
+        "rss_bytes": { "type": ["integer", "null"] },
+        "proxy_active_connections": { "type": ["integer", "null"] },
+        "proxy_requests_total": { "type": ["integer", "null"] },
+        "proxy_errors_total": { "type": ["integer", "null"] },
+        "scrape_errors_total": { "type": ["integer", "null"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
