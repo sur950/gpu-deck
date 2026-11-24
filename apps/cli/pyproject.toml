@@ -40,7 +40,7 @@ dev = [
   "isort==7.0.0",
   "flake8==7.3.0",
   "mypy==1.20.0",
-  "types-PyYAML==6.0.12.20250915",
+  "types-PyYAML==6.0.12.20261113",
   "types-jsonschema==4.26.0.20261006",
 ]
 
