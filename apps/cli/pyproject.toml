@@ -37,7 +37,7 @@ dev = [
   "pytest-cov==7.1.0",
   "respx==0.23.1",
   "black==26.3.0",
-  "isort==7.0.0",
+  "isort==9.0.2",
   "flake8==7.3.0",
   "mypy==1.20.0",
   "types-PyYAML==6.0.12.20250915",
