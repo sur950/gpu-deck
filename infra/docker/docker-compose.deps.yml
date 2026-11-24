@@ -66,7 +66,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7.4-alpine
+    image: redis:8.0-alpine
     environment:
       REDIS_USER: ${GPUDECK_DEPS_REDIS_USER:-gpu-deck}
       REDIS_PASSWORD: ${GPUDECK_DEPS_REDIS_PASSWORD:?set in infra/docker/.env (bootstrap.dev.sh deps up writes it)}
