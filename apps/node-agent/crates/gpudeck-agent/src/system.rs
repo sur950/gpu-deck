@@ -29,23 +29,29 @@ pub fn host_info() -> HostInfo {
     } else {
         NodeArch::X86_64
     };
-    let sys = System::new_all();
+    // sysinfo reports an unreadable source as an error; a host fact it cannot read is omitted.
+    let sys = System::new_all().ok();
     HostInfo {
-        hostname: System::host_name().unwrap_or_else(|| "unknown".into()),
+        hostname: System::host_name().unwrap_or_else(|_| "unknown".into()),
         os,
-        os_version: System::os_version(),
+        os_version: System::os_version().ok(),
         arch,
-        kernel_version: System::kernel_version(),
+        kernel_version: System::kernel_version().ok(),
         ip_addresses: ip_addresses(),
-        cpu_cores: Some(sys.cpus().len() as u64).filter(|n| *n > 0),
-        memory_total_bytes: Some(sys.total_memory()).filter(|m| *m > 0),
+        cpu_cores: sys
+            .as_ref()
+            .map(|s| s.cpus().len() as u64)
+            .filter(|n| *n > 0),
+        memory_total_bytes: sys.as_ref().map(System::total_memory).filter(|m| *m > 0),
         boot_id: boot_id(),
     }
 }
 
 /// Non-loopback unicast addresses.
 pub fn ip_addresses() -> Vec<String> {
-    let networks = Networks::new_with_refreshed_list();
+    let Ok(networks) = Networks::new_with_refreshed_list() else {
+        return vec![];
+    };
     let mut out: Vec<String> = vec![];
     for data in networks.values() {
         for net in data.ip_networks() {
@@ -72,7 +78,7 @@ fn boot_id() -> Option<String> {
     if let Ok(s) = std::fs::read_to_string("/proc/sys/kernel/random/boot_id") {
         return Some(s.trim().to_string());
     }
-    let t = System::boot_time();
+    let t = System::boot_time().ok()?;
     (t > 0).then(|| format!("boot-{t}"))
 }
 
@@ -82,7 +88,12 @@ static SELF_SYSTEM: Mutex<Option<System>> = Mutex::new(None);
 pub fn self_usage() -> (Option<f64>, Option<u64>) {
     let pid = Pid::from_u32(std::process::id());
     let mut guard = SELF_SYSTEM.lock().unwrap_or_else(|e| e.into_inner());
-    let sys = guard.get_or_insert_with(System::new);
+    if guard.is_none() {
+        *guard = System::new().ok();
+    }
+    let Some(sys) = guard.as_mut() else {
+        return (None, None);
+    };
     sys.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
     match sys.process(pid) {
         Some(p) => (Some(p.cpu_usage() as f64), Some(p.memory())),
@@ -92,35 +103,45 @@ pub fn self_usage() -> (Option<f64>, Option<u64>) {
 
 /// RSS of an arbitrary pid, bytes.
 pub fn process_rss(pid: u32) -> Option<u64> {
-    let mut sys = System::new();
+    let mut sys = System::new().ok()?;
     let p = Pid::from_u32(pid);
     sys.refresh_processes(ProcessesToUpdate::Some(&[p]), true);
     sys.process(p).map(|p| p.memory())
 }
 
 pub fn system_info() -> SystemInfo {
-    let mut sys = System::new();
-    sys.refresh_memory();
-    sys.refresh_cpu_all();
+    let mut sys = System::new().ok();
+    if let Some(sys) = sys.as_mut() {
+        sys.refresh_memory();
+        sys.refresh_cpu_all();
+    }
     SystemInfo {
-        cpu_cores: Some(sys.cpus().len() as u64).filter(|n| *n > 0),
-        memory_total_bytes: Some(sys.total_memory()).filter(|m| *m > 0),
-        memory_used_bytes: Some(sys.used_memory()),
-        load_avg_1m: Some(System::load_average().one),
-        uptime_seconds: Some(System::uptime()),
+        cpu_cores: sys
+            .as_ref()
+            .map(|s| s.cpus().len() as u64)
+            .filter(|n| *n > 0),
+        memory_total_bytes: sys.as_ref().map(System::total_memory).filter(|m| *m > 0),
+        memory_used_bytes: sys.as_ref().map(System::used_memory),
+        load_avg_1m: System::load_average().ok().map(|l| l.one),
+        uptime_seconds: System::uptime().ok(),
     }
 }
 
 pub fn node_load(cache_used_bytes: u64, cache_dir: &Path) -> NodeLoad {
-    let mut sys = System::new();
-    sys.refresh_memory();
-    // `System::new()` has an empty CPU list until it is refreshed (the load average was divided
-    // by 1 instead of the core count).
-    sys.refresh_cpu_list(sysinfo::CpuRefreshKind::nothing());
+    let mut sys = System::new().ok();
+    if let Some(sys) = sys.as_mut() {
+        sys.refresh_memory();
+        // `System::new()` has an empty CPU list until it is refreshed (the load average was
+        // divided by 1 instead of the core count).
+        sys.refresh_cpu_list(sysinfo::CpuRefreshKind::nothing());
+    }
+    let cores = sys.as_ref().map_or(0, |s| s.cpus().len()).max(1) as f64;
     NodeLoad {
-        cpu_pct: Some(System::load_average().one * 100.0 / sys.cpus().len().max(1) as f64)
+        cpu_pct: System::load_average()
+            .ok()
+            .map(|l| l.one * 100.0 / cores)
             .filter(|v| v.is_finite()),
-        memory_used_bytes: Some(sys.used_memory()),
+        memory_used_bytes: sys.as_ref().map(System::used_memory),
         cache_used_bytes: Some(cache_used_bytes),
         disk_free_bytes: disk_free(cache_dir),
     }
@@ -128,7 +149,9 @@ pub fn node_load(cache_used_bytes: u64, cache_dir: &Path) -> NodeLoad {
 
 /// Mounted filesystems; the one holding `cache_dir` is flagged.
 pub fn disks(cache_dir: &Path) -> Vec<Disk> {
-    let disks = Disks::new_with_refreshed_list();
+    let Ok(disks) = Disks::new_with_refreshed_list() else {
+        return vec![];
+    };
     let cache_mount = mount_for(&disks, cache_dir);
     let mut out: Vec<Disk> = disks
         .iter()
@@ -179,7 +202,7 @@ fn mount_for(disks: &Disks, path: &Path) -> Option<std::path::PathBuf> {
 
 /// Free bytes on the filesystem holding `path` (walks up to the nearest existing ancestor).
 pub fn disk_free(path: &Path) -> Option<u64> {
-    let disks = Disks::new_with_refreshed_list();
+    let disks = Disks::new_with_refreshed_list().ok()?;
     let mut p = path.to_path_buf();
     while !p.exists() {
         p = p.parent()?.to_path_buf();
@@ -192,7 +215,7 @@ pub fn disk_free(path: &Path) -> Option<u64> {
 }
 
 pub fn disk_total(path: &Path) -> Option<u64> {
-    let disks = Disks::new_with_refreshed_list();
+    let disks = Disks::new_with_refreshed_list().ok()?;
     let mut p = path.to_path_buf();
     while !p.exists() {
         p = p.parent()?.to_path_buf();
@@ -273,7 +296,7 @@ mod tests {
     fn node_cpu_pct_is_per_core() {
         let cores = host_info().cpu_cores.unwrap_or(1) as f64;
         let pct = node_load(0, Path::new("/")).cpu_pct.unwrap();
-        let expected = System::load_average().one * 100.0 / cores;
+        let expected = System::load_average().expect("load average").one * 100.0 / cores;
         assert!(
             (pct - expected).abs() < 100.0 / cores + 1.0,
             "{pct} vs {expected}"

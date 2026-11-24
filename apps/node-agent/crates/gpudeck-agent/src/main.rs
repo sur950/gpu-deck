@@ -269,7 +269,8 @@ async fn status(cfg: &AgentConfig, path: &std::path::Path) -> Result<()> {
         );
     }
     let url = format!("http://127.0.0.1:{}/metrics", cfg.prom_port);
-    match reqwest::Client::new()
+    let client = gpudeck_agent::tls::http_client_builder().build()?;
+    match client
         .get(&url)
         .timeout(std::time::Duration::from_secs(2))
         .send()

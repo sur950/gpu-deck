@@ -14,7 +14,8 @@
 # Non-root (uid 1000), read-only-root friendly. Pick the process with the command (see
 # infra/docker/docker-compose.yml); the default runs the admin API on 8180.
 
-ARG PYTHON_IMAGE=python:3.12.12-slim-bookworm
+# Debian 13 (trixie): its postgresql-client is 17, the server major the stack runs.
+ARG PYTHON_IMAGE=python:3.12.16-slim-trixie
 
 # ---------- wheels ----------
 FROM ${PYTHON_IMAGE} AS builder
@@ -43,7 +44,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PKI_CA_DIR=/app/certs \
     TMPDIR=/tmp
 
-RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client libpq5 curl procps \
+# `upgrade` takes the Debian security fixes published since the base image was built.
+RUN apt-get update && apt-get -y upgrade \
+    && apt-get install -y --no-install-recommends postgresql-client libpq5 curl procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Install from the wheelhouse only, through requirements.txt so extras such as

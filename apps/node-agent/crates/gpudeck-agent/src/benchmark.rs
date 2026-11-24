@@ -144,7 +144,7 @@ async fn run_level(
     concurrency: u32,
     cancel: &tokio_util::sync::CancellationToken,
 ) -> Vec<Sample> {
-    let client = reqwest::Client::builder()
+    let client = crate::tls::http_client_builder()
         .no_proxy()
         .timeout(Duration::from_secs(600))
         .build()

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling==1.27.0"]
+requires = ["hatchling==1.33.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -11,13 +11,17 @@ requires-python = ">=3.12,<3.13"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Suresh Konakanchi" }]
 dependencies = [
-  # Command framework (click 8.x pinned through typer)
-  "typer==0.21.1",
+  # Command framework. The command tree is built at runtime from the OpenAPI spec with Click
+  # parameter types and Typer's Click subclasses (gpudeck/registry.py), so Click is a direct
+  # dependency. Typer 0.26+ vendors its own Click and drops Click-level extension, which that
+  # dynamic tree needs: stay on 0.25 (held in scripts/update_python_pins.py).
+  "typer==0.25.1",
+  "click==8.5.1",
   # HTTP (respx mocks it in tests)
   "httpx==0.28.1",
   # Output; YAML request bodies and the bundled OpenAPI spec
-  "rich==14.3.2",
-  "pyyaml==6.0.3",
+  "rich==15.0.0",
+  "pyyaml==6.0.4",
   # Request bodies are validated against the spec's JSON schema before sending
   "jsonschema==4.26.0",
   # Session storage (OS keychain; falls back to a 0600 file)
@@ -36,11 +40,11 @@ dev = [
   "pytest==9.2.0",
   "pytest-cov==7.1.0",
   "respx==0.23.1",
-  "black==26.3.0",
-  "isort==7.0.0",
-  "flake8==7.3.0",
-  "mypy==1.20.0",
-  "types-PyYAML==6.0.12.20250915",
+  "black==26.10.1",
+  "isort==9.0.2",
+  "flake8==7.5.0",
+  "mypy==2.4.1",
+  "types-PyYAML==6.0.12.20261122",
   "types-jsonschema==4.26.0.20261006",
 ]
 

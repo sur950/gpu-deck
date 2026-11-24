@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -72,10 +73,14 @@ def error(status: int, code: str, message: str = "boom") -> Response:
     )
 
 
+ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
 def run(argv: list[str], capsys) -> tuple[int, str, str]:
     code = cli_main.main(argv)
     out, err = capsys.readouterr()
-    return code, out, err
+    # Typer forces a colour terminal for help on CI (GITHUB_ACTIONS, FORCE_COLOR); compare text.
+    return code, ANSI.sub("", out), ANSI.sub("", err)
 
 
 def run_json(argv: list[str], capsys):

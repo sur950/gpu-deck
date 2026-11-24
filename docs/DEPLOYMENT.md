@@ -76,8 +76,8 @@ One image (`ghcr.io/sur950/gpu-deck-api`) provides six of the processes; the web
 | `worker` | `gpu-deck-api` | 9464 (metrics, internal) | none | Celery: usage writes, rollups, billing, alert delivery |
 | `beat` | `gpu-deck-api` | none | none | Celery beat. Exactly one per deployment |
 | `scheduler` | `gpu-deck-api` | 9465 (metrics, internal) | none | Rules, layouts, swaps, housekeeping; elects a leader, so more than one is safe |
-| `postgres` | `postgres:17.9-alpine` | 5432 (internal) | none | All state (full overlay) |
-| `redis` | `redis:7.4.7-alpine` | 6379 (internal) | none | Cache, routing table, pub/sub, Celery broker (full overlay) |
+| `postgres` | `postgres:17.12-alpine` | 5432 (internal) | none | All state (full overlay) |
+| `redis` | `redis:7.4.12-alpine` | 6379 (internal) | none | Cache, routing table, pub/sub, Celery broker (full overlay) |
 | `prometheus`, `grafana`, `otel-collector` | upstream images | 9090, 3000, 4317/4318 | 127.0.0.1 | Optional, `--profile observability` |
 
 To use your own PostgreSQL and Redis instead of the overlay, leave out `docker-compose.full.yml`, set `GPUDECK_DATABASE_URL` and `GPUDECK_REDIS_URL` (credentials such as `POSTGRES_USER` and `REDIS_PASSWORD` come from the `.env`), and create the Docker network the base file joins first: `docker network create gpu-deck-deps`.

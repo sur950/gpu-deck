@@ -10,7 +10,7 @@ default-members = ["crates/gpudeck-protocol", "crates/gpudeck-agent"]
 [workspace.package]
 version = "1.0.0"
 edition = "2021"
-rust-version = "1.85"
+rust-version = "1.95"
 license = "Apache-2.0"
 authors = ["Suresh Konakanchi"]
 repository = "https://github.com/sur950/gpu-deck"
@@ -20,7 +20,7 @@ homepage = "https://sur950.github.io/gpu-deck/"
 gpudeck-protocol = { path = "crates/gpudeck-protocol" }
 anyhow = "1"
 async-trait = "0.1"
-base64 = "0.22"
+base64 = "0.23"
 bytes = "1"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive", "env"] }
@@ -33,28 +33,31 @@ http-body-util = "0.1"
 libc = "0.2"
 hyper = { version = "1", features = ["http1", "http2", "server", "client"] }
 hyper-util = { version = "0.1", features = ["tokio", "client", "client-legacy", "http1", "http2", "server"] }
-rand = "0.8"
-rcgen = { version = "0.13", features = ["pem", "x509-parser"] }
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream", "http2"] }
+rand = "0.10"
+rcgen = { version = "0.14", features = ["pem", "x509-parser"] }
+# rustls with the ring provider the agent installs (tls::init_crypto); public roots come from
+# webpki-root-certs (tls::http_client_builder), not the host's CA store.
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "json", "stream", "http2"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "logging", "tls12"] }
 rustls-pemfile = "2"
 rustls-pki-types = { version = "1", features = ["std"] }
+webpki-root-certs = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sha2 = "0.10"
-sysinfo = "0.33"
+sha2 = "0.11"
+sysinfo = "0.40"
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "logging", "tls12"] }
-tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
+tokio-tungstenite = { version = "0.30", features = ["rustls-tls-webpki-roots"] }
 tokio-util = { version = "0.7", features = ["io", "rt"] }
 urlencoding = "2"
-toml = "0.8"
+toml = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 uuid = { version = "1", features = ["v4", "v5", "serde"] }
-x509-parser = "0.16"
-jsonschema = "0.26"
+x509-parser = "0.18"
+jsonschema = "0.63"
 tempfile = "3"
 
 [profile.release]

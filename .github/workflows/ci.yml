@@ -20,12 +20,14 @@ permissions:
 
 env:
   PYTHON_VERSION: "3.12"
-  NODE_VERSION: "24.21.0"
-  TERRAFORM_VERSION: "1.13.4"
-  HELM_VERSION: "v3.19.0"
+  NODE_VERSION: "26.13.1"
+  TERRAFORM_VERSION: "1.17.2"
+  HELM_VERSION: "v4.3.2"
   KUBECONFORM_VERSION: "v0.8.0"
-  ZIG_VERSION: "0.13.0"
-  CARGO_ZIGBUILD_VERSION: "0.20.1"
+  ZIG_VERSION: "0.17.1"
+  CARGO_ZIGBUILD_VERSION: "0.24.1"
+  # Pinned by digest: the scanner runs with the Docker socket mounted.
+  TRIVY_IMAGE: aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb
   CARGO_TERM_COLOR: always
   FORCE_COLOR: "1"
 
@@ -71,7 +73,6 @@ jobs:
               - package.json
               - pnpm-lock.yaml
               - pnpm-workspace.yaml
-              - .npmrc
             agent:
               - *shared
               - apps/node-agent/**
@@ -450,7 +451,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
       - name: Scan for critical vulnerabilities (Trivy, fixed ones only)
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.67.2 \
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" \
             image --no-progress --exit-code 1 --severity CRITICAL --ignore-unfixed "${{ matrix.image }}:ci"
 
   security:
@@ -459,9 +460,9 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - name: trivy fs (critical, fixed only)
+      - name: trivy fs (critical, fixed only; settings in trivy.yaml)
         run: |
-          docker run --rm -v "$PWD:/src" -w /src aquasec/trivy:0.67.2 fs --no-progress \
+          docker run --rm -v "$PWD:/src" -w /src "$TRIVY_IMAGE" fs --no-progress \
             --scanners vuln,secret,misconfig --exit-code 1 --severity CRITICAL --ignore-unfixed .
 
   # ---------------------------------------------------------------------------------------------

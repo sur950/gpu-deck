@@ -1,0 +1,12 @@
+# Trivy settings for `trivy fs .` and `trivy image` (CI job "Lockfiles, IaC and secrets").
+scan:
+  skip-files:
+    # BuildKit per-Dockerfile ignore files, not Dockerfiles (the scanner matches Dockerfile.*).
+    - "**/Dockerfile.dockerignore"
+misconfiguration:
+  helm:
+    # The chart refuses to render without a secret source (templates/control-plane.yaml);
+    # render it the way CI's helm lint does, for the oldest Kubernetes the chart supports.
+    set:
+      - secrets.existingSecret=ci
+    kube-version: "1.27.0"

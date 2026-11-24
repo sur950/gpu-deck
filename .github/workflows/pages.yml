@@ -12,7 +12,8 @@ name: Website
 #                                  a broken link, anchor or asset anywhere on the site)
 # The diagrams are pre-rendered SVGs in website/assets/diagrams/ (committed; refresh them with
 # `python scripts/build_docs.py --render-diagrams` after a ```mermaid block changes).
-# Repository setting needed once: Settings, Pages, Source: GitHub Actions.
+# Repository setting needed once: Settings, Pages, Source: GitHub Actions. Until it is set, the
+# site is still built and checked, and the run ends green with a warning instead of deploying.
 
 on:
   push:
@@ -40,6 +41,11 @@ jobs:
     name: Build website
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: read
+    outputs:
+      pages: ${{ steps.pages.outputs.enabled }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -69,15 +75,30 @@ jobs:
           [[ -f website/index.html && -f website/docs/index.html ]] || { echo "::error::the build is incomplete"; exit 1; }
           touch website/.nojekyll
 
-      - uses: actions/configure-pages@v6
+      - name: Is GitHub Pages enabled for this repository?
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/pages" --silent 2>/dev/null; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::GitHub Pages is not enabled (Settings, Pages, Source: GitHub Actions); the site was built and checked but not deployed."
+          fi
 
-      - uses: actions/upload-pages-artifact@v5
+      - if: steps.pages.outputs.enabled == 'true'
+        uses: actions/configure-pages@v6
+
+      - if: steps.pages.outputs.enabled == 'true'
+        uses: actions/upload-pages-artifact@v5
         with:
           path: website
 
   deploy:
     name: Deploy website
     needs: build
+    if: needs.build.outputs.pages == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

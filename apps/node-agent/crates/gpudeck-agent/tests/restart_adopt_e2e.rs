@@ -296,7 +296,9 @@ async fn engines_survive_agent_restarts() {
         preset.contains("[tiny-one]") && !preset.contains("[tiny-two]"),
         "{preset}"
     );
-    let reply: Value = reqwest::Client::new()
+    let reply: Value = gpudeck_agent::tls::http_client_builder()
+        .build()
+        .unwrap()
         .post(format!("http://127.0.0.1:{m2_port}/v1/chat/completions"))
         .json(&json!({"model": "tiny-two", "messages": []}))
         .send()

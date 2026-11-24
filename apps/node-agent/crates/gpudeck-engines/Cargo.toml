@@ -2,7 +2,7 @@
 name = "gpudeck-engines"
 version = "1.0.0"
 edition = "2021"
-rust-version = "1.85"
+rust-version = "1.95"
 description = "GPU Deck node agent: engine adapters (llama.cpp, MLX, mlx-audio, vLLM, vLLM-Omni, SGLang, TensorRT-LLM, whisper.cpp, stable-diffusion.cpp, custom): command building, health, metric scraping."
 license = "Apache-2.0"
 publish = false
@@ -12,7 +12,9 @@ anyhow = "1"
 async-trait = "0.1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
 gpudeck-devices = { path = "../gpudeck-devices" }
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "multipart"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "json", "multipart"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+webpki-root-certs = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

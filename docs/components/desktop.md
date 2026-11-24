@@ -48,7 +48,7 @@ The web side of the bridge lives in `apps/web/lib/desktop/` (`host.ts`, `events.
 
 ## Develop
 
-Prerequisites: Rust stable (1.85+), Node 20+ with pnpm; macOS: Xcode command line tools;
+Prerequisites: Rust stable (1.90+), Node 22+ with pnpm; macOS: Xcode command line tools;
 Linux: `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf`;
 Windows: WebView2 (preinstalled on 10/11) and MSVC build tools.
 

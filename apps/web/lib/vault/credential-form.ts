@@ -109,7 +109,7 @@ export function kindErrors(kind: CredentialKind, values: FormValues): FormErrors
       try {
         const key = JSON.parse(raw) as Record<string, unknown>;
         const missing = ['project_id', 'client_email', 'private_key'].filter((k) => !key?.[k]);
-        if (key?.type !== 'service_account') errors.service_account_json = 'Not a service account key ("type": "service_account" missing)';
+        if (key?.type !== 'service_account') errors.service_account_json = 'Not a service account key ("type" is not "service_account")';
         else if (missing.length) errors.service_account_json = `The key is missing ${missing.join(', ')}`;
         else if (!String(key.private_key).includes('PRIVATE KEY')) errors.service_account_json = '"private_key" is not a PEM private key';
       } catch {

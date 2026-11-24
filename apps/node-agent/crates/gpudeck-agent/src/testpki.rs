@@ -3,12 +3,13 @@
 use anyhow::{anyhow, Context, Result};
 use rcgen::{
     BasicConstraints, Certificate, CertificateParams, CertificateSigningRequestParams,
-    DistinguishedName, DnType, ExtendedKeyUsagePurpose, IsCa, KeyPair, KeyUsagePurpose, SanType,
+    DistinguishedName, DnType, ExtendedKeyUsagePurpose, IsCa, Issuer, KeyPair, KeyUsagePurpose,
+    SanType,
 };
 
 pub struct TestCa {
     pub cert: Certificate,
-    pub key: KeyPair,
+    issuer: Issuer<'static, KeyPair>,
 }
 
 pub struct Issued {
@@ -33,7 +34,8 @@ impl TestCa {
             KeyUsagePurpose::DigitalSignature,
         ];
         let cert = params.self_signed(&key).expect("self sign");
-        Self { cert, key }
+        let issuer = Issuer::new(params, key);
+        Self { cert, issuer }
     }
 
     pub fn ca_pem(&self) -> String {
@@ -84,7 +86,7 @@ impl TestCa {
             }
         }
         let key = KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256).expect("key");
-        let cert = params.signed_by(&key, &self.cert, &self.key).expect("sign");
+        let cert = params.signed_by(&key, &self.issuer).expect("sign");
         let info = crate::pki::inspect_cert(cert.der()).expect("inspect");
         Issued {
             cert_pem: cert.pem(),
@@ -98,7 +100,7 @@ impl TestCa {
     pub fn issue_client(&self, cn: &str, org: &str) -> Issued {
         let params = Self::base_params(cn, org, 365);
         let key = KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256).expect("key");
-        let cert = params.signed_by(&key, &self.cert, &self.key).expect("sign");
+        let cert = params.signed_by(&key, &self.issuer).expect("sign");
         let info = crate::pki::inspect_cert(cert.der()).expect("inspect");
         Issued {
             cert_pem: cert.pem(),
@@ -127,7 +129,7 @@ impl TestCa {
                 .context("uri san")?,
         ));
         let cert = csr
-            .signed_by(&self.cert, &self.key)
+            .signed_by(&self.issuer)
             .map_err(|e| anyhow!("sign csr: {e}"))?;
         let info = crate::pki::inspect_cert(cert.der())?;
         Ok(Issued {

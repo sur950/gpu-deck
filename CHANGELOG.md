@@ -4,6 +4,17 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Changed
+
+- **Dependencies on their latest releases:** Node.js 26 LTS and pnpm 12 (pnpm settings moved from `.npmrc` to `pnpm-workspace.yaml`), ESLint 10, Vitest 5.1, Playwright 1.65, Tailwind CSS 4.3.5, `@hookform/resolvers` 7 and `@testing-library/jest-dom` 8; Python `openai` 3, `anthropic` 2 (both on `httpx2`), `gunicorn` 27, `celery`/`kombu` 5.7, FastAPI 0.165 and the CLI's `rich` 15, `mypy` 2 and `isort` 9; Rust `reqwest` 0.13, `rand` 0.10, `sysinfo` 0.40, `rcgen` 0.14, `tokio-tungstenite` 0.30, `toml` 1, `x509-parser` 0.18, `sha2` 0.11, `base64` 0.23, `jsonschema` 0.63 and Tauri 2.12.7; Go gRPC 1.85 on the Go 1.27 toolchain. The API image moves to Debian 13 (its PostgreSQL client tools are version 17) and every image takes the distribution's security updates at build time. The node agent needs Rust 1.95, the desktop shell Rust 1.90.
+- **No Dependabot pull requests:** maintainers run `scripts/update_deps.sh` on `main` instead; the packages held back and why are listed in [docs/RELEASING.md](docs/RELEASING.md#keeping-dependencies-current).
+
+### Fixed
+
+- **CLI:** `-o json` writes plain JSON when stdout is not a terminal, also when `FORCE_COLOR` is set.
+- **Node agent:** its HTTP clients (model and engine downloads, observed servers) keep checking certificates against the Mozilla roots built into the binary, so hosts and containers without a CA bundle still work with `reqwest` 0.13; Linux arm64 builds link again with current Rust (cargo-zigbuild 0.24, Zig 0.17).
+- **Website workflow:** without GitHub Pages enabled the site is still built and checked, and the run ends with a warning instead of failing.
+
 ## [1.0.0] - 2026-11-23
 
 First public release. Every component (control plane, node agent, desktop app, CLI, Terraform provider, Helm chart and images) ships under one version.

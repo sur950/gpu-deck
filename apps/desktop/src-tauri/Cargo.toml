@@ -7,7 +7,7 @@ license = "Apache-2.0"
 repository = "https://github.com/sur950/gpu-deck"
 homepage = "https://sur950.github.io/gpu-deck/"
 edition = "2021"
-rust-version = "1.85"
+rust-version = "1.90"
 publish = false
 
 # Standalone crate: deliberately not part of apps/node-agent's workspace.
@@ -18,10 +18,10 @@ name = "gpudeck_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.7.5", features = [] }
+tauri-build = { version = "2.7.6", features = [] }
 
 [dependencies]
-tauri = { version = "2.12.6", features = ["tray-icon", "image-png"] }
+tauri = { version = "2.12.7", features = ["tray-icon", "image-png"] }
 tauri-plugin-store = "2.5.1"
 tauri-plugin-updater = "2.14.1"
 tauri-plugin-single-instance = { version = "2.5.5", features = ["deep-link"] }

@@ -2,7 +2,7 @@
 name = "gpudeck-devices"
 version = "1.0.0"
 edition = "2021"
-rust-version = "1.85"
+rust-version = "1.95"
 description = "GPU Deck node agent: vendor device plugins (NVIDIA, AMD, Hygon, MetaX, Moore Threads, T-Head, Apple Silicon) producing one common Device / DeviceSample type."
 license = "Apache-2.0"
 publish = false
@@ -22,7 +22,7 @@ tracing = "0.1"
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation-sys = "0.8"
 libc = "0.2"
-libloading = "0.8"
+libloading = "0.9"
 objc2 = "0.6"
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSString"] }
 objc2-metal = { version = "0.3", default-features = false, features = ["std", "MTLDevice"] }

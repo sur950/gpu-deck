@@ -235,7 +235,7 @@ def _gcp_check(fields: Dict[str, Any]) -> List[Tuple[str, str]]:
         return [("service_account_json", "must be a JSON object (the downloaded key file)")]
     errors: List[Tuple[str, str]] = []
     if data.get("type") != "service_account":
-        errors.append(("service_account_json", 'needs "type": "service_account"'))
+        errors.append(("service_account_json", 'needs "type" set to "service_account"'))
     for key in ("project_id", "client_email", "private_key"):
         if not data.get(key):
             errors.append(("service_account_json", f'is missing "{key}"'))

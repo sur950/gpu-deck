@@ -11,29 +11,30 @@
 # at build time (build args). At runtime the container only needs write access to /tmp and
 # /app/apps/web/.next/cache (mount tmpfs there when running with --read-only).
 
-ARG NODE_IMAGE=node:24.21.0-alpine
+ARG NODE_IMAGE=node:26.13.1-alpine
+# Keep equal to `packageManager` in the root package.json. Node 25+ ships without corepack, so
+# npm installs pnpm; without its install scripts the pnpm bins run through Node.js.
+ARG PNPM_VERSION=12.23.0
 
 # ---------- dependencies ----------
 # apps/web is a member of the root pnpm workspace (one lockfile at the repo root).
 FROM ${NODE_IMAGE} AS deps
+ARG PNPM_VERSION
 WORKDIR /src
-ENV PNPM_HOME=/pnpm \
-    COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
-    NEXT_TELEMETRY_DISABLED=1
-RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY apps/web/package.json apps/web/.npmrc apps/web/
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm install --global --ignore-scripts --no-fund --no-audit "pnpm@${PNPM_VERSION}"
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY apps/web/package.json apps/web/
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm config set store-dir /pnpm/store && \
-    pnpm install --frozen-lockfile --filter web...
+    pnpm install --frozen-lockfile --store-dir /pnpm/store --filter web...
 
 # ---------- build ----------
 FROM ${NODE_IMAGE} AS build
+ARG PNPM_VERSION
 WORKDIR /src/apps/web
-ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
-    NEXT_TELEMETRY_DISABLED=1 \
+ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production
-RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
+RUN npm install --global --ignore-scripts --no-fund --no-audit "pnpm@${PNPM_VERSION}"
 # Names match apps/web/.env.example (the app reads exactly these).
 # Empty = same origin (/api/v1 through the gateway). Set it only to make the browser call an
 # admin API on another origin.

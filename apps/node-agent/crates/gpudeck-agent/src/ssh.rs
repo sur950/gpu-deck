@@ -557,7 +557,7 @@ async fn wait_banner(
             }
         }
         checks += 1;
-        if checks % 5 == 0 && !alive().await {
+        if checks.is_multiple_of(5) && !alive().await {
             return Err(err(
                 error_code::ENGINE_START_FAILED,
                 "ssh container exited during startup",

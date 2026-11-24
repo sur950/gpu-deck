@@ -183,7 +183,7 @@ class ValidationError(BaseAPIException):
 
     def __init__(self, detail: str = "Validation error"):
         super().__init__(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=detail,
             error_code="VALIDATION_ERROR",
         )
@@ -406,7 +406,7 @@ async def validation_exception_handler(
         for error in exc.errors()
     ]
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content=_error_envelope("VALIDATION_ERROR", "Request validation failed", details=errors),
     )
 
@@ -459,7 +459,7 @@ async def serving_validation_exception_handler(
     loc = ".".join(str(part) for part in first.get("loc", []) if part != "body")
     message = f"{loc}: {first.get('msg', 'invalid request')}" if loc else "invalid request"
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content=serving_error_body(fmt, 422, message, "invalid_request_error"),
     )
 

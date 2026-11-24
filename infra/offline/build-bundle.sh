@@ -29,8 +29,8 @@ WITH_OBS=0
 SKIP_AGENT=0
 
 # Third-party images, pinned (same tags as infra/docker/docker-compose.full.yml).
-DATA_IMAGES="postgres:17.9-alpine redis:7.4.7-alpine"
-OBS_IMAGES="prom/prometheus:v3.7.3 grafana/grafana:12.3.0 otel/opentelemetry-collector-contrib:0.139.0"
+DATA_IMAGES="postgres:17.12-alpine redis:7.4.12-alpine"
+OBS_IMAGES="prom/prometheus:v3.16.0 grafana/grafana:13.3.1 otel/opentelemetry-collector-contrib:0.165.0"
 PY_VERSION="3.12"
 
 while [[ $# -gt 0 ]]; do

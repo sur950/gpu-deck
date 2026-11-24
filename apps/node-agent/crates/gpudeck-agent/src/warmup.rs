@@ -84,7 +84,7 @@ pub fn plan(model: &str, model_type: ModelType, context_size: Option<u64>) -> Ve
 /// answered 2xx and the time spent.
 pub async fn run(base: &str, reqs: &[WarmupRequest], budget: Duration) -> (usize, Duration) {
     let started = Instant::now();
-    let Ok(http) = reqwest::Client::builder().no_proxy().build() else {
+    let Ok(http) = crate::tls::http_client_builder().no_proxy().build() else {
         return (0, Duration::ZERO);
     };
     let mut ok = 0;

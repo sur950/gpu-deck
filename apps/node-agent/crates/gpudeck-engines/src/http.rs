@@ -14,7 +14,14 @@ pub const SCRAPE_TIMEOUT: Duration = Duration::from_secs(5);
 pub fn client() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
     CLIENT.get_or_init(|| {
+        // reqwest is built without a crypto provider (`rustls-no-provider`): use ring, as the
+        // agent does, and check any TLS against the bundled Mozilla roots, not the OS store.
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        let roots = webpki_root_certs::TLS_SERVER_ROOT_CERTS
+            .iter()
+            .filter_map(|der| reqwest::Certificate::from_der(der).ok());
         reqwest::Client::builder()
+            .tls_certs_only(roots)
             .no_proxy()
             .pool_idle_timeout(Duration::from_secs(30))
             .connect_timeout(Duration::from_secs(2))

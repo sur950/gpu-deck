@@ -30,6 +30,7 @@ from typing import Any, Dict, List
 import anthropic
 import asyncpg
 import httpx
+import httpx2
 import pytest
 import pytest_asyncio
 from app.core.settings import settings
@@ -538,8 +539,8 @@ async def test_message_batches_end_to_end(env, monkeypatch):
         base_url="http://serve/anthropic",
         api_key="sk-test",
         max_retries=0,
-        http_client=httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=serving_app), base_url="http://serve"
+        http_client=httpx2.AsyncClient(
+            transport=httpx2.ASGITransport(app=serving_app), base_url="http://serve"
         ),
     )
     try:

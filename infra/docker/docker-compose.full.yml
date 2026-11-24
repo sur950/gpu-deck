@@ -38,7 +38,7 @@ x-depends-data: &depends-data
 
 services:
   postgres:
-    image: postgres:17.9-alpine
+    image: postgres:17.12-alpine
     environment:
       POSTGRES_USER: gpudeck
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
@@ -58,7 +58,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7.4.7-alpine
+    image: redis:7.4.12-alpine
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}"]
     volumes:
       - redis-data:/data
@@ -102,7 +102,7 @@ services:
 
   # ----- observability profile ------------------------------------------------------------
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.139.0
+    image: otel/opentelemetry-collector-contrib:0.165.0
     profiles: ["observability"]
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
@@ -116,7 +116,7 @@ services:
     restart: unless-stopped
 
   prometheus:
-    image: prom/prometheus:v3.7.3
+    image: prom/prometheus:v3.16.0
     profiles: ["observability"]
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -134,7 +134,7 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:12.3.0
+    image: grafana/grafana:13.3.1
     profiles: ["observability"]
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}

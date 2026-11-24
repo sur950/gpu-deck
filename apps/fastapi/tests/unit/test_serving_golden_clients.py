@@ -21,6 +21,7 @@ from typing import Any, Dict, List
 
 import anthropic
 import httpx
+import httpx2
 import ollama
 import openai
 import pytest
@@ -347,9 +348,10 @@ def engine(monkeypatch):
 
 
 def _http():
+    """HTTP client for the openai / anthropic SDKs, which are built on httpx2 (not httpx)."""
     from app.api_layer_main import app
 
-    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+    return httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app), base_url="http://test")
 
 
 @pytest.fixture
@@ -607,10 +609,10 @@ async def test_anthropic_text_non_stream(engine, ant):
         max_tokens=64,
         system=[{"type": "text", "text": "You are terse."}],
         stop_sequences=["END"],
-        temperature=0.2,
-        top_k=5,
         metadata={"user_id": "u-1"},
         messages=[{"role": "user", "content": "hi"}],
+        # anthropic 2.x dropped the sampling keyword arguments; older clients still send them.
+        extra_body={"temperature": 0.2, "top_k": 5},
     )
     assert msg.content[0].type == "text" and msg.content[0].text == "Hello from the fake engine."
     assert msg.stop_reason == "end_turn" and msg.model == "qwen3-test"
@@ -618,6 +620,7 @@ async def test_anthropic_text_non_stream(engine, ant):
     sent = engine.last["body"]
     assert sent["messages"][0] == {"role": "system", "content": "You are terse."}
     assert sent["stop"] == ["END"] and sent["max_tokens"] == 64 and sent["top_k"] == 5
+    assert sent["temperature"] == 0.2
     assert sent["user"] == "u-1"
     u = engine.usage[-1]
     assert u["format"] == "anthropic" and u["endpoint"] == "messages" and u["input_tokens"] == 12

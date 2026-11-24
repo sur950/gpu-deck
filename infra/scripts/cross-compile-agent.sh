@@ -4,8 +4,8 @@
 #   infra/scripts/cross-compile-agent.sh [--targets "t1 t2"] [--out dist/agent] [--version 1.2.3]
 #
 # Prerequisites (NOT installed by this script; install once on the build host / CI image):
-#   cargo install --locked cargo-zigbuild@0.20.1     # or: pip install cargo-zigbuild==0.20.1
-#   zig 0.13.0 on PATH                                # pip install ziglang==0.13.0 also works
+#   cargo install --locked cargo-zigbuild@0.24.1     # or: pip install cargo-zigbuild==0.24.1
+#   zig 0.17.1 on PATH                                # pip install ziglang==0.17.1 also works
 #   rustup target add <each target below>
 #   macOS targets: build on macOS (Apple SDK frameworks: IOKit/Metal are linked), see below.
 #
@@ -59,7 +59,7 @@ for target in $TARGETS; do
     need zig
     (cd "$AGENT_DIR" && cargo zigbuild --release --locked -p gpudeck-agent --bin gpudeck-agent --target "$target")
   fi
-  bin="$AGENT_DIR/target/$triple/release/gpudeck-agent"
+  bin="${CARGO_TARGET_DIR:-$AGENT_DIR/target}/$triple/release/gpudeck-agent"
   stage="$(mktemp -d)"
   cp "$bin" "$stage/gpudeck-agent"
   if [[ -d "$AGENT_DIR/packaging" ]]; then

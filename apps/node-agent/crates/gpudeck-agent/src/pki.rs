@@ -3,7 +3,7 @@
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, TimeZone, Utc};
 use gpudeck_protocol::KeyType;
-use rcgen::{CertificateParams, DistinguishedName, DnType, KeyPair};
+use rcgen::{CertificateParams, DistinguishedName, DnType, KeyPair, PublicKeyData};
 use rustls_pki_types::CertificateDer;
 use sha2::{Digest, Sha256};
 
@@ -178,7 +178,7 @@ pub fn cert_matches_key(cert_pem: &str, key: &KeyPair) -> Result<bool> {
     let (_, cert) =
         x509_parser::parse_x509_certificate(&certs[0]).map_err(|e| anyhow!("parse x509: {e}"))?;
     let spki = cert.public_key().raw;
-    Ok(spki == key.public_key_der().as_slice())
+    Ok(spki == key.subject_public_key_info().as_slice())
 }
 
 #[cfg(test)]

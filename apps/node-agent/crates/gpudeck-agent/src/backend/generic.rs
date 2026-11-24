@@ -31,7 +31,7 @@ impl GenericDriver {
 
 /// Client for engine admin calls on localhost (no proxy, short timeouts).
 pub fn local_http_client() -> reqwest::Client {
-    reqwest::Client::builder()
+    crate::tls::http_client_builder()
         .no_proxy()
         .timeout(Duration::from_secs(10))
         .build()

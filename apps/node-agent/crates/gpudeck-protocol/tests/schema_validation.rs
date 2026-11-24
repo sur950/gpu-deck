@@ -18,7 +18,10 @@ fn schema_dir() -> PathBuf {
 struct LocalRetriever;
 
 impl Retrieve for LocalRetriever {
-    fn retrieve(&self, uri: &Uri<&str>) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
+    fn retrieve(
+        &self,
+        uri: &Uri<String>,
+    ) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
         let name = uri
             .path()
             .as_str()
@@ -46,7 +49,7 @@ fn assert_valid(name: &str, value: &Value) {
     let v = validator(name);
     let errors: Vec<String> = v
         .iter_errors(value)
-        .map(|e| format!("{} at {}", e, e.instance_path))
+        .map(|e| format!("{} at {}", e, e.instance_path()))
         .collect();
     assert!(
         errors.is_empty(),
@@ -748,7 +751,7 @@ fn assert_def_valid(file: &str, def: &str, value: &Value) {
     let v = def_validator(file, def);
     let errors: Vec<String> = v
         .iter_errors(value)
-        .map(|e| format!("{} at {}", e, e.instance_path))
+        .map(|e| format!("{} at {}", e, e.instance_path()))
         .collect();
     assert!(
         errors.is_empty(),

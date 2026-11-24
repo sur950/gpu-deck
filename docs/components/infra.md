@@ -53,7 +53,7 @@ them (plus the alert rules) into the chart; `--check` fails on stale files or un
 
 Targets: `x86_64/aarch64-unknown-linux-gnu.2.28` (glibc ≥ 2.28), `x86_64/aarch64-unknown-linux-musl`
 (static), `aarch64-apple-darwin` (built natively on a Mac; Metal/IOKit). Prerequisites (not
-installed by the script): `cargo-zigbuild 0.20.1`, `zig 0.13.0`, `rustup target add ...`.
+installed by the script): `cargo-zigbuild 0.24.1`, `zig 0.17.1`, `rustup target add ...`.
 
 ## Offline install
 

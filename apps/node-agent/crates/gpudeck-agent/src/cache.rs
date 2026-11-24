@@ -145,7 +145,7 @@ impl CacheManager {
             }
         }
         entries.retain(|_, e| e.item.state != CacheState::Evicted);
-        let http = reqwest::Client::builder()
+        let http = crate::tls::http_client_builder()
             .connect_timeout(Duration::from_secs(30))
             .read_timeout(Duration::from_secs(120))
             .build()?;

@@ -34,10 +34,10 @@ You need Docker with the compose plugin (OrbStack, Docker Desktop, Colima or Doc
 | Component | Tools |
 |---|---|
 | Backend and CLI | Python 3.12 and [uv](https://docs.astral.sh/uv/) |
-| Web, desktop | Node 20 or newer (CI uses 24) and `pnpm` (the version in `package.json` `packageManager`) |
-| Node agent, desktop shell | Rust 1.85 or newer, with `rustfmt` and `clippy` |
-| Terraform provider | Go 1.25 or newer, and Terraform for the acceptance tests |
-| Helm chart | Helm 3 |
+| Web, desktop | Node 22 or newer (CI uses 26) and `pnpm` (the version in `package.json` `packageManager`) |
+| Node agent, desktop shell | Rust 1.95 or newer, with `rustfmt` and `clippy` |
+| Terraform provider | Go 1.26 or newer (`go.mod` names the toolchain CI uses), and Terraform for the acceptance tests |
+| Helm chart | Helm 4 |
 
 No model downloads are needed to work on GPU Deck. Tests use fixtures and small local models only.
 
@@ -245,6 +245,10 @@ Before you request a review, confirm that:
 ## Releases
 
 Maintainers cut releases. Versions follow [Semantic Versioning](https://semver.org/), all components share one version number, and release notes come from `CHANGELOG.md`. The release steps (version bump, tag, images, desktop and agent binaries, Helm chart and website) are in [docs/RELEASING.md](docs/RELEASING.md).
+
+### Keeping dependencies current
+
+There are no Dependabot pull requests. Maintainers run `scripts/update_deps.sh` on `main` (npm, Python, Rust and Go to their newest releases), fix what new majors break and run `scripts/ci_local.sh` before pushing; see [Keeping dependencies current](docs/RELEASING.md#keeping-dependencies-current) for what it covers, the packages held back and why, and what is bumped by hand. In a pull request, do not bump unrelated dependencies.
 
 ## License
 

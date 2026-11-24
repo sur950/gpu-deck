@@ -73,7 +73,7 @@ pub async fn download_verified(
     if !url.starts_with("https://") && !url.starts_with("http://") {
         return Err(fail(format!("{url}: only http(s) downloads are supported")));
     }
-    let client = reqwest::Client::builder()
+    let client = crate::tls::http_client_builder()
         .connect_timeout(Duration::from_secs(30))
         .build()
         .map_err(|e| fail(e.to_string()))?;

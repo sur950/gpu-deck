@@ -24,13 +24,14 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: "24.21.0"
+  NODE_VERSION: "26.13.1"
   PYTHON_VERSION: "3.12"
-  HELM_VERSION: "v3.19.0"
-  ZIG_VERSION: "0.13.0"
-  CARGO_ZIGBUILD_VERSION: "0.20.1"
+  HELM_VERSION: "v4.3.2"
+  ZIG_VERSION: "0.17.1"
+  CARGO_ZIGBUILD_VERSION: "0.24.1"
   GORELEASER_VERSION: "~> v2"
-  TRIVY_IMAGE: aquasec/trivy:0.67.2
+  # Pinned by digest: the scanner runs with registry credentials.
+  TRIVY_IMAGE: aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -222,7 +223,7 @@ jobs:
             --exit-code 1 --severity CRITICAL --ignore-unfixed "$IMAGE@${{ steps.index.outputs.digest }}"
       - run: mkdir -p "$RUNNER_TEMP/sbom"
       - name: SBOM (SPDX) for the release page
-        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        uses: anchore/sbom-action@dfcb83b97731532d72be422cbc51ee64adb6fd56 # v0.24.4
         with:
           image: ${{ env.IMAGE }}@${{ steps.index.outputs.digest }}
           format: spdx-json

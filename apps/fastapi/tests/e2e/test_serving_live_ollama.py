@@ -23,6 +23,7 @@ from pathlib import Path
 
 import anthropic
 import httpx
+import httpx2
 import ollama
 import openai
 import pytest
@@ -109,8 +110,9 @@ async def live(tmp_path_factory):
 
 
 def _http(app):
-    return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://live", timeout=180
+    # The openai / anthropic SDKs are built on httpx2; the ollama client stays on httpx.
+    return httpx2.AsyncClient(
+        transport=httpx2.ASGITransport(app=app), base_url="http://live", timeout=180
     )
 
 

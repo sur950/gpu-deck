@@ -15,7 +15,6 @@ use gpudeck_protocol::{
     InstanceState, InstanceStatus, Inventory, KubernetesInfo, Message, ProxyInfo, Settings,
     HUB_WS_PATH, PROTOCOL_VERSION,
 };
-use rand::Rng;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
 use tokio_tungstenite::tungstenite::protocol::{CloseFrame, WebSocketConfig};
@@ -28,7 +27,7 @@ use crate::agent::Agent;
 /// Reconnect delay: exponential from 1 s, factor 2, cap 60 s, full jitter (min 100 ms).
 pub fn backoff(attempt: u32) -> Duration {
     let cap = 60f64.min(2f64.powi(attempt.min(10) as i32));
-    let secs = rand::thread_rng().gen_range(0.0..=cap);
+    let secs = rand::random_range(0.0..=cap);
     Duration::from_secs_f64(secs.max(0.1))
 }
 

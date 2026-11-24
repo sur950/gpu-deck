@@ -3,7 +3,7 @@
 
 use std::collections::HashSet;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use anyhow::{anyhow, Context, Result};
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
@@ -20,6 +20,26 @@ pub fn init_crypto() {
     if CryptoProvider::get_default().is_none() {
         let _ = rustls::crypto::ring::default_provider().install_default();
     }
+}
+
+/// Builder for the agent's plain HTTP(S) clients: model and engine downloads, external instance
+/// probes and the loopback engines. Server certificates are checked against Mozilla's root store
+/// compiled into the binary (webpki-root-certs), as with reqwest 0.12's `rustls-tls`, so a host
+/// or container without a CA bundle still verifies TLS (reqwest 0.13 reads the OS store by
+/// default). Also installs the ring provider that reqwest's `rustls-no-provider` build needs.
+pub fn http_client_builder() -> reqwest::ClientBuilder {
+    init_crypto();
+    reqwest::Client::builder().tls_certs_only(public_roots().iter().cloned())
+}
+
+fn public_roots() -> &'static [reqwest::Certificate] {
+    static ROOTS: OnceLock<Vec<reqwest::Certificate>> = OnceLock::new();
+    ROOTS.get_or_init(|| {
+        webpki_root_certs::TLS_SERVER_ROOT_CERTS
+            .iter()
+            .filter_map(|der| reqwest::Certificate::from_der(der).ok())
+            .collect()
+    })
 }
 
 fn provider() -> Arc<CryptoProvider> {

@@ -102,7 +102,10 @@ fn schema_dir() -> PathBuf {
 
 struct Local;
 impl Retrieve for Local {
-    fn retrieve(&self, uri: &Uri<&str>) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
+    fn retrieve(
+        &self,
+        uri: &Uri<String>,
+    ) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
         let name = uri
             .path()
             .as_str()
@@ -840,7 +843,7 @@ async fn agent_against_fake_hub() {
         kinds.insert(v["type"].as_str().unwrap().to_string());
         let errs: Vec<String> = validator
             .iter_errors(&v)
-            .map(|e| format!("{e} at {}", e.instance_path))
+            .map(|e| format!("{e} at {}", e.instance_path()))
             .collect();
         assert!(
             errs.is_empty(),

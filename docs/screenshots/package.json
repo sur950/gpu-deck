@@ -12,7 +12,7 @@
   "dependencies": {
     "harfbuzzjs": "1.6.4",
     "pixelmatch": "8.0.0",
-    "playwright-core": "1.62.1",
+    "playwright-core": "1.65.1",
     "pngjs": "7.0.0",
     "subset-font": "2.9.0"
   }

@@ -4,7 +4,7 @@
 # Every pin is exact. Add a comment above any pin whose reason is not obvious.
 
 # FastAPI Core
-fastapi==0.162.0
+fastapi==0.165.0
 # [standard] pulls in websockets + httptools + uvloop; the agent hub WebSocket
 # route and the SSE streaming in the API layer rely on them.
 uvicorn[standard]==0.54.0
@@ -13,21 +13,21 @@ websockets==17.4
 httptools==0.9.0
 uvloop==0.23.0
 watchfiles==1.3.0
-python-multipart==0.0.32
+python-multipart==0.0.34
 
 # Database - PostgreSQL
-sqlalchemy==2.1.6
+sqlalchemy==2.1.9
 greenlet==3.5.6
 sqlacodegen==4.0.4
 alembic==1.20.1
 # asyncpg for the apps (async), psycopg for Alembic + sqlacodegen (sync).
 asyncpg==0.32.0
-psycopg[binary]==3.3.6
+psycopg[binary]==3.3.9
 
 # Pydantic
-pydantic==2.14.2
-pydantic-settings==2.16.2
-email-validator==2.3.0
+pydantic==2.14.4
+pydantic-settings==2.16.3
+email-validator==2.4.0
 
 # Authentication & Security
 # Argon2id password hashing (passwords are stored with Argon2).
@@ -44,19 +44,19 @@ httpx==0.28.1
 h2==4.4.1
 
 # Workers & Background Tasks
-celery==5.6.3
-# celery only bounds kombu (>=5.6), so pin the version the workers run with.
-# kombu 5.7 needs redis-py>=6.4 (and broke workers on redis 5.x); check redis
-# below before lifting this. kombu>=5.3 is required for the
+celery==5.7.0
+# celery only bounds kombu (>=5.7), so pin the version the workers run with.
+# kombu 5.7 needs redis-py>=6.4,<9 (it broke workers on redis 5.x); keep redis
+# below inside that range. kombu>=5.3 is required for the
 # `global_keyprefix` broker option the shared ACL'd Redis needs.
-kombu==5.6.2
-redis==8.1.0
+kombu==5.7.0
+redis==8.2.0
 
 # Scheduling
 apscheduler==3.11.3
 
 # Logging
-loguru==0.7.3
+loguru==0.8.0
 
 # Observability & Monitoring
 prometheus-fastapi-instrumentator==8.1.0
@@ -76,10 +76,10 @@ slowapi==0.1.10
 psutil==7.2.2
 
 # Contracts — validate agent-protocol / rule JSON against libs/contracts schemas
-jsonschema==4.25.1
+jsonschema==4.26.0
 
 # Cloud GPU VM providers (app/services/cloud/providers/*; DigitalOcean uses httpx REST)
-boto3==1.44.4
+boto3==1.44.10
 azure-identity==1.27.0
 azure-mgmt-compute==39.0.0
 azure-mgmt-network==33.1.0
@@ -87,22 +87,24 @@ google-cloud-compute==1.58.0
 
 # Testing
 pytest==9.2.0
-pytest-asyncio==1.4.1
+pytest-asyncio==1.5.0
 pytest-cov==7.1.0
 pytest-mock==3.17.0
 factory-boy==3.3.3
-faker==40.44.0
+faker==40.63.0
 # Property-based tests for the placement scheduler core (tests/unit/test_scheduler.py).
-hypothesis==6.148.2
+hypothesis==6.170.17
 # Official client SDKs used ONLY by the serving golden tests (tests/unit/test_serving_golden_clients.py,
 # tests/e2e/test_serving_live_ollama.py) as real clients against the serving app; app code never
 # imports them.
-openai==2.21.0
-anthropic==0.82.0
-ollama==0.6.1
+openai==3.58.0
+anthropic==2.13.0
+# openai 3.x / anthropic 2.x run on httpx2 (not httpx): the tests hand them httpx2 ASGI clients.
+httpx2==2.16.2
+ollama==0.6.3
 # AWS EC2/STS/SSM backend for tests/unit/test_cloud_providers.py; `responses` replays recorded
 # Azure ARM / GCP Compute REST responses in the cloud provider tests.
-moto[ec2]==5.2.5
+moto[ec2]==5.2.6
 responses==0.26.3
 
 # Code Quality
@@ -114,6 +116,8 @@ pre-commit==4.7.0
 
 # Utilities
 python-dotenv==1.2.4
+# Held on 2.x: celery pins python-dateutil==2.9.0.post0 and botocore needs <3.0.0
+# (held in scripts/update_python_pins.py).
 python-dateutil==2.9.0.post0
 pytz==2026.6
-gunicorn==26.2.0
+gunicorn==27.0.1

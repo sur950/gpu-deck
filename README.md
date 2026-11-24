@@ -101,7 +101,7 @@ Then deploy a model from **Catalog**, create an API key under **API keys** and c
 
 ### Development: this repository on your machine
 
-You need Docker (for Postgres and Redis), Python 3.12 with `uv`, Node 20+ with `pnpm`, and Rust for the agent. Nothing else is installed on the host.
+You need Docker (for Postgres and Redis), Python 3.12 with `uv`, Node 22+ with `pnpm`, and Rust for the agent. Nothing else is installed on the host.
 
 ```bash
 ./infra/scripts/bootstrap.dev.sh                 # Postgres + Redis containers, .env, venv, migrations, seed, start all

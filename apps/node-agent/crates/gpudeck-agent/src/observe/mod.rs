@@ -304,7 +304,7 @@ impl Observer {
             .iter()
             .map(|t| (t.name.clone(), State::new(t)))
             .collect();
-        let http = reqwest::Client::builder()
+        let http = crate::tls::http_client_builder()
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .timeout(REQUEST_TIMEOUT)

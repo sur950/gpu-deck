@@ -139,8 +139,9 @@ Settings (once, by the repository owner):
 - **Branch protection on `main`:** require pull requests and the status check **CI passed**;
   require signed commits if you sign them. Protect tags `v*` (Settings, Rules, Tag rulesets) so
   only maintainers can create them.
-- **Code security:** enable Dependabot alerts and security updates, secret scanning with push
-  protection, and private vulnerability reporting ([SECURITY.md](SECURITY.md) points to it). CodeQL runs from
+- **Code security:** enable Dependabot alerts (not Dependabot security or version updates:
+  dependencies are updated on `main`, see [Keeping dependencies current](#keeping-dependencies-current)),
+  secret scanning with push protection, and private vulnerability reporting ([SECURITY.md](SECURITY.md) points to it). CodeQL runs from
   `.github/workflows/codeql.yml` (use the *Advanced* setup, not *Default*).
 
 Secrets and variables (Settings, Secrets and variables, Actions). Every one is optional; the
@@ -199,5 +200,36 @@ Add the `1.0.1` section to `CHANGELOG.md` on `main` as well.
 | `scripts/release.sh` | pre-tag checks; prints the `git tag` / `git push` commands (never runs them) |
 | `scripts/release_notes.sh X.Y.Z` | the release body: the CHANGELOG section plus install instructions |
 | `scripts/ci_local.sh [steps]` | the CI checks on a clean copy of what git would push |
+| `scripts/update_deps.sh [--check] [npm python rust go]` | bump dependencies to their newest releases (see below) |
 | `scripts/ci_deps.sh up\|down` | throwaway Postgres + Redis (own compose project and ports) for the backend tests |
 | `scripts/collect_desktop_bundles.sh`, `scripts/desktop_updater_manifest.py` | used by the release workflow to name desktop files and write `latest.json` |
+
+## Keeping dependencies current
+
+Dependabot version updates are off (there is no `.github/dependabot.yml`); a maintainer brings
+the dependencies up to date on `main`, typically before a release:
+
+```bash
+scripts/update_deps.sh --check        # what is outdated (exit 1 if anything is)
+scripts/update_deps.sh                # npm, Python, Rust and Go to their newest releases
+scripts/ci_local.sh                   # fix what the new majors break, until this passes
+```
+
+`scripts/update_deps.sh` runs `pnpm up --latest` (workspace and `docs/screenshots`), rewrites
+the exact Python pins (`scripts/update_python_pins.py`), runs `cargo upgrade --incompatible
+allow` plus `cargo update` (cargo-edit is installed into a temporary directory when missing) and
+`go get -u`. pnpm skips versions published in the last 24 hours (`minimumReleaseAge`), and the
+Python helper does the same. Packages held below a version, with the reason:
+
+| Package | Held | Why |
+| --- | --- | --- |
+| `typescript` (npm) | < 7 | `typescript-eslint`, used by `eslint-config-next`, needs the TypeScript 6 JS API |
+| `typer` (CLI) | < 0.26 | 0.26 vendors Click; the CLI builds its command tree from the spec on Click |
+| `python-dateutil` (backend) | < 3 | `celery` pins 2.9.0.post0 and `botocore` needs < 3 |
+
+Bumped by hand: the Docker images (`ARG *_IMAGE` in `infra/docker/*/Dockerfile`, the compose
+files; Postgres stays on 17 and Redis on 7.4), GitHub Actions (first-party by major tag, others by
+commit SHA with the version in a comment), the tool versions in the workflow `env` blocks (Node,
+Zig, cargo-zigbuild, Helm, Terraform, the Trivy image digest) and pnpm (`packageManager`, plus
+`PNPM_VERSION` in `infra/docker/web/Dockerfile`). Raise `rust-version` in the `Cargo.toml` files
+when a dependency needs a newer Rust.

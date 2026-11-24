@@ -125,7 +125,11 @@ def render(
     meta = to_plain(meta)
     if fmt == "json":
         payload = data if meta is None else {"data": data, "meta": meta}
-        console.print_json(json.dumps(payload, default=str), highlight=console.is_terminal)
+        if sys.stdout.isatty():
+            console.print_json(json.dumps(payload, default=str), highlight=console.is_terminal)
+        else:
+            # Piped or redirected: plain JSON even when FORCE_COLOR / CI make rich colour output.
+            sys.stdout.write(json.dumps(payload, default=str, indent=2, ensure_ascii=False) + "\n")
         return
     if fmt == "yaml":
         import yaml

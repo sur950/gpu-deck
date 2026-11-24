@@ -78,7 +78,7 @@ async fn wait_healthy(a: &dyn EngineAdapter, url: &str, timeout: Duration) -> He
 /// One non-streaming chat completion; returns the proxy-style record.
 async fn chat(base: &str, model: &str) -> (serde_json::Value, RequestRecord) {
     let t0 = Instant::now();
-    let resp = reqwest::Client::new()
+    let resp = gpudeck_engines::http::client()
         .post(format!("{base}/v1/chat/completions"))
         .json(&json!({"model": model, "messages": [{"role": "user", "content": "Say hi in three words. /no_think"}], "max_tokens": 24}))
         .timeout(Duration::from_secs(120))

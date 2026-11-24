@@ -5,6 +5,19 @@ packages:
 # apps/fastapi (Python), apps/node-agent (Rust), apps/cli (Python) and
 # apps/terraform-provider (Go) have no package.json and are ignored by pnpm.
 
+# Settings live here: pnpm 11+ reads only auth and registry settings from .npmrc.
+autoInstallPeers: false
+engineStrict: true
+
+peerDependencyRules:
+  allowedVersions:
+    # eslint-config-next 16.4 bundles eslint-plugin-react, -import and -jsx-a11y, whose peer
+    # ranges stop at eslint 9. Every rule the config enables runs on eslint 10 (pnpm --filter
+    # web lint is part of CI).
+    eslint: "10"
+    # openapi-typescript 7 declares typescript ^5; it runs on the workspace's typescript 6.
+    openapi-typescript>typescript: "6"
+
 # Security pins for transitive dependencies (pnpm audit). Keep each within the
 # parent's major and explain the advisory it closes.
 # overrides:

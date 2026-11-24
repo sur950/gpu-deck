@@ -20,7 +20,8 @@
 # - container (vLLM, SGLang, TensorRT-LLM, vLLM-Omni, custom): opt in with
 #   nodeAgent.containerRuntime in the Helm chart, which mounts the node's Docker-compatible
 #   socket (Docker Engine, or Podman's API socket); this image carries the docker CLI for it.
-ARG RUST_IMAGE=rust:1.91.1-bookworm
+# Build on Debian 12 (glibc 2.36) so the binary links only symbols the runtime image provides.
+ARG RUST_IMAGE=rust:1.100.0-bookworm
 ARG RUNTIME_IMAGE=ubuntu:noble-20261110.1
 # Static docker CLI (official image, pinned by digest).
 ARG DOCKER_CLI_IMAGE=docker:29.10.0-cli@sha256:34507eb5069d8be82c95dd3b6987d4250fd5fee49b82e2509b7d7a7030740d6d
@@ -41,7 +42,7 @@ LABEL org.opencontainers.image.title="gpu-deck-agent" \
       org.opencontainers.image.vendor="Suresh Konakanchi" \
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.source="https://github.com/sur950/gpu-deck"
-RUN apt-get update && \
+RUN apt-get update && apt-get -y upgrade && \
     apt-get install -y --no-install-recommends ca-certificates nftables procps tini \
         libgomp1 libvulkan1 tar gzip unzip && \
     rm -rf /var/lib/apt/lists/* && \
