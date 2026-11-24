@@ -16,7 +16,7 @@ dependencies = [
   # HTTP (respx mocks it in tests)
   "httpx==0.28.1",
   # Output; YAML request bodies and the bundled OpenAPI spec
-  "rich==14.3.2",
+  "rich==15.0.0",
   "pyyaml==6.0.3",
   # Request bodies are validated against the spec's JSON schema before sending
   "jsonschema==4.26.0",
