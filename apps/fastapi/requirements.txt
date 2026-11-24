@@ -98,7 +98,7 @@ hypothesis==6.148.2
 # tests/e2e/test_serving_live_ollama.py) as real clients against the serving app; app code never
 # imports them.
 openai==2.21.0
-anthropic==0.82.0
+anthropic==2.12.0
 ollama==0.6.1
 # AWS EC2/STS/SSM backend for tests/unit/test_cloud_providers.py; `responses` replays recorded
 # Azure ARM / GCP Compute REST responses in the cloud provider tests.
