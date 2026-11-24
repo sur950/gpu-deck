@@ -116,4 +116,4 @@ pre-commit==4.7.0
 python-dotenv==1.2.4
 python-dateutil==2.9.0.post0
 pytz==2026.6
-gunicorn==26.2.0
+gunicorn==27.0.1
