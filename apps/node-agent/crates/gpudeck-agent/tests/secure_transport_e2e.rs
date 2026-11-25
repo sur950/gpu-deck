@@ -151,6 +151,9 @@ async fn tunnel_server(ca_pem: &str, server: &Issued) -> TunnelServer {
             let acceptor = acceptor.clone();
             let tx = tx.clone();
             let failed = f2.clone();
+            // Like the API layer's endpoint (asyncio sets TCP_NODELAY): without it Linux holds
+            // small HTTP/2 writes for a delayed ACK (~40 ms per round trip).
+            let _ = tcp.set_nodelay(true);
             tokio::spawn(async move {
                 let tls = match acceptor.accept(tcp).await {
                     Ok(t) => t,
