@@ -984,7 +984,7 @@ def control_plane() -> Board:
 BOARDS = {
     "gpu-fleet.json": gpu_fleet,
     "inference.json": inference,
-    "usage-billing.json": usage_billing,
+    # "usage-billing.json": usage_billing,  # v2: usage metering and cost (not shipped in v1)
     "control-plane.json": control_plane,
 }
 

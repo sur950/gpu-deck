@@ -64,7 +64,7 @@ async def download_agent(
     x_gpudeck_join_token: Optional[str] = JOIN_TOKEN_HEADER,
     token: Optional[str] = JOIN_TOKEN_QUERY,
     admin=Depends(get_optional_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     return await dl.download_response(request, db, version, target, admin)
 
@@ -82,7 +82,7 @@ async def download_agent_sha256(
     x_gpudeck_join_token: Optional[str] = JOIN_TOKEN_HEADER,
     token: Optional[str] = JOIN_TOKEN_QUERY,
     admin=Depends(get_optional_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     return await dl.download_sha256_response(request, db, version, target, admin)
 
@@ -96,6 +96,6 @@ async def agent_install_script(
     version: Optional[str] = Query(
         None, max_length=64, description="Build version (default latest)"
     ),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     return await dl.install_script_response(request, db, version)

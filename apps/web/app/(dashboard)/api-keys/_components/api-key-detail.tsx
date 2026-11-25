@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Activity, Ban, CalendarClock, Coins, MessageSquare, Pause, Play, RotateCw } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Activity, Ban, CalendarClock, MessageSquare, Pause, Play, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,12 +17,12 @@ import { RelativeTime } from '@/components/shared/relative-time';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { BarList } from '@/components/charts/bar-list';
 import { TimeSeriesChart } from '@/components/charts/time-series-chart';
-import type { ChartRow } from '@/components/charts/series-utils';
+import { filterSeries, findSeries, mergeSeries, sumValues } from '@/components/charts/series-utils';
 import { DashboardSkeleton } from '@/components/charts/dashboard-skeleton';
 import { useActivateApiKey, useApiKey, useRevokeApiKey, useRotateApiKey, useSuspendApiKey } from '@/hooks/api/security';
 import type { ApiKeyCreated } from '@/hooks/api/security-api';
-import { useUsageSummary } from '@/hooks/api/usage';
-import { bucketStartMs, fmtTokens, fmtUsd } from '@/components/usage/usage-shared';
+import { useModels } from '@/hooks/api/models';
+import { getUsageMetrics } from '@/lib/api/metrics';
 import { ExpiryCell, ExpiryDialog, RevealDialog } from '@/app/(dashboard)/api-keys/_components/api-keys-list';
 import { useNow } from '@/components/automation/use-now';
 
@@ -36,9 +37,29 @@ export function ApiKeyDetail() {
     from.setUTCHours(0, 0, 0, 0);
     return { from: from.toISOString(), to: to.toISOString() };
   });
-  const filters = useMemo(() => ({ apiKeyId: id, from: range.from, to: range.to }), [id, range]);
-  const byDay = useUsageSummary(filters, ['day']);
-  const byModel = useUsageSummary(filters, ['model']);
+  // Requests and tokens per day from the hourly usage rollups (GET /metrics/usage).
+  const byDay = useQuery({
+    queryKey: ['api-keys', 'usage', id, range.from, 'day'],
+    queryFn: () => getUsageMetrics({ from: range.from, to: range.to, step: '1d', apiKeyId: id, metrics: ['requests', 'input_tokens', 'output_tokens', 'cached_tokens'] }),
+    staleTime: 60_000,
+  });
+  const byModelQuery = useQuery({
+    queryKey: ['api-keys', 'usage', id, range.from, 'model'],
+    queryFn: () => getUsageMetrics({ from: range.from, to: range.to, step: '1d', apiKeyId: id, groupBy: 'model', metrics: ['requests'] }),
+    staleTime: 60_000,
+  });
+  const models = useModels({ page_size: 200 });
+  const byModel = useMemo(() => {
+    const names = new Map((models.data?.items ?? []).map((m) => [m.id, m.name]));
+    return filterSeries(byModelQuery.data, 'requests')
+      .map((s) => {
+        const modelId = s.labels.model_id ?? 'unknown';
+        const label = modelId === 'unknown' ? 'Unrouted requests' : (names.get(modelId) ?? `${modelId.slice(0, 8)}…`);
+        return { id: modelId, label, value: sumValues(s) };
+      })
+      .filter((row) => row.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [byModelQuery.data, models.data]);
   const revoke = useRevokeApiKey();
   const suspend = useSuspendApiKey();
   const activate = useActivateApiKey();
@@ -56,8 +77,9 @@ export function ApiKeyDetail() {
     );
   }
 
-  const totals = byDay.data?.totals;
-  const chart: ChartRow[] = (byDay.data?.rows ?? []).map((r) => ({ t: bucketStartMs(r.group.day), requests: r.totals.requestCount, cost: r.totals.costUsd })).filter((r) => !Number.isNaN(r.t));
+  const total = (metric: string) => sumValues(findSeries(byDay.data, metric));
+  const chart = mergeSeries([{ key: 'requests', series: findSeries(byDay.data, 'requests') }]);
+  const fmtCount = (n: number) => Math.round(n).toLocaleString();
 
   return (
     <PageContainer>
@@ -93,14 +115,13 @@ export function ApiKeyDetail() {
           </>
         }
       />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {byDay.isLoading || !totals ? (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[104px] rounded-md" />)
+      <div className="grid gap-4 sm:grid-cols-3">
+        {byDay.isLoading ? (
+          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-[104px] rounded-md" />)
         ) : (
           <>
-            <StatCard label="Requests (30 d)" value={fmtTokens(totals.requestCount)} icon={Activity} footnote={`${key.totalRequests.toLocaleString()} all time`} />
-            <StatCard label="Tokens (30 d)" value={fmtTokens(totals.inputTokens + totals.outputTokens)} icon={MessageSquare} footnote={`${fmtTokens(totals.cachedTokens)} cached input`} />
-            <StatCard label="Cost (30 d)" value={fmtUsd(totals.costUsd)} icon={Coins} footnote="Tokens + allocated GPU minutes" />
+            <StatCard label="Requests (30 d)" value={fmtCount(total('requests'))} icon={Activity} footnote={`${key.totalRequests.toLocaleString()} all time`} />
+            <StatCard label="Tokens (30 d)" value={fmtCount(total('input_tokens') + total('output_tokens'))} icon={MessageSquare} footnote={`${fmtCount(total('cached_tokens'))} cached input`} />
             <StatCard label="Last used" value={key.lastUsedAt ? <RelativeTime value={key.lastUsedAt} /> : 'never'} icon={CalendarClock} footnote={<>Expires <ExpiryCell value={key.expiresAt} now={now} /></>} />
           </>
         )}
@@ -115,7 +136,7 @@ export function ApiKeyDetail() {
             {byDay.isLoading ? (
               <Skeleton className="h-[240px]" />
             ) : (
-              <TimeSeriesChart data={chart} series={[{ key: 'requests', label: 'Requests', color: 'rgb(var(--chart-2))', kind: 'bar' }]} fromMs={Date.parse(range.from)} toMs={Date.parse(range.to)} formatValue={(v) => (v === null ? '—' : fmtTokens(v))} height={240} emptyTitle="No requests yet" emptyDescription="Requests with this key show up within a minute." />
+              <TimeSeriesChart data={chart} series={[{ key: 'requests', label: 'Requests', color: 'rgb(var(--chart-2))', kind: 'bar' }]} fromMs={Date.parse(range.from)} toMs={Date.parse(range.to)} formatValue={(v) => (v === null ? '—' : fmtCount(v))} height={240} emptyTitle="No requests yet" emptyDescription="Requests with this key show up within a minute." />
             )}
           </CardContent>
         </Card>
@@ -137,8 +158,8 @@ export function ApiKeyDetail() {
           </Card>
           <Card className="rounded-xl">
             <CardContent className="space-y-3">
-              <SectionLabel>Cost by model (30 d)</SectionLabel>
-              {byModel.isLoading ? <Skeleton className="h-24" /> : (byModel.data?.rows.length ?? 0) === 0 ? <p className="text-xs text-muted-foreground">No usage yet.</p> : <BarList items={(byModel.data?.rows ?? []).map((r) => ({ id: r.group.model, label: r.labels.model ?? r.group.model, value: r.totals.costUsd, valueLabel: fmtUsd(r.totals.costUsd), extraLabel: `${fmtTokens(r.totals.requestCount)} req` }))} />}
+              <SectionLabel>Requests by model (30 d)</SectionLabel>
+              {byModelQuery.isLoading ? <Skeleton className="h-24" /> : byModel.length === 0 ? <p className="text-xs text-muted-foreground">No requests yet.</p> : <BarList items={byModel.map((row) => ({ ...row, valueLabel: `${fmtCount(row.value)} req` }))} />}
             </CardContent>
           </Card>
         </div>

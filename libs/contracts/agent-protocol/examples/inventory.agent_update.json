@@ -1,0 +1,21 @@
+{
+  "devices": [],
+  "disks": [],
+  "cache": {
+    "dir": "/var/lib/gpudeck/cache",
+    "limit_bytes": 0,
+    "used_bytes": 0,
+    "items": []
+  },
+  "instances": [],
+  "agent_update": {
+    "mode": "helper",
+    "target": "x86_64-unknown-linux-gnu",
+    "state": "staged",
+    "staged_version": "1.1.0",
+    "staged_sha256": "9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a",
+    "staged_at": "2026-11-24T10:00:00Z",
+    "previous_version": null,
+    "release_keys": 1
+  }
+}

@@ -1,0 +1,12 @@
+# Starts gpudeck-agent-update.service when the agent requests an update (it writes
+# /var/lib/gpudeck/update/request.json after the control plane sent apply_update).
+# Enable with: systemctl enable --now gpudeck-agent-update.path
+[Unit]
+Description=GPU Deck agent self-update request
+
+[Path]
+PathChanged=/var/lib/gpudeck/update/request.json
+Unit=gpudeck-agent-update.service
+
+[Install]
+WantedBy=multi-user.target

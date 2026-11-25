@@ -1,0 +1,22 @@
+# GPU machine for the security verification (docs/security-model.md §4): Ubuntu 24.04 + systemd
+# so the generated install script runs unchanged, nftables for the host firewall, a simulated
+# NVIDIA GPU (../multinode/fake-nvidia-smi) and the test engine as `llama-server`, an operator
+# sshd on 2222 (inside the SSH-instance port range, so the firewall must preserve it), and
+# loopback-only forwarders that make the control plane on the Docker host appear at
+# localhost:8443 (hub) and localhost:8444 (API-layer tunnel), matching AGENT_HUB_PUBLIC_URL.
+FROM ubuntu:24.04
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      systemd systemd-sysv curl ca-certificates nftables procps iproute2 socat \
+      openssh-server libgomp1 \
+ && rm -rf /var/lib/apt/lists/* \
+ && printf 'Port 2222\nPasswordAuthentication no\nKbdInteractiveAuthentication no\nPermitRootLogin no\n' \
+      > /etc/ssh/sshd_config.d/10-operator.conf \
+ && systemctl enable ssh.service \
+ && (systemctl disable ssh.socket 2>/dev/null || true)
+COPY fake-nvidia-smi /usr/local/bin/nvidia-smi
+COPY gpudeck-fake-engine /usr/local/bin/llama-server
+COPY gpudeck-fwd@.service /etc/systemd/system/gpudeck-fwd@.service
+RUN chmod 0755 /usr/local/bin/nvidia-smi /usr/local/bin/llama-server \
+ && systemctl enable gpudeck-fwd@8443.service gpudeck-fwd@8444.service
+CMD ["/lib/systemd/systemd"]

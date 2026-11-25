@@ -30,7 +30,7 @@ interface DeleteConfirmationDialogProps {
    */
   itemName: string;
   /**
-   * The type of resource being deleted (e.g., "tag", "user", "role", "price plan")
+   * The type of resource being deleted (e.g., "tag", "user", "role", "layout")
    */
   resourceType: string;
   /**

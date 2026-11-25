@@ -1,6 +1,13 @@
 # Serving API contract (API layer, :8181)
 
-The data plane. Pure pass-through from any AI gateway in front of GPU Deck (or any client) to engines via the node agent proxies. Implemented in `app/api/serving/{openai,anthropic,ollama}` and `services/{serving,metering,billing}`. This document is the contract for the API layer, the web "API keys / usage" screens, the CLI and the Rust proxy (the §7 routing table consumer).
+The data plane. Pure pass-through from any AI gateway in front of GPU Deck (or any client) to engines via the node agent proxies. Implemented in `app/api/serving/{openai,anthropic,ollama}` and `services/{serving,metering,billing}`. This document is the contract for the API layer, the web "API keys" screens, the CLI and the Rust proxy (the §7 routing table consumer).
+
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../docs/diagrams/request-path-dark.svg">
+    <img src="../../../docs/diagrams/request-path-light.svg" alt="The path of a serving request: a client with a gd- API key calls the API layer on port 8181, which checks IP rules, looks the key up in a cache, resolves the model in its in-memory routing table and picks a replica. The request reaches the node agent over its outbound mutual-TLS tunnel (or the 9443 proxy in direct mode) and the engine on 127.0.0.1. Tokens stream back frame by frame with the model name rewritten; after the last frame a usage event is queued for metering. No database read on the request path, failover before the first byte, engines never reachable from the network." width="880">
+  </picture>
+</p>
 
 ## 1. Endpoints
 
@@ -22,6 +29,10 @@ Both OpenAI and Anthropic use `/v1/models` and `/v1/models/{model}`. Resolution 
 1. Path is unique to a format → that format (`/v1/messages*` Anthropic; `/v1/chat/completions`, `/v1/responses`, `/v1/completions`, `/v1/embeddings`, `/v1/rerank`, `/v1/audio/*`, `/v1/images/*`, `/v1/videos*` OpenAI).
 2. Shared path (`/v1/models*`): `anthropic-version` request header present → Anthropic shape; else `x-api-key` header present **and** no `Authorization` header → Anthropic shape; else OpenAI shape.
 3. Explicit prefixes (`/openai/`, `/anthropic/`, `/ollama/`) override everything; use them in gateway configuration.
+
+> [!TIP]
+> In an AI gateway or any shared configuration, use the explicit prefixes (`/openai/v1`,
+> `/anthropic/v1`, `/ollama/api`): they never depend on which headers a client sends.
 
 Clients that cannot set headers (Ollama CLI, some SDKs) use the explicit prefix as base URL: `OPENAI_BASE_URL=https://host/openai/v1`, `ANTHROPIC_BASE_URL=https://host/anthropic`, `OLLAMA_HOST=https://host/ollama`.
 
@@ -57,7 +68,12 @@ Status mapping from the agent proxy / engine: connection refused or TLS failure 
 
 ## 5. Routing and load balancing
 
+![A deployment: its replicas with live sessions, time to first token and traffic weights, and a ready-to-run curl command](../../../docs/screenshots/deployment-detail.svg)
+
+*A deployment's replicas with their live sessions and traffic weights, the input to the strategies below.*
+
 - Routing table (§7) maps serving name/alias → deployment → ready instances with weights. Strategy per deployment `traffic_config.strategy`: `least_sessions` (default; uses live `active_sessions` pushed by the hub into the table every 2 s), `round_robin`, `weighted` (by `traffic_weight`). Weight 0 = never selected. Instances with `health != healthy` or `accepting=false` are skipped.
+- **Latency-aware selection** (`least_sessions`, on unless `SERVING_LATENCY_ROUTING=false`): every API layer probes its round trip to each connected node over the path requests use (one `GET /_health` on the warm HTTP/2 connection or the agent's tunnel every `SERVING_RTT_PROBE_SECONDS`, EWMA + jitter; no extra round trip per request) and picks the replica with the lowest expected latency `rtt + SERVING_LATENCY_LOAD_PENALTY_MS × sessions / capacity ÷ (weight/100)` (sessions = live active + waiting + this process's in-flight; capacity = `max_concurrent`, else `SERVING_LATENCY_DEFAULT_CAPACITY`). Replicas within `SERVING_LATENCY_TOLERANCE_MS` of the best share the load (least loaded, then weighted random). The nearest replica takes the traffic until its load penalty outweighs the extra round trip to the next one. A node without a measurement counts as the farthest measured one; with no measurement at all the plain least-sessions rule applies. Failover, ejection and the other strategies are unchanged.
 - Model type check: an endpoint only routes to a deployment whose `model_type` is allowed for it (chat/thinking/vision → chat, responses, messages, ollama chat/generate; embedding → embeddings/embed; rerank → rerank; stt → transcriptions/translations; tts → audio/speech; image → images/*; video → videos). Mismatch → 400 `model_type_mismatch`.
 - **No ready instance**: if the deployment exists with `desired_running=true` and an instance is `loading`, the request waits up to `SERVING_NO_INSTANCE_WAIT_SECONDS` (default 30; set by swaps) then 503 `model_not_ready` + `Retry-After`. If no instance is loading and `SERVING_ON_DEMAND_LOAD=true`, the API layer asks the control plane to start the deployment (`POST /deployments/{id}/start` internal call) and waits the same window. Otherwise 503 `model_not_ready`.
 - **Addressing one deployment**: every deployment is also routable by its own name (deployment names are unique, case-insensitive). `model: "qwen3-0.6b"` balances across all deployments of that model; `model: "qwen3-0.6b-sglang"` (a deployment name) goes only to that deployment's instances with its own traffic settings. A deployment name that equals a model name or alias is not added (the model wins). Per-deployment names are listed in `/v1/models` only when the model name is shared by ≥ 2 deployments; they always resolve. Metering records the deployment either way; the response `model` field echoes the requested name.
@@ -66,6 +82,9 @@ Status mapping from the agent proxy / engine: connection refused or TLS failure 
 - Streaming: SSE/NDJSON forwarded chunk-by-chunk (`X-Accel-Buffering: no`, no gzip). Client disconnect cancels the upstream request.
 
 ## 6. Usage extraction (metering)
+
+> [!NOTE]
+> Metering and billing pages and their admin endpoints (`/usage/*`, `/billing/*`, `/price-plans`) are planned for v2. The recording below already runs in v1: it feeds the request and token figures on the dashboard and the API key pages (`/metrics/usage`).
 
 Recorded after the response completes (streams: after the last frame), enqueued to Celery queue `metering` (`enqueue_usage_event`, never raises). One `usage_events` row per request; batches write one row per item.
 
@@ -89,7 +108,7 @@ Recorded after the response completes (streams: after the last frame), enqueued 
 
 Common fields: `latency_ms` = response end − request start at the API layer; `ttft_ms` = first content byte − start (streams only, else null); `gpu_count` = deployment `gpu_count`; `gpu_seconds` = the request's **busy share** (informational; billable GPU time comes from instance uptime): `latency_ms/1000 × gpu_count × (slice_compute_pct or 100)/100 ÷ max(1, concurrent active requests on that instance at start)`; `cost_usd` = **token cost only**: `(input − cached)/1000 × usd_per_1k_input_tokens + cached/1000 × usd_per_1k_cached_tokens + output/1000 × usd_per_1k_output_tokens` (cached tokens are part of `input_tokens`, so they are billed once, at the cached rate; `usd_per_1k_cached_tokens` null → the input rate) using the node's plan, else the cluster's, else the default plan, else 0; `status` = success (2xx), error (4xx/5xx), timeout, cancelled (client disconnect); `request_count` = 1 (Anthropic batch rows: 1 per item).
 
-**Billable GPU time** is computed from instance uptime, not per request: every instance-minute in `ready`/`draining` gets the instance's share of its GPUs (per device: a slice claims `compute_pct/100`, a whole-GPU instance 1; when everything on one device in that minute — managed instances, observed engines, SSH GPU instances — claims more than the device, the device-minute is split by VRAM share, each capped at its claim, so **one GPU never bills more than one GPU-minute per minute**; loaded-but-idle instances keep their share; instances without device ids fall back to `gpu_count × slice_fraction`), and those GPU-minutes are allocated to the API keys that used the instance in that minute, pro-rata by tokens processed (by requests when the minute has no tokens); minutes without traffic go to the `unallocated` bucket (`api_key_id IS NULL`, the cost of keeping a model loaded). The result lives in `usage_rollups_hourly.gpu_seconds`, whose `cost_usd` = token cost + allocated GPU minutes × `usd_per_gpu_minute` of the node's plan. `/billing/reports` re-price with the current plans; `/usage/summary` and `/billing/estimate` show the write-time cost.
+**Billable GPU time** is computed from instance uptime, not per request: every instance-minute in `ready`/`draining` gets the instance's share of its GPUs (per device: a slice claims `compute_pct/100`, a whole-GPU instance 1; when everything on one device in that minute — managed instances, observed engines, SSH GPU instances — claims more than the device, the device-minute is split by VRAM share, each capped at its claim, so **one GPU never bills more than one GPU-minute per minute**; loaded-but-idle instances keep their share; instances without device ids fall back to `gpu_count × slice_fraction`), and those GPU-minutes are allocated to the API keys that used the instance in that minute, pro-rata by tokens processed (by requests when the minute has no tokens); minutes without traffic go to the `unallocated` bucket (`api_key_id IS NULL`, the cost of keeping a model loaded). The result lives in `usage_rollups_hourly.gpu_seconds`, whose `cost_usd` = token cost + allocated GPU minutes × `usd_per_gpu_minute` of the node's plan. In v2, billing reports will re-price with the current plans; the summary and estimate show the write-time cost.
 
 SSH GPU instances (not serving traffic) write one `usage_events` row per metered window with `endpoint = gpu_instance` (`gpu_seconds` = window × GPUs × slice, `api_key_id`/`model_id`/`deployment_id` null, `metadata.kind = gpu_instance`). The rollup adds those GPU-seconds to the bucket's billable GPU time for that node (priced with the node plan), takes their claim off the device capacity left for engine instances in the same minutes, and never counts them as requests or latency.
 
@@ -141,6 +160,7 @@ The API layer dials `proxy_url` with its client cert (`API_LAYER_CLIENT_CERT_PAT
 | `openai-processing-ms` | integer ms | OpenAI |
 | `x-gpudeck-model` / `x-gpudeck-deployment` / `x-gpudeck-instance` / `x-gpudeck-node` | ids | all (omitted when `SERVING_EXPOSE_ROUTING_HEADERS=false`) |
 | `x-gpudeck-error-code` | code | all, on errors |
+| `Server-Timing` | phase durations (§10); off with `SERVING_SERVER_TIMING=off` | all |
 | `Cache-Control: no-store` | | all |
 | `X-Accel-Buffering: no` + `Content-Type: text/event-stream` (OpenAI/Anthropic) or `application/x-ndjson` (Ollama) | | streams |
 | `Retry-After` | seconds | 429/503 |
@@ -161,3 +181,29 @@ The API layer dials `proxy_url` with its client cert (`API_LAYER_CLIENT_CERT_PAT
 | `SERVING_BATCH_EXPIRES_HOURS` | 24 | batch lifetime; results kept `SERVING_BATCH_RESULTS_RETENTION_DAYS` 29 |
 
 Oversized → 413 `request_too_large`; timeouts → 504 `upstream_timeout` (or stream error frame).
+
+## 10. Server-Timing and the request timing breakdown
+
+Every serving response carries a [`Server-Timing`](https://www.w3.org/TR/server-timing/) header with where the time went inside GPU Deck, in milliseconds:
+
+```
+Server-Timing: route;dur=0.1, queue;dur=0.0, connect;dur=0.0, rtt;dur=18.4, net;dur=19.0, engine;dur=30.6, upstream;dur=50.2, total;dur=53.0
+```
+
+| Metric | Meaning |
+| --- | --- |
+| `route` | Routing decision in the API layer: model lookup and replica selection (in memory) |
+| `queue` | Time in the API layer before the attempt that answered went out: waiting for a ready replica (load on demand, swaps) and failed attempts retried on another replica |
+| `connect` | Opening the upstream connection for that attempt (TCP + TLS); `0` on a warm pooled connection or an agent tunnel |
+| `rtt` | Smoothed round trip from this API layer to the chosen node (EWMA of the probes, not this request) |
+| `net` | This request's network time: `upstream` minus the time the node reported for it (needs an agent that sends `x-gpudeck-proxy-timing`, protocol.md §6) |
+| `engine` | Engine time to its response headers, measured on the node (includes the node's wait for a concurrency slot) |
+| `upstream` | Request headers written to the node → response headers read, measured in the API layer |
+| `total` | The whole request in the API layer; non-streaming responses only |
+
+Streaming responses send their headers before the first token, so their `Server-Timing` has everything up to `upstream` and no `total`; the full breakdown, with `ttft` and `total`, is kept with the request and served by the admin API (`GET /metrics/request-timing`): `metadata.timing` holds `route_ms`, `queue_ms`, `connect_ms`, `rtt_ms`, `net_ms`, `engine_ms`, `node_queue_ms`, `upstream_ms`, `ttft_ms` and `total_ms` (only the phases known for the request), and `metadata.api_layer` the `{id, region}` of the API layer that served it (`API_LAYER_ID`, `API_LAYER_REGION`). Phases that are not known are left out (for example `net` and `engine` with an older agent).
+
+`SERVING_SERVER_TIMING`: `generic` (default) sends only the metric names and durations above, nothing that names a host, address, node or region; `detailed` adds `edge;desc="<API_LAYER_REGION>"` and `node;desc="<node name>"` for trusted callers; `off` sends no header. An AI gateway or load balancer in front of the API layer can read the header from the upstream response (it is a normal response header, not a trailer), merge it with its own entries and pass it on or strip it before it reaches end users. Browsers only expose it to scripts of another origin when the response also carries `Timing-Allow-Origin`; the serving API is not meant to be called from browsers and does not send it.
+
+The node agent's proxy reports its share in a response header the API layer reads and removes (never passed to clients): `x-gpudeck-proxy-timing: queue;dur=<ms>, engine;dur=<ms>, node;dur=<ms>`.
+

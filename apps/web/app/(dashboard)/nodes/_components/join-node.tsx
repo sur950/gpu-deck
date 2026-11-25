@@ -18,7 +18,8 @@ import { StatusBadge, type BadgeVariant } from '@/components/shared/StatusBadge'
 import { KeyValueEditor, rowsToRecord, type KeyValueRow } from '@/components/shared/key-value-editor';
 import { LabelChips } from '@/components/shared/label-chips';
 import { ExpiryCountdown, useNow, useRemaining } from '@/components/fleet/expiry-countdown';
-import { InstallCommands } from '@/components/fleet/install-commands';
+import { InstallCommands, joinOptionFlags, withInstallOptions, type ServingMode } from '@/components/fleet/install-commands';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAgentBuilds, useClusters, useCreateJoinToken, useJoinTokens, useNode, useRevokeJoinToken } from '@/hooks/api/fleet';
 import { agentDownloadUrl } from '@/lib/api/fleet';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -252,6 +253,9 @@ export function JoinNode() {
   const ttlOptions = multiUse ? MULTI_TTL_OPTIONS : TTL_OPTIONS;
   const [issued, setIssued] = useState<JoinTokenCreated | null>(null);
   const [reveal, setReveal] = useState(false);
+  // Network exposure of the GPU machine: outbound tunnel (no inbound port) by default.
+  const [servingMode, setServingMode] = useState<ServingMode>('tunnel');
+  const [firewall, setFirewall] = useState(true);
 
   const clusterList = useMemo(() => (clusters.data?.items ?? []).filter((c) => c.status === 'active'), [clusters.data]);
   const effectiveCluster = clusterId || (clusterList.length === 1 ? clusterList[0].id : '');
@@ -282,14 +286,17 @@ export function JoinNode() {
         caPemSha256: issued.ca_pem_sha256 ?? null,
         version: agentBuilds.data?.latestVersion ?? null,
         multiUse: (issued.max_uses ?? 1) > 1,
+        servingMode,
+        firewall,
       }
     : null;
+  const joinCommand = issued ? [issued.join_command, ...joinOptionFlags(servingMode, firewall)].join(' ') : '';
 
   return (
     <PageContainer className="max-w-6xl">
       <PageHeader
         title="Add a node"
-        description="Issue a join token, run the agent on the GPU machine, and it appears here with its own certificate. GPU machines only need outbound access to the agent hub (8443)."
+        description="Issue a join token, run the agent on the GPU machine, and it appears here with its own certificate. GPU machines need no inbound port: outbound access to the agent hub (8443) and the API layer tunnel (8444) only."
         actions={
           <Button variant="outline" size="sm" className="rounded-sm" onClick={() => router.push('/nodes')}>
             <ArrowLeft className="size-4" />
@@ -385,7 +392,7 @@ export function JoinNode() {
               </Select>
             </Field>
             {issued ? (
-              <Button variant="outline" size="sm" className="w-full rounded-sm" onClick={() => { setIssued(null); setName(''); setLabels([]); setMaxUses(1); setTtl(15); }}>
+              <Button variant="outline" size="sm" className="w-full rounded-sm" onClick={() => { setIssued(null); setName(''); setLabels([]); setMaxUses(1); setTtl(15); setServingMode('tunnel'); setFirewall(true); }}>
                 <RefreshCw className="size-4" />
                 Join another machine
               </Button>
@@ -443,6 +450,45 @@ export function JoinNode() {
 
             <Card className="rounded-md shadow-premium">
               <CardHeader>
+                <CardTitle>Network exposure</CardTitle>
+                <CardDescription>How the serving API reaches this machine. Only this control plane is ever trusted: its keys are pinned by a CA-signed policy.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Serving mode">
+                  {(
+                    [
+                      ['tunnel', 'Outbound tunnel (recommended)', 'The agent dials out to the API layer; the GPU machine opens no inbound port at all.'],
+                      ['direct', 'Direct', 'The API layer dials the agent on :9443 (mTLS, its key pinned, allow-listed sources only). For low-latency private networks.'],
+                    ] as const
+                  ).map(([value, label, hint]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={servingMode === value}
+                      onClick={() => setServingMode(value)}
+                      className={cn(
+                        'rounded-lg border p-3 text-left text-xs transition-colors',
+                        servingMode === value ? 'border-brand bg-brand/5' : 'border-border hover:bg-muted/40',
+                      )}
+                    >
+                      <span className="block text-sm font-medium">{label}</span>
+                      <span className="mt-0.5 block text-muted-foreground">{hint}</span>
+                    </button>
+                  ))}
+                </div>
+                <label className="flex items-start gap-2 text-xs">
+                  <Checkbox checked={firewall} onCheckedChange={(v) => setFirewall(Boolean(v))} className="mt-0.5" />
+                  <span>
+                    <span className="block font-medium">Host firewall for the agent&apos;s ports (nftables / pf)</span>
+                    <span className="text-muted-foreground">Applied and verified by the installer; the ports your sshd listens on stay open. Untick only if you manage the firewall yourself.</span>
+                  </span>
+                </label>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-md shadow-premium">
+              <CardHeader>
                 <CardTitle>Install and join</CardTitle>
                 <CardDescription>
                   Run on the GPU machine. The agent runs as its own non-root user with access to the GPU devices and the model cache only.
@@ -454,12 +500,12 @@ export function JoinNode() {
                     <p className="text-xs font-medium text-muted-foreground">
                       Fastest: one command, talking only to the agent hub, pins the hub&apos;s CA, downloads the right build, checks its sha256, joins and installs the service (systemd or launchd)
                     </p>
-                    <CodeBlock code={issued.install_command} language="shell" />
+                    <CodeBlock code={withInstallOptions(issued.install_command, servingMode, firewall)} language="shell" />
                   </div>
                 )}
                 <div className="space-y-1.5">
                   <p className="text-xs font-medium text-muted-foreground">Agent already installed? Just join:</p>
-                  <CodeBlock code={issued.join_command} language="shell" />
+                  <CodeBlock code={joinCommand} language="shell" />
                 </div>
                 <div className="space-y-1.5 border-t border-border pt-4">
                   <p className="text-xs font-medium text-muted-foreground">Or step by step:</p>

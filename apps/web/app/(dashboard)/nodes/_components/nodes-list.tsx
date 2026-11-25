@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowDownToLine, ArrowUpFromLine, Cpu, ExternalLink, HardDrive, KeyRound, MoreVertical, Pencil, Plus, RotateCw, Server, Trash2, X } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpCircle, ArrowUpFromLine, Cpu, ExternalLink, HardDrive, KeyRound, MoreVertical, Pencil, Plus, RotateCw, Server, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,9 +23,11 @@ import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { ActivityBadge, nodeActivity } from '@/components/fleet/activity-badge';
 import { NodeStatusBadge, isNodeConnected, isNodeDetached, nodeStateInput } from '@/components/fleet/node-status';
 import { Heartbeat } from '@/components/fleet/heartbeat';
+import { NodeRttCell, useNodeRttMap } from '@/components/observability/latency';
 import { VramMeter } from '@/components/fleet/vram-meter';
 import { ExpiryCountdown } from '@/components/fleet/expiry-countdown';
 import { DrainNodeDialog, EditNodeDialog, RemoveNodeDialog } from '@/components/fleet/node-dialogs';
+import { AgentUpdateBadge, UpdateAgentDialog } from '@/components/fleet/agent-update';
 import { useClusters, useDevices, useJoinTokens, useNodes, useRevokeJoinToken, useRotateNodeCertificate, useUndrainNode } from '@/hooks/api/fleet';
 import { useUrlState } from '@/hooks/use-url-state';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -87,6 +89,7 @@ export function NodesList() {
   const [editing, setEditing] = useState<Node | null>(null);
   const [removing, setRemoving] = useState<Node | null>(null);
   const [rotating, setRotating] = useState<Node | null>(null);
+  const [updatingAgent, setUpdatingAgent] = useState<Node | null>(null);
   const undrain = useUndrainNode();
   const rotate = useRotateNodeCertificate();
 
@@ -109,6 +112,7 @@ export function NodesList() {
   );
 
   const { data, isLoading, isError, refetch } = useNodes(query);
+  const rttByNode = useNodeRttMap();
   const all = useNodes({ page_size: 500 });
   const fleetDevices = useDevices({ page_size: 200 });
   const clusters = useClusters({ page_size: 100 });
@@ -121,6 +125,8 @@ export function NodesList() {
   const gpus = fleet.reduce((s, n) => s + (n.device_count ?? 0), 0);
   const instances = fleet.reduce((s, n) => s + (n.instance_count ?? 0), 0);
   const versions = [...new Set(fleet.map((n) => n.agent_version).filter(Boolean))] as string[];
+  const updatable = fleet.filter((n) => n.agent_update?.update_available && n.agent_update.status !== 'managed').length;
+  const targetVersion = fleet.find((n) => n.agent_update?.target_version)?.agent_update?.target_version;
   const cacheUsed = fleet.reduce((s, n) => s + (n.cache_used_bytes ?? 0), 0);
   const cacheLimit = fleet.reduce((s, n) => s + (n.cache_limit_bytes ?? 0), 0);
   const devicesByNode = (nodeId: string) => (fleetDevices.data?.items ?? []).filter((d) => d.node_id === nodeId);
@@ -153,7 +159,7 @@ export function NodesList() {
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard label="Nodes connected" value={`${connected} / ${fleet.length}`} icon={Server} footnote={detachedCount > 0 ? `${detachedCount} detached (agent gone)` : connected < fleet.length ? `${fleet.length - connected} not reporting yet` : 'Every agent is heartbeating'} />
         <StatCard label="GPUs" value={gpus} icon={Cpu} footnote={`${instances} engine instance${instances === 1 ? '' : 's'} placed`} />
-        <StatCard label="Agent versions" value={versions.length || '—'} icon={RotateCw} footnote={versions.length === 1 ? <span className="font-mono">{versions[0]}</span> : versions.length > 1 ? 'Mixed — plan an upgrade' : 'No agents yet'} />
+        <StatCard label="Agent versions" value={versions.length || '—'} icon={RotateCw} footnote={updatable > 0 && targetVersion ? <span>{updatable} can move to <span className="font-mono">{targetVersion}</span></span> : versions.length === 1 ? <span className="font-mono">{versions[0]}</span> : versions.length > 1 ? 'Mixed — plan an upgrade' : 'No agents yet'} />
         <StatCard label="Model cache" value={formatBytes(cacheUsed)} icon={HardDrive} footnote={cacheLimit ? `of ${formatBytes(cacheLimit)} allowed across nodes` : 'No limits set'} />
       </div>
 
@@ -243,6 +249,7 @@ export function NodesList() {
                             <SortIcon field="last_heartbeat_at" sortField={sortField(params.sort)} sortDirection={sortDir} />
                           </div>
                         </TableHead>
+                        <TableHead title="Round trip from the nearest API layer (serving path) and from the control plane">Latency</TableHead>
                         <TableHead className="sticky right-0 bg-card text-right shadow-[-4px_0_6px_-2px_rgb(var(--border))]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -266,7 +273,7 @@ export function NodesList() {
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-wrap items-center gap-1">
-                                <NodeStatusBadge node={nodeStateInput(node)} />
+                                {node.agent_update?.status === 'updating' ? <AgentUpdateBadge info={node.agent_update} /> : <NodeStatusBadge node={nodeStateInput(node)} />}
                                 {!isNodeDetached(nodeStateInput(node)) && node.activity && node.activity !== 'detached' && <ActivityBadge activity={nodeActivity(node.activity, devicesByNode(node.id))} outside={node.outside_processes ?? 0} />}
                               </div>
                               {(node.status_message || node.drain_reason) && (
@@ -282,6 +289,7 @@ export function NodesList() {
                             <TableCell>
                               <div className="font-mono text-[11px]">{node.agent_version ?? '—'}</div>
                               <div className="text-[11px] text-muted-foreground">protocol v{node.protocol_version ?? '?'}</div>
+                              {node.agent_update?.status !== 'updating' && <AgentUpdateBadge info={node.agent_update} className="mt-1" />}
                             </TableCell>
                             <TableCell className="text-right tabular-nums">{node.device_count ?? 0}</TableCell>
                             <TableCell className="text-right tabular-nums">{node.instance_count ?? 0}</TableCell>
@@ -294,6 +302,9 @@ export function NodesList() {
                             </TableCell>
                             <TableCell className="text-xs">
                               <Heartbeat at={node.last_heartbeat_at} />
+                            </TableCell>
+                            <TableCell>
+                              <NodeRttCell rtt={rttByNode.get(node.id)} />
                             </TableCell>
                             <TableCell className="sticky right-0 bg-card text-right shadow-[-4px_0_6px_-2px_rgb(var(--border))]">
                               <DropdownMenu>
@@ -323,6 +334,12 @@ export function NodesList() {
                                     <DropdownMenuItem onClick={() => undrain.mutate({ id: node.id })}>
                                       <ArrowUpFromLine className="mr-2 h-4 w-4" />
                                       Undrain
+                                    </DropdownMenuItem>
+                                  )}
+                                  {node.agent_update?.can_update && (
+                                    <DropdownMenuItem onClick={() => setUpdatingAgent(node)}>
+                                      <ArrowUpCircle className="mr-2 h-4 w-4" />
+                                      Update agent to {node.agent_update.target_version}
                                     </DropdownMenuItem>
                                   )}
                                   <DropdownMenuItem disabled={node.status === 'offline' || node.status === 'pending'} onClick={() => setRotating(node)}>
@@ -360,6 +377,7 @@ export function NodesList() {
       {draining && <DrainNodeDialog key={draining.id} node={draining} open onOpenChange={(o) => !o && setDraining(null)} />}
       {editing && <EditNodeDialog key={editing.id} node={editing} open onOpenChange={(o) => !o && setEditing(null)} />}
       {removing && <RemoveNodeDialog key={removing.id} node={removing} open onOpenChange={(o) => !o && setRemoving(null)} />}
+      {updatingAgent && <UpdateAgentDialog key={updatingAgent.id} nodeId={updatingAgent.id} nodeName={updatingAgent.name} info={updatingAgent.agent_update} open onOpenChange={(o) => !o && setUpdatingAgent(null)} />}
       <ConfirmationDialog
         open={!!rotating}
         onOpenChange={(o) => !o && setRotating(null)}

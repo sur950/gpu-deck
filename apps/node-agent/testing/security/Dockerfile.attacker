@@ -1,0 +1,8 @@
+# The attacker (and the "insider" whose source address the direct-mode node allow-lists):
+# port scanner, TLS client/server, SSH client, curl, Python for raw join replays.
+FROM ubuntu:24.04
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      nmap ncat openssl curl openssh-client python3 ca-certificates socat iproute2 \
+ && rm -rf /var/lib/apt/lists/*
+CMD ["sleep", "infinity"]

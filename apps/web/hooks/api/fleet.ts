@@ -61,7 +61,6 @@ export const fleetKeys = {
 
   agentBuilds: ['agent-downloads'] as const,
   credentials: (type?: string) => ['vault', 'picker', type] as const,
-  pricePlans: ['price-plans', 'picker'] as const,
 };
 
 function errorMessage(error: unknown): string {
@@ -509,14 +508,6 @@ export function useCredentialOptions(types?: string[]) {
       const result = await api.listCredentials({ status: 'active' });
       return types && types.length > 0 ? result.items.filter((c) => types.includes(c.type)) : result.items;
     },
-    staleTime: 60_000,
-  });
-}
-
-export function usePricePlans() {
-  return useQuery({
-    queryKey: fleetKeys.pricePlans,
-    queryFn: async () => (await api.listPricePlans()).items,
     staleTime: 60_000,
   });
 }

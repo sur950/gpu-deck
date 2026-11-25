@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   Activity,
   ArrowDownToLine,
+  ArrowUpCircle,
   ArrowUpFromLine,
   Copy,
   Cpu,
@@ -49,6 +50,8 @@ import { GpuLive } from '@/components/fleet/gpu-live';
 import { DrainNodeDialog, EditNodeDialog, RemoveNodeDialog, RevokeCertificateDialog } from '@/components/fleet/node-dialogs';
 import { InstancesTable } from '@/components/models/instances-table';
 import { NodeFilesPanel } from '@/app/(dashboard)/nodes/_components/node-files';
+import { NodeLatencyPanel } from '@/components/observability/node-latency-panel';
+import { AgentUpdateBadge, NodeAgentUpdateCard, UpdateAgentDialog } from '@/components/fleet/agent-update';
 import {
   useCluster,
   useNode,
@@ -57,7 +60,6 @@ import {
   useNodeDevices,
   useNodeEvents,
   useNodeInstances,
-  usePricePlans,
   useRotateNodeCertificate,
   useUndrainNode,
 } from '@/hooks/api/fleet';
@@ -68,7 +70,7 @@ import { formatBytes, formatDate, formatDateTime, formatRelativeTime } from '@/u
 import { AGENT_COMMAND_STATE_LABELS, DEVICE_HEALTH_LABELS, NODE_OS_LABELS, NODE_STATUS_LABELS, nodeEngines, type LogChunk, type Node, type NodeCertificate } from '@/types/fleet';
 import { CACHE_STATE_LABELS, ENGINE_LABELS, type EngineName } from '@/types/models';
 
-const TABS = ['overview', 'gpus', 'instances', 'cache', 'files', 'events', 'certificates'] as const;
+const TABS = ['overview', 'gpus', 'instances', 'cache', 'files', 'network', 'events', 'certificates'] as const;
 type Tab = (typeof TABS)[number];
 const DEFAULTS = { tab: 'overview' as string };
 
@@ -80,6 +82,17 @@ const LEVEL_STYLE: Record<string, string> = {
 };
 
 function StatusCallout({ node, activity }: { node: Node; activity: string | null }) {
+  const run = node.agent_update?.active_run;
+  if (node.agent_update?.status === 'updating') {
+    return (
+      <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm">
+        <span className="font-medium">Updating the agent{run ? ` to ${run.to_version}` : ''}.</span>{' '}
+        <span className="text-muted-foreground">
+          Running models keep serving. Metrics pause while the agent restarts and resume when it reconnects; offline alerts for this node are held back until the update ends. If the new agent does not come up healthy, the node rolls back by itself.
+        </span>
+      </div>
+    );
+  }
   const detached = isNodeDetached(nodeStateInput(node)) && node.status !== 'removed';
   if (node.status === 'online' && !detached) return null;
   const since = node.disconnected_at ?? node.last_heartbeat_at;
@@ -301,11 +314,11 @@ export function NodeDetail() {
   const instances = useNodeInstances(id);
   const cache = useCacheItems({ node_id: id, page_size: 200 });
   const cluster = useCluster(node?.cluster_id ?? '');
-  const plans = usePricePlans();
   const undrain = useUndrainNode();
   const [editOpen, setEditOpen] = useState(false);
   const [drainOpen, setDrainOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
+  const [updateOpen, setUpdateOpen] = useState(false);
 
   const deviceLabels = useMemo(() => new Map((devices.data?.items ?? []).map((d) => [d.id, `${d.name.replace(/^NVIDIA |^AMD /, '')} #${d.index}`])), [devices.data]);
   const allSlices = useMemo(() => (devices.data?.items ?? []).flatMap((d) => d.slices ?? []), [devices.data]);
@@ -324,7 +337,6 @@ export function NodeDetail() {
   const activity = nodeActivity(node.activity, deviceList);
   const vramTotal = deviceList.reduce((s, d) => s + d.vram_total_bytes, 0);
   const vramReserved = deviceList.reduce((s, d) => s + (d.vram_reserved_bytes ?? 0), 0);
-  const plan = plans.data?.find((p) => p.id === node.price_plan_id);
   const canDrain = node.status === 'online' || node.status === 'unhealthy';
   const canUndrain = node.status === 'draining' || node.status === 'drained';
   const engines = nodeEngines(node.capabilities);
@@ -339,7 +351,8 @@ export function NodeDetail() {
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{node.name}</h1>
-            <NodeStatusBadge node={nodeStateInput(node)} />
+            {node.agent_update?.status === 'updating' ? <AgentUpdateBadge info={node.agent_update} /> : <NodeStatusBadge node={nodeStateInput(node)} />}
+            {node.agent_update?.status !== 'updating' && <AgentUpdateBadge info={node.agent_update} />}
             {!isNodeDetached(nodeStateInput(node)) && <ActivityBadge activity={activity} outside={node.outside_processes ?? 0} />}
             <span className="text-xs">
               <Heartbeat at={node.last_heartbeat_at} />
@@ -359,6 +372,12 @@ export function NodeDetail() {
           <LabelChips labels={node.labels} max={8} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {node.agent_update?.can_update && (
+            <Button size="sm" className="rounded-sm" onClick={() => setUpdateOpen(true)}>
+              <ArrowUpCircle className="size-4" />
+              Update agent
+            </Button>
+          )}
           {canDrain && (
             <Button variant="outline" size="sm" className="rounded-sm" onClick={() => setDrainOpen(true)}>
               <ArrowDownToLine className="size-4" />
@@ -431,6 +450,7 @@ export function NodeDetail() {
           <TabsTrigger value="instances" className="px-3 text-xs">Instances · {instances.data?.items.length ?? 0}</TabsTrigger>
           <TabsTrigger value="cache" className="px-3 text-xs">Model cache</TabsTrigger>
           <TabsTrigger value="files" className="px-3 text-xs">Files</TabsTrigger>
+          <TabsTrigger value="network" className="px-3 text-xs">Network</TabsTrigger>
           <TabsTrigger value="events" className="px-3 text-xs">Events</TabsTrigger>
           <TabsTrigger value="certificates" className="px-3 text-xs">Certificates</TabsTrigger>
         </TabsList>
@@ -466,13 +486,14 @@ export function NodeDetail() {
                   items={[
                     { label: 'Version', value: node.agent_version, mono: true },
                     { label: 'Protocol', value: node.protocol_version ? `v${node.protocol_version}` : undefined },
-                    { label: 'Proxy (mTLS)', value: `${node.proxy_address ?? node.ip_address ?? '—'}:${node.proxy_port}`, mono: true },
+                    node.metadata?.serving_mode === 'tunnel'
+                      ? { label: 'Serving', value: 'Outbound tunnel · no inbound port' }
+                      : { label: 'Serving (direct, mTLS)', value: `${node.proxy_address ?? node.ip_address ?? '—'}:${node.proxy_port}`, mono: true },
                     isNodeDetached(nodeStateInput(node))
                       ? { label: 'Disconnected', value: node.disconnected_at ?? node.last_heartbeat_at ? formatRelativeTime(node.disconnected_at ?? node.last_heartbeat_at) : 'unknown' }
                       : { label: 'Connected', value: node.connected_at ? formatRelativeTime(node.connected_at) : undefined },
                     { label: 'Last inventory', value: node.last_inventory_at ? formatRelativeTime(node.last_inventory_at) : 'never' },
                     { label: 'Cert fingerprint', value: node.cert_fingerprint, mono: true },
-                    { label: 'Price plan', value: plan ? `${plan.name} · $${plan.usd_per_gpu_minute}/GPU-min` : 'Inherits the cluster plan' },
                     { label: 'Joined', value: formatDate(node.created_at) },
                   ]}
                 />
@@ -525,6 +546,7 @@ export function NodeDetail() {
               </CardContent>
             </Card>
           </div>
+          <NodeAgentUpdateCard nodeId={node.id} nodeName={node.name} className="mt-6" />
         </TabsContent>
 
         <TabsContent value="gpus" className="mt-4">
@@ -660,6 +682,10 @@ export function NodeDetail() {
           <NodeFilesPanel node={node} />
         </TabsContent>
 
+        <TabsContent value="network" className="mt-4">
+          {tab === 'network' && <NodeLatencyPanel nodeId={node.id} />}
+        </TabsContent>
+
         <TabsContent value="events" className="mt-4">
           <EventsPanel nodeId={node.id} />
         </TabsContent>
@@ -672,6 +698,7 @@ export function NodeDetail() {
       {editOpen && <EditNodeDialog node={node} open onOpenChange={setEditOpen} />}
       {drainOpen && <DrainNodeDialog node={node} open onOpenChange={setDrainOpen} />}
       {removeOpen && <RemoveNodeDialog node={node} open onOpenChange={setRemoveOpen} onRemoved={() => router.push('/nodes')} />}
+      {updateOpen && <UpdateAgentDialog nodeId={node.id} nodeName={node.name} info={node.agent_update} open onOpenChange={setUpdateOpen} />}
     </PageContainer>
   );
 }

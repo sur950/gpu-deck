@@ -872,7 +872,6 @@ export interface RefNode {
   status: S['node_status'];
   labels: Record<string, string>;
   deviceCount: number;
-  priceplanId: string | null;
 }
 
 export interface RefCluster {
@@ -880,7 +879,6 @@ export interface RefCluster {
   name: string;
   type: S['cluster_type'];
   status: S['cluster_status'];
-  pricePlanId: string | null;
   nodes: number;
 }
 
@@ -969,7 +967,6 @@ export async function listRefNodes(): Promise<RefNode[]> {
     status: n.status,
     labels: n.labels ?? {},
     deviceCount: n.device_count ?? 0,
-    priceplanId: n.price_plan_id ?? null,
   }));
   return page.items;
 }
@@ -980,7 +977,6 @@ export async function listRefClusters(): Promise<RefCluster[]> {
     name: c.name,
     type: c.type,
     status: c.status,
-    pricePlanId: c.price_plan_id ?? null,
     nodes: c.counts?.nodes ?? 0,
   }));
   return page.items;

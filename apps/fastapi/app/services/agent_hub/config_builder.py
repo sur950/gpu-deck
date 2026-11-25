@@ -1,7 +1,8 @@
 """
 Builds ``config_push`` payloads for a node: proxy routing table, egress
 allowlist, engine catalog for the node platform, CRL, CA bundle, agent
-settings and model-source mirrors. ``config_version`` is a per-node monotonic
+settings, model-source mirrors and the CA-signed node security policy
+(``security``, protocol.md §13). ``config_version`` is a per-node monotonic
 counter kept in ``nodes.metadata.config_version``.
 """
 
@@ -29,6 +30,7 @@ ALL_SECTIONS = (
     "crl",
     "settings",
     "model_sources",
+    "security",
 )
 
 # Paths the agent proxy may forward for each model type (engine admin paths never appear).
@@ -178,6 +180,13 @@ class ConfigBuilder:
                 payload["settings"]["cache_limit_bytes"] = int(node.cache_limit_bytes)
         if "model_sources" in wanted:
             payload["model_sources"] = model_sources()
+        if "security" in wanted:
+            from app.services.agent_hub.security_policy import build_signed_policy
+
+            try:
+                payload["security"] = await build_signed_policy(self.session, node, self.pki)
+            except Exception as exc:  # noqa: BLE001 - never block routing / CRL pushes
+                logger.error(f"security policy for node={node.id} not built: {exc}")
         return payload
 
     async def crl_delta(self, node: Nodes) -> Dict[str, Any]:

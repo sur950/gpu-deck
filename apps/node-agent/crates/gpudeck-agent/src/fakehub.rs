@@ -42,6 +42,52 @@ pub struct HubState {
     pub intervals: Mutex<Intervals>,
     pub connections: AtomicU64,
     pub reject_reason: Mutex<Option<String>>,
+    /// SubjectPublicKeyInfo sha256 of the hub's server key (pinned by the policy it signs).
+    pub hub_spki: String,
+    /// Policy template signed for every joining node (node_id / serial / hub pin filled in);
+    /// `None` = join responses carry no policy (an older hub).
+    pub policy_template: Mutex<Option<gpudeck_protocol::SecurityPolicy>>,
+    /// `hello_ack.features` (tests drop names to play an older hub).
+    pub features: Mutex<Vec<String>>,
+    /// Agent update binaries served at `/agent/v1/updates/<version>/<target>`:
+    /// `"<version>/<target>"` -> (download token, bytes).
+    pub updates: Mutex<HashMap<String, (String, Vec<u8>)>>,
+    /// Update downloads served (successful ones).
+    pub update_downloads: AtomicU64,
+}
+
+impl HubState {
+    /// Sign `template` for `node_id` with a fresh serial and this hub's key pinned (unless the
+    /// template pins hub keys itself).
+    pub fn sign_policy_for(
+        &self,
+        node_id: Uuid,
+        mut template: gpudeck_protocol::SecurityPolicy,
+    ) -> gpudeck_protocol::SignedPolicy {
+        template.v = 1;
+        template.node_id = node_id;
+        template.issued_at = gpudeck_protocol::now();
+        if template.serial == 0 {
+            template.serial = template.issued_at.timestamp_millis() as u64;
+        }
+        if template.hub.is_none() {
+            template.hub = Some(gpudeck_protocol::IdentityPins {
+                spki_sha256: vec![self.hub_spki.clone()],
+                subjects: vec![],
+            });
+        }
+        self.ca.sign_policy(&template)
+    }
+
+    /// Node ids that joined so far.
+    pub fn node_ids(&self) -> Vec<Uuid> {
+        self.nodes
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .keys()
+            .copied()
+            .collect()
+    }
 }
 
 pub struct FakeHub {
@@ -74,6 +120,8 @@ impl FakeHub {
         crate::tls::init_crypto();
         let ca = TestCa::new("GPU Deck Fake Hub CA");
         let server = ca.issue_server("agent-hub", &["localhost", "127.0.0.1"]);
+        let hub_spki =
+            crate::pki::spki_sha256(&crate::pki::parse_cert_bundle(&server.cert_pem)?[0])?;
         let mut roots = rustls::RootCertStore::empty();
         roots.add(rustls::pki_types::CertificateDer::from(
             ca.cert.der().to_vec(),
@@ -117,6 +165,16 @@ impl FakeHub {
             }),
             connections: AtomicU64::new(0),
             reject_reason: Mutex::new(None),
+            hub_spki,
+            policy_template: Mutex::new(Some(gpudeck_protocol::SecurityPolicy::default())),
+            features: Mutex::new(vec![
+                gpudeck_protocol::hub_feature::OBSERVED_ENGINES.into(),
+                gpudeck_protocol::hub_feature::GPU_PROCESSES.into(),
+                gpudeck_protocol::hub_feature::SECURE_TRANSPORT.into(),
+                gpudeck_protocol::hub_feature::AGENT_UPDATES.into(),
+            ]),
+            updates: Mutex::new(HashMap::new()),
+            update_downloads: AtomicU64::new(0),
         });
         let shutdown = tokio_util::sync::CancellationToken::new();
         let (st, sd) = (state.clone(), shutdown.clone());
@@ -191,6 +249,24 @@ impl FakeHub {
             .intervals
             .lock()
             .unwrap_or_else(|e| e.into_inner()) = i;
+    }
+
+    /// `hello_ack.features` from the next connection on (drop names to play an older hub).
+    pub fn set_features(&self, features: Vec<String>) {
+        *self
+            .state
+            .features
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = features;
+    }
+
+    /// Serve `bytes` as the update binary of `version` / `target` to holders of `token`.
+    pub fn serve_update(&self, version: &str, target: &str, token: &str, bytes: Vec<u8>) {
+        self.state
+            .updates
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(format!("{version}/{target}"), (token.to_string(), bytes));
     }
 
     pub fn connections(&self) -> u64 {
@@ -387,11 +463,57 @@ async fn route(
                 .lock()
                 .unwrap_or_else(|e| e.into_inner())
                 .clone(),
+            security: st
+                .policy_template
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone()
+                .map(|t| st.sign_policy_for(node_id, t)),
         };
         return resp(
             StatusCode::OK,
             serde_json::json!({"success": true, "data": jresp, "error": null}),
         );
+    }
+    if let Some(key) = path.strip_prefix("/agent/v1/updates/") {
+        // Like the real hub: a node certificate and the stage_update download token.
+        if cn.is_none() {
+            return resp(
+                StatusCode::UNAUTHORIZED,
+                serde_json::json!({"error": "client certificate required"}),
+            );
+        }
+        let token = req
+            .headers()
+            .get(crate::update::TOKEN_HEADER)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or_default()
+            .to_string();
+        let found = st
+            .updates
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(key)
+            .cloned();
+        return match found {
+            Some((want, bytes)) if want == token => {
+                st.update_downloads.fetch_add(1, Ordering::SeqCst);
+                let mut r = Response::new(Full::new(Bytes::from(bytes)).boxed());
+                r.headers_mut().insert(
+                    header::CONTENT_TYPE,
+                    "application/octet-stream".parse().expect("hv"),
+                );
+                r
+            }
+            Some(_) => resp(
+                StatusCode::UNAUTHORIZED,
+                serde_json::json!({"error": "bad update token"}),
+            ),
+            None => resp(
+                StatusCode::NOT_FOUND,
+                serde_json::json!({"error": "not found"}),
+            ),
+        };
     }
     if path == "/agent/v1/ca" {
         return resp(
@@ -504,10 +626,11 @@ async fn session<S>(
             .unwrap_or(0),
         min_agent_version: None,
         drain: false,
-        features: vec![
-            gpudeck_protocol::hub_feature::OBSERVED_ENGINES.into(),
-            gpudeck_protocol::hub_feature::GPU_PROCESSES.into(),
-        ],
+        features: st
+            .features
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone(),
     };
     let ack_env = Envelope::new(Some(node_id), Message::HelloAck(ack)).with_correlation(hello.id);
     if sink

@@ -21,7 +21,6 @@ export type CloudNodeCreate = S['CloudNodeCreate'];
 export type CloudNodeUpdate = S['CloudNodeUpdate'];
 export type CloudNodeAction = S['CloudNodeAction'];
 export type CloudProvisionPreview = S['CloudProvisionPreview'];
-export type CloudPricePlanSuggestion = S['CloudPricePlanSuggestion'];
 
 export interface CloudNodeListParams {
   page?: number;

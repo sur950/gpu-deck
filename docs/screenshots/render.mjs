@@ -10,7 +10,7 @@
  * which compare it with the live page.
  *
  *   node docs/screenshots/render.mjs                    # every source SVG
- *   node docs/screenshots/render.mjs overview billing   # some
+ *   node docs/screenshots/render.mjs overview nodes     # some
  *
  * Fonts are downloaded once into ~/.cache/gpu-deck-screens/fonts (see lib/fonts.mjs).
  */
@@ -89,7 +89,9 @@ if (
     .sort();
   const todo = names.length ? names : all;
   const { chromium } = require('playwright-core');
-  const browser = await chromium.launch();
+  // SHOT_BROWSER_CHANNEL=chrome uses an installed Chrome instead of Playwright's bundled Chromium.
+  const channel = process.env.SHOT_BROWSER_CHANNEL;
+  const browser = await chromium.launch(channel ? { channel } : {});
   try {
     for (const name of todo) {
       const r = await renderOne(name, { browser });

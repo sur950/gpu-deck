@@ -252,4 +252,4 @@ There are no Dependabot pull requests. Maintainers run `scripts/update_deps.sh` 
 
 ## License
 
-GPU Deck is licensed under the [Apache License 2.0](LICENSE). By contributing you agree that your contribution is licensed under the same license. Code ported from GPUStack keeps its attribution as described in [NOTICE](NOTICE).
+GPU Deck is licensed under the [Apache License 2.0](LICENSE). By contributing you agree that your contribution is licensed under the same license. Code adapted from another open-source project must keep that project's license and copyright notice, and be credited in [NOTICE](NOTICE).

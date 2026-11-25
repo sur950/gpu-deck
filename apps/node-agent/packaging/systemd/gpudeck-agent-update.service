@@ -1,0 +1,19 @@
+# GPU Deck agent self-update helper (agent protocol §14). Runs as root, only when the agent asks
+# for an update (gpudeck-agent-update.path), because the agent binary is root-owned and the agent
+# itself runs as the unprivileged `gpudeck` user. The applier verifies the staged binary again
+# (sha256 + the release signature, trusting only keys anchored in the root-owned agent.toml and
+# the CA it pins), swaps /usr/local/bin/gpudeck-agent atomically (the previous binary stays as
+# gpudeck-agent.prev), restarts gpudeck-agent.service, waits for the new agent to reconnect and
+# report healthy, and rolls back otherwise. Engines keep running throughout (KillMode=process).
+#
+# Installed by the installers with `gpudeck-agent update install-helper` (which writes these
+# units with the installed paths); this copy uses the default paths.
+[Unit]
+Description=GPU Deck agent self-update (applies a verified, staged release)
+Documentation=https://sur950.github.io/gpu-deck/docs/components/node-agent/
+
+[Service]
+Type=oneshot
+Environment=GPUDECK_AGENT_STATE_DIR=/var/lib/gpudeck
+ExecStart=/usr/local/bin/gpudeck-agent --config /etc/gpudeck/agent.toml update apply --restart systemd:gpudeck-agent.service
+TimeoutStartSec=1800

@@ -8,7 +8,7 @@
   "properties": {
     "command": {
       "type": "string",
-      "enum": ["load_model", "unload_model", "drain_instance", "start_engine", "stop_engine", "restart_instance", "prefetch_model", "evict_cache", "run_benchmark", "update_config", "rotate_cert", "install_cert", "cancel", "scan_path", "hash_files", "start_ssh_instance", "stop_ssh_instance"]
+      "enum": ["load_model", "unload_model", "drain_instance", "start_engine", "stop_engine", "restart_instance", "prefetch_model", "evict_cache", "run_benchmark", "update_config", "rotate_cert", "install_cert", "cancel", "scan_path", "hash_files", "start_ssh_instance", "stop_ssh_instance", "stage_update", "apply_update"]
     },
     "timeout_seconds": { "type": "integer", "minimum": 1, "default": 900, "description": "Agent aborts and reports failed(code=timeout) after this; the hub independently marks the row timed_out at expires_at." },
     "swap_operation_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }], "description": "Swap this command belongs to (for log correlation only)." },
@@ -32,7 +32,9 @@
     { "if": { "properties": { "command": { "const": "scan_path" } } },        "then": { "properties": { "args": { "$ref": "#/$defs/ScanPathArgs" } } } },
     { "if": { "properties": { "command": { "const": "hash_files" } } },       "then": { "properties": { "args": { "$ref": "#/$defs/HashFilesArgs" } } } },
     { "if": { "properties": { "command": { "const": "start_ssh_instance" } } }, "then": { "properties": { "args": { "$ref": "#/$defs/StartSshInstanceArgs" } } } },
-    { "if": { "properties": { "command": { "const": "stop_ssh_instance" } } },  "then": { "properties": { "args": { "$ref": "#/$defs/StopSshInstanceArgs" } } } }
+    { "if": { "properties": { "command": { "const": "stop_ssh_instance" } } },  "then": { "properties": { "args": { "$ref": "#/$defs/StopSshInstanceArgs" } } } },
+    { "if": { "properties": { "command": { "const": "stage_update" } } },       "then": { "properties": { "args": { "$ref": "#/$defs/StageUpdateArgs" } } } },
+    { "if": { "properties": { "command": { "const": "apply_update" } } },       "then": { "properties": { "args": { "$ref": "#/$defs/ApplyUpdateArgs" } } } }
   ],
   "$defs": {
     "LoadModelArgs": {
@@ -425,6 +427,30 @@
         "force": { "type": "boolean", "default": false, "description": "SIGKILL immediately instead of SIGTERM + kill_grace_seconds." },
         "kill_grace_seconds": { "type": "integer", "minimum": 1, "default": 10 },
         "remove_volumes": { "type": "boolean", "default": true, "description": "False = keep every named volume regardless of SshVolume.keep." }
+      },
+      "additionalProperties": false
+    },
+    "StageUpdateArgs": {
+      "type": "object",
+      "description": "Download an agent release binary in the background and stage it (protocol.md §14; capability-gated: only agents listing stage_update in hello.capabilities.commands get it). The agent verifies the manifest signature with a pinned release key, takes binary_sha256 for its own target from it, checks free disk space, downloads GET <hub_url>/agent/v1/updates/<version>/<target> from the hub it joined (never another host; header X-GPUDeck-Update-Token: download_token) over the pinned hub connection, verifies the sha256, checks that the binary runs (`version`), and keeps it in <state_dir>/update/staged/<version>/. The running binary is never touched. Result: {\"staged_version\",\"sha256\",\"size_bytes\",\"staged_at\"}. Errors: update_unsupported, signature_invalid, insufficient_disk, artifact_download_failed, artifact_checksum_mismatch.",
+      "required": ["version", "target", "manifest", "download_token"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$" },
+        "target": { "type": "string", "pattern": "^[A-Za-z0-9_.-]{1,64}$", "description": "Must be the agent's own target triple." },
+        "manifest": { "$ref": "common.json#/$defs/SignedReleaseManifest" },
+        "download_token": { "type": "string", "minLength": 16, "maxLength": 128, "description": "Single-purpose token for the hub download (bound to this node, version and target; short-lived)." },
+        "allow_downgrade": { "type": "boolean", "default": false }
+      },
+      "additionalProperties": false
+    },
+    "ApplyUpdateArgs": {
+      "type": "object",
+      "description": "Swap the running agent for the staged version with no model downtime (protocol.md §14): re-verify the staged binary (signature + sha256), atomic swap keeping the previous binary, restart the agent service, re-adopt running engines, health check (the new agent must reconnect to the hub within health_timeout_seconds), else roll back to the previous binary. Progress arrives as event(agent_update) phases; the result is sent by the agent that runs after the restart (succeeded) or after a rollback (failed with code rolled_back). Errors: update_unsupported, not_staged, signature_invalid, update_in_progress, rolled_back.",
+      "required": ["version"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$" },
+        "health_timeout_seconds": { "type": "integer", "minimum": 30, "maximum": 900, "default": 120 },
+        "run_id": { "oneOf": [{ "$ref": "common.json#/$defs/uuid" }, { "type": "null" }], "description": "Control-plane update run (log correlation)." }
       },
       "additionalProperties": false
     }

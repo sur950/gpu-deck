@@ -235,6 +235,43 @@
       { once: true }
     );
   }
+  // Screenshots and drawn diagrams are scaled down to the article column: a button on each one
+  // opens it full size in the same dialog (the image the current theme shows).
+  $$(".prose p > img, .prose p > picture > img").forEach(function (img) {
+    var para = img.closest("p");
+    if (!para || $$("img", para).length !== 1 || typeof HTMLDialogElement === "undefined") return;
+    var btn = doc.createElement("button");
+    btn.type = "button";
+    btn.className = "diagram-expand img-expand";
+    btn.setAttribute("aria-label", "Open the image full size");
+    btn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#i-expand"/></svg>';
+    para.classList.add("has-zoom");
+    para.appendChild(btn);
+    btn.addEventListener("click", function () {
+      var d = diagramDialog();
+      var stage = $("[data-dg-stage]", d);
+      var big = doc.createElement("img");
+      var w = Number(img.getAttribute("width")) || img.naturalWidth || 1000;
+      big.src = img.currentSrc || img.src;
+      big.alt = img.alt;
+      big.className = "dg-img";
+      big.style.width = Math.round(img.hasAttribute("data-art") ? w * 1.25 : w) + "px";
+      stage.innerHTML = "";
+      stage.appendChild(big);
+      var title = (img.alt || "Image").split(/[:.]/)[0];
+      $("[data-dg-title]", d).textContent = title.length > 90 ? title.slice(0, 89) + "…" : title;
+      d.showModal();
+      d.addEventListener(
+        "close",
+        function () {
+          stage.innerHTML = "";
+          btn.focus();
+        },
+        { once: true }
+      );
+    });
+  });
+
   var fullCache = {};
   $$("[data-diagram-expand]").forEach(function (btn) {
     btn.addEventListener("click", function () {

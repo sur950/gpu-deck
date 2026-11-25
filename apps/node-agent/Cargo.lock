@@ -746,12 +746,14 @@ dependencies = [
  "rand",
  "rcgen",
  "reqwest",
+ "ring",
  "rustls",
  "rustls-pemfile",
  "rustls-pki-types",
  "serde",
  "serde_json",
  "sha2",
+ "socket2",
  "sysinfo",
  "tempfile",
  "thiserror 2.0.21",
@@ -812,6 +814,7 @@ dependencies = [
 name = "gpudeck-protocol"
 version = "1.0.0"
 dependencies = [
+ "base64",
  "chrono",
  "jsonschema",
  "serde",

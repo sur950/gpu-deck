@@ -1,0 +1,22 @@
+{
+  "v": 1,
+  "id": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+  "ts": "2026-11-24T10:20:30.123Z",
+  "node_id": "6f1c2b2e-0b2b-4d8e-9e0e-1b2c3d4e5f60",
+  "correlation_id": null,
+  "type": "command",
+  "payload": {
+    "command": "stage_update",
+    "timeout_seconds": 1800,
+    "args": {
+      "version": "1.1.0",
+      "target": "x86_64-unknown-linux-gnu",
+      "manifest": {
+        "manifest": "ewogICJzY2hlbWEiOiAxLAogICJwcm9kdWN0IjogImdwdWRlY2stYWdlbnQiLAogICJ2ZXJzaW9uIjogIjEuMS4wIiwKICAicHJvdG9jb2xfdmVyc2lvbiI6IDEsCiAgImNyZWF0ZWRfYXQiOiAiMjAyNi0xMS0yNFQxMDowMDowMFoiLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJ0YXJnZXQiOiAieDg2XzY0LXVua25vd24tbGludXgtZ251IiwKICAgICAgImZpbGUiOiAiZ3B1ZGVjay1hZ2VudC0xLjEuMC14ODZfNjQtdW5rbm93bi1saW51eC1nbnUudGFyLmd6IiwKICAgICAgInNpemVfYnl0ZXMiOiA5MTIzNDU2LAogICAgICAic2hhMjU2IjogIjRmNGY0ZjRmNGY0ZjRmNGY0ZjRmNGY0ZjRmNGY0ZjRmNGY0ZjRmNGY0ZjRmNGY0ZjRmNGY0ZjRmNGY0ZjRmNGYiLAogICAgICAiYmluYXJ5X3NoYTI1NiI6ICI5YTlhOWE5YTlhOWE5YTlhOWE5YTlhOWE5YTlhOWE5YTlhOWE5YTlhOWE5YTlhOWE5YTlhOWE5YTlhOWE5YTlhIiwKICAgICAgImJpbmFyeV9zaXplX2J5dGVzIjogMjE5ODc2NTQKICAgIH0KICBdCn0K",
+        "signature": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+        "algorithm": "ed25519"
+      },
+      "download_token": "gdu_3f9c1e7a5b2d4c6e8f0a1b2c3d4e5f60"
+    }
+  }
+}

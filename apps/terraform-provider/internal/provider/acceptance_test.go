@@ -35,22 +35,16 @@ func accName(kind string) string {
 }
 
 func TestAccControlPlaneObjects(t *testing.T) {
-	cluster, plan, rule := accName("cluster"), accName("plan"), accName("rule")
+	cluster, rule := accName("cluster"), accName("rule")
 	cfg := func(desc string) string {
 		return fmt.Sprintf(`
 provider "gpudeck" {}
 
-resource "gpudeck_price_plan" "p" {
-  name               = %[2]q
-  usd_per_gpu_minute = 0.02
-}
-
 resource "gpudeck_cluster" "c" {
-  name          = %[1]q
-  type          = "bare_metal"
-  description   = %[4]q
-  price_plan_id = gpudeck_price_plan.p.id
-  labels        = { owner = "tfacc" }
+  name        = %[1]q
+  type        = "bare_metal"
+  description = %[3]q
+  labels      = { owner = "tfacc" }
 }
 
 resource "gpudeck_join_token" "t" {
@@ -59,7 +53,7 @@ resource "gpudeck_join_token" "t" {
 }
 
 resource "gpudeck_rule" "idle" {
-  name    = %[3]q
+  name    = %[2]q
   type    = "idle_unload"
   params  = jsonencode({ idle_minutes = 60 })
   enabled = false
@@ -86,7 +80,7 @@ resource "gpudeck_alert_channel" "a" {
 data "gpudeck_nodes" "all" {}
 data "gpudeck_devices" "all" {}
 data "gpudeck_engines" "all" {}
-`, cluster, plan, rule, desc)
+`, cluster, rule, desc)
 	}
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },

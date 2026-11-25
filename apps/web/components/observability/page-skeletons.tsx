@@ -33,7 +33,7 @@ export function MetricsPageSkeleton({ tiles = 6, charts = 4, tall = false }: { t
   );
 }
 
-/** Mirrors a list-and-detail page (logs, traces): header, filters, one long card. */
+/** Mirrors a list-and-detail page (logs): header, filters, one long card. */
 export function StreamPageSkeleton({ rows = 14 }: { rows?: number }) {
   return (
     <div className={PAGE_CLASS}>

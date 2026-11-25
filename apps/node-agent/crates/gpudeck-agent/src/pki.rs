@@ -78,16 +78,23 @@ pub struct CertInfo {
     pub not_before: DateTime<Utc>,
     pub not_after: DateTime<Utc>,
     pub is_ca: bool,
+    /// sha256 hex of the DER SubjectPublicKeyInfo (what key pins name; survives re-issuing a
+    /// certificate for the same key).
+    pub spki_sha256: String,
 }
 
 impl CertInfo {
     /// `O=<org>,CN=<cn>` style subject string used for allow-list matching.
     pub fn matches_subject_rule(&self, rule: &str) -> bool {
         // Rule forms: "O=gpudeck-services", "CN=api-layer", "O=x,CN=y" (all parts must match).
-        rule.split(',')
+        let parts: Vec<&str> = rule
+            .split(',')
             .map(str::trim)
             .filter(|p| !p.is_empty())
-            .all(|part| match part.split_once('=') {
+            .collect();
+        // An empty rule matches nothing (never "anything").
+        !parts.is_empty()
+            && parts.into_iter().all(|part| match part.split_once('=') {
                 Some((k, v)) => match k.trim().to_ascii_uppercase().as_str() {
                     "O" => self.organization.as_deref() == Some(v.trim()),
                     "CN" => self.common_name.as_deref() == Some(v.trim()),
@@ -135,7 +142,13 @@ pub fn inspect_cert(der: &[u8]) -> Result<CertInfo> {
         not_before,
         not_after,
         is_ca,
+        spki_sha256: hex::encode(Sha256::digest(cert.tbs_certificate.subject_pki.raw)),
     })
+}
+
+/// sha256 hex of the SubjectPublicKeyInfo of a DER certificate.
+pub fn spki_sha256(der: &[u8]) -> Result<String> {
+    Ok(inspect_cert(der)?.spki_sha256)
 }
 
 /// Normalise a serial for CRL comparison: lowercase hex, strip `:`/`0x`/spaces and leading zeros.

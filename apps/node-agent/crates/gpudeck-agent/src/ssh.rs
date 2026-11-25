@@ -25,7 +25,7 @@ use sha2::{Digest, Sha256};
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::sync::CancellationToken;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 use crate::agent::Agent;
@@ -181,8 +181,46 @@ pub fn valid_public_key(line: &str) -> bool {
     }
 }
 
+/// Fail closed: an empty list allows nobody (an instance without source CIDRs is unreachable
+/// until CIDRs are set, `protocol.md` §8).
 pub fn cidr_allows(cidrs: &[ipnet::IpNet], ip: IpAddr) -> bool {
-    cidrs.is_empty() || cidrs.iter().any(|n| n.contains(&ip))
+    crate::security::ip_in(cidrs, ip)
+}
+
+/// Union of the source CIDRs of every persisted SSH instance (firewall inputs for the CLI).
+pub fn persisted_cidrs(paths: &crate::state::StatePaths) -> Vec<String> {
+    let Ok(rd) = std::fs::read_dir(paths.root.join("ssh")) else {
+        return vec![];
+    };
+    let mut out: Vec<String> = rd
+        .flatten()
+        .filter_map(|e| {
+            crate::state::read_json::<SshRecord>(&e.path().join("instance.json"))
+                .ok()
+                .flatten()
+        })
+        .flat_map(|r| r.args.allowed_source_cidrs)
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Shared inputs of the forwarders: the policy's default CIDRs (used by instances that have
+/// none of their own) and the rejected-attempt monitor.
+#[derive(Clone)]
+pub struct ForwardGuard {
+    pub defaults: Arc<std::sync::RwLock<Vec<ipnet::IpNet>>>,
+    pub monitor: Arc<crate::ingress::IngressMonitor>,
+}
+
+impl ForwardGuard {
+    fn allows(&self, own: &[ipnet::IpNet], ip: IpAddr) -> bool {
+        if !own.is_empty() {
+            return cidr_allows(own, ip);
+        }
+        cidr_allows(&self.defaults.read().unwrap_or_else(|e| e.into_inner()), ip)
+    }
 }
 
 pub fn parse_cidrs(v: &[String]) -> Result<Vec<ipnet::IpNet>, ErrorInfo> {
@@ -573,11 +611,14 @@ async fn wait_banner(
     }
 }
 
-/// Accept on `listener`, filter by CIDR, splice to `target`, count connections.
+/// Accept on `listener`, filter by CIDR (the instance's own, else the policy default; none =
+/// nobody), splice to `target`, count connections. Refused clients get a reset and are counted
+/// in the ingress monitor.
 pub async fn forward(
     listener: TcpListener,
     target: SocketAddr,
     cidrs: Vec<ipnet::IpNet>,
+    guard: ForwardGuard,
     stats: Arc<ForwardStats>,
     cancel: CancellationToken,
 ) {
@@ -586,8 +627,13 @@ pub async fn forward(
             r = listener.accept() => match r { Ok(x) => x, Err(e) => { warn!("ssh forwarder accept: {e}"); tokio::time::sleep(Duration::from_millis(200)).await; continue; } },
             _ = cancel.cancelled() => return,
         };
-        if !cidr_allows(&cidrs, peer.ip()) {
-            info!(%peer, "ssh forwarder: client not in allowed_source_cidrs; dropped");
+        if !guard.allows(&cidrs, peer.ip()) {
+            debug!(%peer, "ssh forwarder: client not in the allowed source CIDRs; reset");
+            guard
+                .monitor
+                .record("ssh_instance", "source_not_allowed", peer.ip());
+            let _ = client.set_zero_linger();
+            drop(client);
             continue;
         }
         let stats = stats.clone();
@@ -637,18 +683,62 @@ impl Agent {
         })
     }
 
-    /// Forwarder listen address: args → `ssh_bind` → `proxy_address` (IP) → 0.0.0.0.
-    fn ssh_bind_address(&self, requested: Option<&str>) -> String {
-        requested
+    /// Forwarder listen address: args → `ssh_bind` → `proxy_address` (an IP of this host) →
+    /// the first private address → loopback. A public or every-interface address is refused
+    /// unless the node's own `ssh_bind` names it (local opt-in, never the control plane's).
+    fn ssh_bind_address(&self, requested: Option<&str>) -> Result<String, ErrorInfo> {
+        let local = crate::system::ip_addresses();
+        let chosen = requested
             .map(str::to_string)
             .or_else(|| self.cfg.ssh_bind.clone())
             .or_else(|| {
                 self.cfg
                     .proxy_address
                     .clone()
-                    .filter(|a| a.parse::<IpAddr>().is_ok())
+                    .filter(|a| local.iter().any(|l| l == a))
             })
-            .unwrap_or_else(|| "0.0.0.0".into())
+            .or_else(|| crate::config::private_ip(&local))
+            .unwrap_or_else(|| "127.0.0.1".into());
+        let ip: IpAddr = chosen.parse().map_err(|_| {
+            err(
+                error_code::INVALID_ARGS,
+                format!("bind_address {chosen:?} is not an IP address"),
+            )
+        })?;
+        let exposed = ip.is_unspecified() || crate::agent::is_public_ip(ip);
+        if exposed && self.cfg.ssh_bind.as_deref() != Some(chosen.as_str()) {
+            return Err(err(
+                error_code::INVALID_ARGS,
+                format!("refusing to expose an SSH instance on {chosen}: set ssh_bind = \"{chosen}\" in agent.toml to allow it"),
+            ));
+        }
+        Ok(chosen)
+    }
+
+    /// Source CIDRs of every live SSH instance plus the policy default (firewall inputs).
+    pub fn ssh_source_cidrs(&self) -> Vec<String> {
+        let mut v: Vec<String> = self
+            .ssh
+            .lock()
+            .values()
+            .filter_map(|i| i.record.as_ref())
+            .flat_map(|r| r.args.allowed_source_cidrs.clone())
+            .collect();
+        if let Some(p) = self.policy() {
+            if let Some(s) = p.ssh {
+                v.extend(s.default_allowed_cidrs);
+            }
+        }
+        v.sort();
+        v.dedup();
+        v
+    }
+
+    fn forward_guard(&self) -> ForwardGuard {
+        ForwardGuard {
+            defaults: self.ssh_defaults.clone(),
+            monitor: self.ingress.clone(),
+        }
     }
 
     /// Address users connect to.
@@ -696,7 +786,8 @@ impl Agent {
         let [lo, hi] = self.cfg.ssh_port_range;
         let taken = self.ssh_ports_taken();
         for p in lo.min(hi)..=lo.max(hi) {
-            if taken.contains(&p) {
+            // Never take a port the operator's sshd uses (the firewall keeps those open).
+            if taken.contains(&p) || self.cfg.firewall_preserve_ports.contains(&p) {
                 continue;
             }
             if let Ok(l) = TcpListener::bind((ip, p)).await {
@@ -982,7 +1073,7 @@ impl Agent {
         let name = container_name(id);
         let deadline = Duration::from_secs(a.health_timeout_seconds.max(5));
         let started = Instant::now();
-        let bind = self.ssh_bind_address(a.bind_address.as_deref());
+        let bind = self.ssh_bind_address(a.bind_address.as_deref())?;
         let listener = self.ssh_listen(&bind, a.ssh_port).await?;
         let host_port = listener
             .local_addr()
@@ -1053,7 +1144,7 @@ impl Agent {
             .collect();
         let mps = Path::new("/tmp/nvidia-mps");
         let mps = (cfg!(target_os = "linux") && mps.join("control").exists()).then_some(mps);
-        let (args, gpu_attached, warnings, volumes) = run_args(
+        let (args, gpu_attached, mut warnings, volumes) = run_args(
             a,
             self.node_id,
             &keys_file,
@@ -1063,6 +1154,15 @@ impl Agent {
             mps,
             cfg!(target_os = "linux"),
         );
+        if a.allowed_source_cidrs.is_empty()
+            && self
+                .ssh_defaults
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .is_empty()
+        {
+            warnings.push("no allowed_source_cidrs: the instance accepts no connections until source CIDRs are set (per instance, or the cluster default)".into());
+        }
         ctx.progress(Some(40.0), "starting container");
         let cid = cli(runtime, &args, Duration::from_secs(120))
             .await
@@ -1135,9 +1235,12 @@ impl Agent {
             listener,
             SocketAddr::from(([127, 0, 0, 1], local_port)),
             cidrs,
+            self.forward_guard(),
             stats,
             token,
         ));
+        // The firewall opens the SSH range only to the instances' CIDRs.
+        self.apply_firewall();
         ctx.progress(Some(60.0), "waiting for sshd");
         let rt = runtime.to_string();
         let n2 = name.clone();
@@ -1448,6 +1551,7 @@ impl Agent {
                 listener,
                 SocketAddr::from(([127, 0, 0, 1], rec.local_port)),
                 cidrs,
+                self.forward_guard(),
                 stats,
                 token,
             ));
@@ -1626,7 +1730,10 @@ mod tests {
         assert!(cidr_allows(&c, "10.1.2.3".parse().unwrap()));
         assert!(cidr_allows(&c, "192.168.1.5".parse().unwrap()));
         assert!(!cidr_allows(&c, "172.16.0.1".parse().unwrap()));
-        assert!(cidr_allows(&[], "1.2.3.4".parse().unwrap()));
+        assert!(
+            !cidr_allows(&[], "1.2.3.4".parse().unwrap()),
+            "no CIDRs = nobody (fail closed)"
+        );
         assert!(parse_cidrs(&["bogus".into()]).is_err());
         assert!(
             valid_user("gpudeck")
@@ -1833,10 +1940,15 @@ mod tests {
         let addr = front.local_addr().unwrap();
         let stats = Arc::new(ForwardStats::default());
         let cancel = CancellationToken::new();
+        let guard = ForwardGuard {
+            defaults: Arc::new(std::sync::RwLock::new(vec![])),
+            monitor: Arc::new(crate::ingress::IngressMonitor::default()),
+        };
         tokio::spawn(forward(
             front,
             target,
-            vec![],
+            parse_cidrs(&["127.0.0.0/8".into()]).unwrap(),
+            guard.clone(),
             stats.clone(),
             cancel.clone(),
         ));
@@ -1863,6 +1975,7 @@ mod tests {
             front,
             target,
             parse_cidrs(&["10.0.0.0/8".into()]).unwrap(),
+            guard.clone(),
             stats2.clone(),
             CancellationToken::new(),
         ));
@@ -1873,5 +1986,29 @@ mod tests {
             .unwrap_or(0);
         assert_eq!(n, 0);
         assert_eq!(stats2.total.load(Ordering::SeqCst), 0);
+        // No CIDRs anywhere: nobody gets in; the policy default opens it without a restart.
+        let front = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = front.local_addr().unwrap();
+        let stats3 = Arc::new(ForwardStats::default());
+        tokio::spawn(forward(
+            front,
+            target,
+            vec![],
+            guard.clone(),
+            stats3.clone(),
+            CancellationToken::new(),
+        ));
+        let mut c = TcpStream::connect(addr).await.unwrap();
+        let n = tokio::time::timeout(Duration::from_secs(2), c.read(&mut b))
+            .await
+            .unwrap()
+            .unwrap_or(0);
+        assert_eq!(n, 0);
+        assert_eq!(stats3.total.load(Ordering::SeqCst), 0);
+        assert!(guard.monitor.take().unwrap().total >= 2);
+        *guard.defaults.write().unwrap() = parse_cidrs(&["127.0.0.1".into()]).unwrap();
+        let mut c = TcpStream::connect(addr).await.unwrap();
+        c.read_exact(&mut b).await.unwrap();
+        assert_eq!(&b, b"SSH-");
     }
 }

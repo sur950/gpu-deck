@@ -288,24 +288,32 @@ def test_binary_download_writes_raw_bytes(api, logged_in, capsysbinary):
 
 
 def test_iso_datetime_with_z_and_raw_text_when_piped(api, logged_in, capsys):
-    route = api.post("/billing/reports").mock(return_value=envelope({"id": CID}))
+    route = api.post("/api-keys").mock(return_value=envelope({"id": CID}))
+    run_json(
+        ["api-keys", "create", "--name", "nov", "--expires-at", "2026-11-01T00:00:00Z"],
+        capsys,
+    )
+    body = json.loads(route.calls[0].request.content)
+    assert body["expires_at"].startswith("2026-11-01T00:00:00")
+    assert body["expires_at"].endswith(("Z", "+00:00"))
+    route = api.post("/ip-rules").mock(return_value=envelope({"id": CID}))
     run_json(
         [
-            "billing",
-            "reports",
+            "ip-rules",
             "create",
-            "--name",
-            "nov",
-            "--period-start",
-            "2026-11-01T00:00:00Z",
-            "--period-end",
+            "--action",
+            "block",
+            "--scope",
+            "admin",
+            "--cidr",
+            "10.0.0.0/8",
+            "--expires-at",
             "2026-12-01",
         ],
         capsys,
     )
     body = json.loads(route.calls[0].request.content)
-    assert body["period_start"].startswith("2026-11-01T00:00:00")
-    assert body["period_start"].endswith(("Z", "+00:00"))
+    assert body["expires_at"].startswith("2026-12-01")
     api.get("/audit/export").mock(
         return_value=Response(200, text="id,event\n1,x\n", headers={"content-type": "text/csv"})
     )

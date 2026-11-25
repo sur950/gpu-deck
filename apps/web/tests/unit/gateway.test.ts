@@ -25,6 +25,7 @@ function listen<T extends http.Server | net.Server>(server: T): Promise<string> 
 afterEach(async () => {
   for (const s of sockets) s.destroy();
   sockets.clear();
+  appPaths.length = 0;
   await Promise.all(servers.splice(0).map((s) => new Promise((r) => s.close(() => r(null)))));
 });
 
@@ -52,10 +53,14 @@ function fakeApi() {
   return { server, seen };
 }
 
+// The fake Next app records the path it was asked for instead of echoing it into HTML.
+const appPaths: string[] = [];
+
 function fakeApp() {
   return http.createServer((req, res) => {
+    appPaths.push(req.url ?? '');
     res.writeHead(200, { 'content-type': 'text/html' });
-    res.end(`<html>next ${req.url}</html>`);
+    res.end('<html>next</html>');
   });
 }
 
@@ -111,7 +116,8 @@ describe('gateway proxying', () => {
   it('serves the UI from Next', async () => {
     const { gwUrl } = await stack();
     const res = await fetch(`${gwUrl}/login`);
-    expect(await res.text()).toBe('<html>next /login</html>');
+    expect(await res.text()).toBe('<html>next</html>');
+    expect(appPaths).toEqual(['/login']);
   });
 
   it('streams server-sent events', async () => {

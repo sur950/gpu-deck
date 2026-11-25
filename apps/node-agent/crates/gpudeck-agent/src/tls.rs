@@ -104,15 +104,54 @@ impl Identity {
         Ok(roots)
     }
 
-    /// mTLS client config for the hub WebSocket (TLS 1.3 only).
+    /// mTLS client config for the hub WebSocket (TLS 1.3 only): chain to the internal CA and
+    /// host name as before, plus — once a signed policy pinned them — the hub key (SPKI sha256).
     pub fn hub_client_config(&self) -> Result<ClientConfig> {
-        let roots = self.root_store()?;
+        self.hub_client_config_pinned(&[])
+    }
+
+    pub fn hub_client_config_pinned(&self, pins: &[String]) -> Result<ClientConfig> {
+        let verifier = Arc::new(PinnedServerVerifier::new(
+            self.root_store()?,
+            pins,
+            &[],
+            false,
+            "agent hub",
+        )?);
         let cfg = ClientConfig::builder_with_provider(provider())
             .with_protocol_versions(&[&rustls::version::TLS13])
             .context("tls13")?
-            .with_root_certificates(roots)
+            .dangerous()
+            .with_custom_certificate_verifier(verifier)
             .with_client_auth_cert(self.cert_chain.clone(), self.key.clone_key())
             .context("client auth cert")?;
+        Ok(cfg)
+    }
+
+    /// Client config for the outbound serving tunnel (`protocol.md` §13): TLS 1.3, the node
+    /// certificate as client identity, ALPN `h2` only; the API layer's certificate must chain to
+    /// the internal CA, match the subject rules and — when the policy pins keys — carry a
+    /// pinned key. The host name is not the trust anchor (endpoints may be IPs or NATed).
+    pub fn tunnel_client_config(
+        &self,
+        pins: &[String],
+        subjects: &[String],
+    ) -> Result<ClientConfig> {
+        let verifier = Arc::new(PinnedServerVerifier::new(
+            self.root_store()?,
+            pins,
+            subjects,
+            true,
+            "API layer tunnel",
+        )?);
+        let mut cfg = ClientConfig::builder_with_provider(provider())
+            .with_protocol_versions(&[&rustls::version::TLS13])
+            .context("tls13")?
+            .dangerous()
+            .with_custom_certificate_verifier(verifier)
+            .with_client_auth_cert(self.cert_chain.clone(), self.key.clone_key())
+            .context("client auth cert")?;
+        cfg.alpn_protocols = vec![b"h2".to_vec()];
         Ok(cfg)
     }
 
@@ -209,6 +248,101 @@ pub fn node_proxy_client_config(
             parse_private_key(key_pem)?,
         )?;
     Ok(cfg)
+}
+
+/// Server verifier: WebPKI chain to the internal CA (host name optional), then key pins and
+/// subject rules. Pins / rules that are empty are not enforced (control planes without a
+/// signed policy).
+#[derive(Debug)]
+pub struct PinnedServerVerifier {
+    inner: Arc<rustls::client::WebPkiServerVerifier>,
+    pins: Vec<String>,
+    subjects: Vec<String>,
+    ignore_name: bool,
+    what: &'static str,
+}
+
+impl PinnedServerVerifier {
+    pub fn new(
+        roots: RootCertStore,
+        pins: &[String],
+        subjects: &[String],
+        ignore_name: bool,
+        what: &'static str,
+    ) -> Result<Self> {
+        let inner = rustls::client::WebPkiServerVerifier::builder_with_provider(
+            Arc::new(roots),
+            provider(),
+        )
+        .build()
+        .context("server verifier")?;
+        Ok(Self {
+            inner,
+            pins: crate::security::normalize_pins(pins),
+            subjects: subjects.to_vec(),
+            ignore_name,
+            what,
+        })
+    }
+}
+
+impl ServerCertVerifier for PinnedServerVerifier {
+    fn verify_server_cert(
+        &self,
+        end_entity: &CertificateDer<'_>,
+        intermediates: &[CertificateDer<'_>],
+        server_name: &ServerName<'_>,
+        ocsp: &[u8],
+        now: UnixTime,
+    ) -> Result<ServerCertVerified, rustls::Error> {
+        let verified =
+            match self
+                .inner
+                .verify_server_cert(end_entity, intermediates, server_name, ocsp, now)
+            {
+                Ok(v) => v,
+                Err(rustls::Error::InvalidCertificate(
+                    rustls::CertificateError::NotValidForName
+                    | rustls::CertificateError::NotValidForNameContext { .. },
+                )) if self.ignore_name => ServerCertVerified::assertion(),
+                Err(e) => return Err(e),
+            };
+        let info =
+            inspect_cert(end_entity.as_ref()).map_err(|e| rustls::Error::General(e.to_string()))?;
+        if !self.pins.is_empty() && !self.pins.contains(&info.spki_sha256) {
+            return Err(rustls::Error::General(format!(
+                "{} key {} is not pinned by the security policy",
+                self.what, info.spki_sha256
+            )));
+        }
+        if !self.subjects.is_empty() && !self.subjects.iter().any(|r| info.matches_subject_rule(r))
+        {
+            return Err(rustls::Error::General(format!(
+                "{} certificate subject (O={:?}, CN={:?}) is not allowed",
+                self.what, info.organization, info.common_name
+            )));
+        }
+        Ok(verified)
+    }
+    fn verify_tls12_signature(
+        &self,
+        m: &[u8],
+        c: &CertificateDer<'_>,
+        d: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        self.inner.verify_tls12_signature(m, c, d)
+    }
+    fn verify_tls13_signature(
+        &self,
+        m: &[u8],
+        c: &CertificateDer<'_>,
+        d: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        self.inner.verify_tls13_signature(m, c, d)
+    }
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        self.inner.supported_verify_schemes()
+    }
 }
 
 #[derive(Debug)]
@@ -334,13 +468,18 @@ impl ServerCertVerifier for PinnedVerifier {
     }
 }
 
-/// Post-handshake identity policy for proxy clients: subject allow-list + CRL.
+/// Identity policy for proxy clients, enforced inside the TLS handshake: subject allow-list,
+/// CRL and — once a signed security policy pinned them — the API layer's key (SPKI sha256).
 #[derive(Debug, Clone, Default)]
 pub struct ClientPolicy {
     /// e.g. `["O=gpudeck-services"]`; every rule is `K=V[,K=V]`, any rule matching admits.
     pub allowed_subjects: Vec<String>,
     pub revoked_serials: HashSet<String>,
     pub revoked_fingerprints: HashSet<String>,
+    /// Pinned client keys; empty = not enforced (no signed policy yet).
+    pub pinned_spki: HashSet<String>,
+    /// Subject rules from the signed policy; they win over `allowed_subjects` (settings).
+    pub pinned_subjects: Vec<String>,
 }
 
 impl ClientPolicy {
@@ -370,7 +509,9 @@ impl ClientPolicy {
                 info.serial_hex
             ));
         }
-        let rules: Vec<&str> = if self.allowed_subjects.is_empty() {
+        let rules: Vec<&str> = if !self.pinned_subjects.is_empty() {
+            self.pinned_subjects.iter().map(String::as_str).collect()
+        } else if self.allowed_subjects.is_empty() {
             vec!["O=gpudeck-services"]
         } else {
             self.allowed_subjects.iter().map(String::as_str).collect()
@@ -381,7 +522,19 @@ impl ClientPolicy {
                 info.organization, info.common_name
             ));
         }
+        if !self.pinned_spki.is_empty() && !self.pinned_spki.contains(&info.spki_sha256) {
+            return Err(format!(
+                "client key {} is not the pinned API layer key (CN={:?})",
+                info.spki_sha256, info.common_name
+            ));
+        }
         Ok(info)
+    }
+
+    /// Apply the API-layer identity of a signed policy (pins + subject rules).
+    pub fn set_pins(&mut self, pins: &[String], subjects: &[String]) {
+        self.pinned_spki = crate::security::normalize_pins(pins).into_iter().collect();
+        self.pinned_subjects = subjects.to_vec();
     }
 }
 
@@ -427,6 +580,26 @@ mod tests {
         assert!(policy.check(&api_der).is_err());
         let policy = ClientPolicy::new(vec!["CN=node-1".into()]);
         assert!(policy.check(&node_der).is_ok());
+        // Pinned: only the API layer key is accepted, even with a valid services certificate.
+        let other_api = ca.issue_client("api-layer", "gpudeck-services");
+        let other_der = crate::pki::parse_cert_bundle(&other_api.cert_pem)
+            .unwrap()
+            .remove(0);
+        let mut pinned = ClientPolicy::default();
+        pinned.set_pins(
+            &[crate::pki::spki_sha256(&api_der).unwrap()],
+            &["CN=api-layer,O=gpudeck-services".into()],
+        );
+        assert!(pinned.check(&api_der).is_ok());
+        assert!(pinned
+            .check(&other_der)
+            .unwrap_err()
+            .contains("not the pinned"));
+        assert!(pinned.check(&node_der).is_err());
+        // An empty subject rule never matches everything.
+        assert!(ClientPolicy::new(vec![String::new()])
+            .check(&api_der)
+            .is_err());
     }
 
     #[test]

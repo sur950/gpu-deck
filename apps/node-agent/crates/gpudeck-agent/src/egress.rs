@@ -1,9 +1,15 @@
-//! Egress lock: outbound traffic only to the hub, model sources (`config_push.model_sources` +
-//! `egress_allowlist`), DNS resolvers and loopback; inbound only the proxy port (and SSH).
-//! Rendered as a pf anchor (macOS, loaded into `com.apple/gpudeck` which the stock
-//! `/etc/pf.conf` already evaluates) or an nftables table (Linux). Rules are only programmed
-//! with `gpudeck-agent run --apply-egress-lock` (needs root / CAP_NET_ADMIN); otherwise they are
-//! rendered to `<state_dir>/egress.{pf,nft}` for review.
+//! Host firewall rendering (`firewall.rs` builds the plan and programs it): a pf anchor (macOS,
+//! `com.apple/gpudeck`, which the stock `/etc/pf.conf` already evaluates) or an nftables table
+//! (Linux, `inet gpudeck`, replaced atomically).
+//!
+//! Two parts:
+//! - the **guard** (always): inbound to the agent's own ports only — the proxy port (nobody in
+//!   tunnel mode, the API layer's addresses in direct mode), the SSH-instance range (the
+//!   instances' source CIDRs), metrics and engine ports (never from the network) — with the
+//!   operator's SSH ports accepted first;
+//! - the optional **egress lock**: outbound only to the hub, model sources
+//!   (`config_push.model_sources` + `egress_allowlist`), DNS resolvers and loopback; inbound
+//!   default deny.
 
 use std::net::IpAddr;
 
@@ -185,84 +191,206 @@ pub fn resolvers() -> Vec<String> {
         .collect()
 }
 
-/// Inbound openings besides loopback and established traffic.
+/// Inbound guard for the agent's own ports (always part of the host firewall). Rules are scoped
+/// to GPU Deck ports, so other services on the machine (and the operator's SSH) are untouched;
+/// `preserve_ports` are accepted before anything else in case a GPU Deck range overlaps them.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct Inbound {
+pub struct Guard {
+    /// Always accepted (the operator's sshd ports).
+    pub preserve_ports: Vec<u16>,
     pub proxy_port: u16,
-    /// SSH-instance forwarder range (`protocol.md` §8).
+    /// `None`: tunnel mode, nothing may reach the proxy port. `Some`: direct mode, only these
+    /// sources (CIDRs / addresses).
+    pub proxy_sources: Option<Vec<String>>,
+    /// SSH-instance forwarder range and the sources allowed to it (empty = nobody).
     pub ssh_ports: Option<[u16; 2]>,
+    pub ssh_sources: Vec<String>,
+    /// Ports that must never be reached from the network (metrics, engine range).
+    pub closed: Vec<[u16; 2]>,
     /// Cross-node group peers (`protocol.md` §9): allowed in (any TCP port) and out.
     pub peers: Vec<String>,
 }
 
-impl Inbound {
-    pub fn new(proxy_port: u16) -> Self {
-        Self {
-            proxy_port,
-            ssh_ports: None,
-            peers: vec![],
-        }
+/// Optional egress lock: outbound only to these destinations, inbound default deny.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct EgressPlan {
+    pub allow: Vec<Allow>,
+    pub dns: Vec<String>,
+}
+
+/// Everything the agent programs into pf / nftables.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Plan {
+    pub guard: Guard,
+    pub egress: Option<EgressPlan>,
+}
+
+impl Plan {
+    /// Short content hash, written into the ruleset so `firewall status` can tell whether the
+    /// loaded rules are the current plan.
+    pub fn hash(&self) -> String {
+        use sha2::{Digest, Sha256};
+        let text = format!("{self:?}");
+        hex::encode(&Sha256::digest(text.as_bytes())[..6])
     }
 }
 
-/// pf anchor rules.
-pub fn render_pf(allow: &[Allow], dns: &[String], inbound: &Inbound) -> String {
-    let proxy_port = inbound.proxy_port;
-    let mut o = String::from("# GPU Deck egress lock (managed by gpudeck-agent; do not edit)\n");
-    let any: Vec<&Allow> = allow.iter().filter(|a| a.port.is_none()).collect();
+/// Keep only literal IPs / CIDRs (never anything that could inject firewall syntax).
+fn nets(v: &[String]) -> Vec<String> {
+    v.iter()
+        .map(|s| s.trim().to_string())
+        .filter(|s| is_net(s))
+        .collect()
+}
+
+fn split_family(v: &[String]) -> (Vec<String>, Vec<String>) {
+    v.iter().cloned().partition(|n| !n.contains(':'))
+}
+
+fn port_set(ports: &[u16]) -> String {
+    let mut p: Vec<u16> = ports.to_vec();
+    p.sort_unstable();
+    p.dedup();
+    p.iter().map(u16::to_string).collect::<Vec<_>>().join(", ")
+}
+
+/// pf anchor rules (`com.apple/gpudeck`; the stock `/etc/pf.conf` evaluates `com.apple/*`).
+pub fn render_pf(plan: &Plan) -> String {
+    let g = &plan.guard;
+    let hash = plan.hash();
+    let mut o =
+        format!("# GPU Deck host firewall (managed by gpudeck-agent; do not edit) plan {hash}\n");
+    let proxy_sources = g.proxy_sources.as_deref().map(nets).unwrap_or_default();
+    let ssh_sources = nets(&g.ssh_sources);
+    let peers = nets(&g.peers);
     o.push_str(&format!(
-        "table <gpudeck_allow> const {{ {} }}\n",
-        any.iter()
+        "table <gpudeck_proxy> const {{ {} }}\n",
+        proxy_sources.join(", ")
+    ));
+    o.push_str(&format!(
+        "table <gpudeck_ssh> const {{ {} }}\n",
+        ssh_sources.join(", ")
+    ));
+    if let Some(e) = &plan.egress {
+        let any: Vec<&str> = e
+            .allow
+            .iter()
+            .filter(|a| a.port.is_none())
             .map(|a| a.net.as_str())
-            .collect::<Vec<_>>()
-            .join(", ")
-    ));
+            .collect();
+        o.push_str(&format!(
+            "table <gpudeck_allow> const {{ {} }}\n",
+            any.join(", ")
+        ));
+        o.push_str(&format!(
+            "table <gpudeck_dns> const {{ {} }}\n",
+            nets(&e.dns).join(", ")
+        ));
+    }
     o.push_str(&format!(
-        "table <gpudeck_dns> const {{ {} }}\n",
-        dns.join(", ")
+        "pass quick on lo0 all label \"gpudeck-plan-{hash}\"\n"
     ));
-    o.push_str("pass quick on lo0 all\n");
+    if !g.preserve_ports.is_empty() {
+        o.push_str(&format!(
+            "pass in quick proto tcp to any port {{ {} }} keep state # operator ssh, never blocked\n",
+            port_set(&g.preserve_ports)
+        ));
+    }
+    if !peers.is_empty() {
+        let p = peers.join(", ");
+        o.push_str(&format!(
+            "pass in quick proto tcp from {{ {p} }} keep state # distributed group peers\n"
+        ));
+        if plan.egress.is_some() {
+            o.push_str(&format!(
+                "pass out quick proto {{ tcp udp }} to {{ {p} }} keep state # distributed group peers\n"
+            ));
+        }
+    }
+    let port = g.proxy_port;
+    if g.proxy_sources.is_some() {
+        o.push_str(&format!(
+            "pass in quick proto tcp from <gpudeck_proxy> to any port {port} keep state # direct mode: API layer only\n"
+        ));
+    }
     o.push_str(&format!(
-        "pass in quick proto tcp to any port {proxy_port} keep state\n"
+        "block drop in quick proto tcp to any port {port} # agent proxy\n"
     ));
-    o.push_str("pass in quick proto tcp to any port 22 keep state\n");
-    if let Some([a, b]) = inbound.ssh_ports {
+    if let Some([a, b]) = g.ssh_ports {
         o.push_str(&format!(
-            "pass in quick proto tcp to any port {a}:{b} keep state # ssh instances\n"
+            "pass in quick proto tcp from <gpudeck_ssh> to any port {a}:{b} keep state # ssh instances\n"
+        ));
+        o.push_str(&format!(
+            "block drop in quick proto tcp to any port {a}:{b} # ssh instances\n"
         ));
     }
-    if !inbound.peers.is_empty() {
-        let peers = inbound.peers.join(", ");
+    for [a, b] in &g.closed {
+        let r = if a == b {
+            a.to_string()
+        } else {
+            format!("{a}:{b}")
+        };
         o.push_str(&format!(
-            "pass in quick proto tcp from {{ {peers} }} keep state # distributed group peers\n"
-        ));
-        o.push_str(&format!("pass out quick proto {{ tcp udp }} to {{ {peers} }} keep state # distributed group peers\n"));
-    }
-    o.push_str("pass out quick proto { udp tcp } to <gpudeck_dns> port 53 keep state\n");
-    o.push_str("pass out quick proto { icmp icmp6 } all keep state\n");
-    if !any.is_empty() {
-        o.push_str("pass out quick proto { tcp udp } to <gpudeck_allow> keep state\n");
-    }
-    for a in allow.iter().filter(|a| a.port.is_some()) {
-        let fam = if a.is_v6() { "inet6" } else { "inet" };
-        o.push_str(&format!(
-            "pass out quick {fam} proto tcp to {} port {} keep state # {}\n",
-            a.net,
-            a.port.unwrap_or(0),
-            a.source
+            "block drop in quick proto tcp to any port {r} # loopback-only\n"
         ));
     }
-    o.push_str("block return out log quick all\n");
-    o.push_str("block drop in log quick all\n");
+    if let Some(e) = &plan.egress {
+        o.push_str("pass out quick proto { udp tcp } to <gpudeck_dns> port 53 keep state\n");
+        o.push_str("pass out quick proto { icmp icmp6 } all keep state\n");
+        if e.allow.iter().any(|a| a.port.is_none()) {
+            o.push_str("pass out quick proto { tcp udp } to <gpudeck_allow> keep state\n");
+        }
+        for a in e.allow.iter().filter(|a| a.port.is_some()) {
+            let fam = if a.is_v6() { "inet6" } else { "inet" };
+            o.push_str(&format!(
+                "pass out quick {fam} proto tcp to {} port {} keep state # {}\n",
+                a.net,
+                a.port.unwrap_or(0),
+                a.source
+            ));
+        }
+        o.push_str("block return out log quick all\n");
+        o.push_str("block drop in log quick all\n");
+    }
     o
 }
 
 /// nftables ruleset (atomic replace of table `inet gpudeck`).
-pub fn render_nft(allow: &[Allow], dns: &[String], inbound: &Inbound) -> String {
-    let proxy_port = inbound.proxy_port;
+pub fn render_nft(plan: &Plan) -> String {
+    let g = &plan.guard;
+    let hash = plan.hash();
+    let set = |name: &str, v6: bool, items: &[String]| {
+        let mut s = format!(
+            "  set {name} {{\n    type {}\n    flags interval\n    auto-merge\n",
+            if v6 { "ipv6_addr" } else { "ipv4_addr" }
+        );
+        if !items.is_empty() {
+            s.push_str(&format!("    elements = {{ {} }}\n", items.join(", ")));
+        }
+        s.push_str("  }\n");
+        s
+    };
+    let mut o = format!("# GPU Deck host firewall (managed by gpudeck-agent; do not edit) plan {hash}\ntable inet {NFT_TABLE}\ndelete table inet {NFT_TABLE}\ntable inet {NFT_TABLE} {{\n");
+    let (p4, p6) = split_family(&g.proxy_sources.as_deref().map(nets).unwrap_or_default());
+    let (s4, s6) = split_family(&nets(&g.ssh_sources));
+    o.push_str(&set("proxy4", false, &p4));
+    o.push_str(&set("proxy6", true, &p6));
+    o.push_str(&set("ssh4", false, &s4));
+    o.push_str(&set("ssh6", true, &s6));
+    if let Some(e) = &plan.egress {
+        let any = |v6: bool| {
+            e.allow
+                .iter()
+                .filter(|a| a.port.is_none() && a.is_v6() == v6)
+                .map(|a| a.net.clone())
+                .collect::<Vec<_>>()
+        };
+        o.push_str(&set("allow4", false, &any(false)));
+        o.push_str(&set("allow6", true, &any(true)));
+    }
+    let peers = nets(&g.peers);
     let peer_rules = |dir: &str| -> String {
-        inbound
-            .peers
+        peers
             .iter()
             .map(|p| {
                 format!(
@@ -272,50 +400,66 @@ pub fn render_nft(allow: &[Allow], dns: &[String], inbound: &Inbound) -> String 
             })
             .collect()
     };
-    let ssh_rule = inbound
-        .ssh_ports
-        .map(|[a, b]| format!("    tcp dport {a}-{b} accept comment \"ssh instances\"\n"))
-        .unwrap_or_default();
-    let set = |v6: bool| {
-        allow
-            .iter()
-            .filter(|a| a.port.is_none() && a.is_v6() == v6)
-            .map(|a| a.net.clone())
-            .collect::<Vec<_>>()
-    };
-    let (v4, v6) = (set(false), set(true));
-    let mut o = format!("# GPU Deck egress lock (managed by gpudeck-agent; do not edit)\ntable inet {NFT_TABLE}\ndelete table inet {NFT_TABLE}\ntable inet {NFT_TABLE} {{\n");
-    o.push_str("  set allow4 {\n    type ipv4_addr\n    flags interval\n");
-    if !v4.is_empty() {
-        o.push_str(&format!("    elements = {{ {} }}\n", v4.join(", ")));
-    }
-    o.push_str("  }\n  set allow6 {\n    type ipv6_addr\n    flags interval\n");
-    if !v6.is_empty() {
-        o.push_str(&format!("    elements = {{ {} }}\n", v6.join(", ")));
-    }
-    o.push_str("  }\n  chain output {\n    type filter hook output priority 0; policy accept;\n    oif \"lo\" accept\n    ct state established,related accept\n");
-    for d in dns {
-        let fam = if d.contains(':') { "ip6" } else { "ip" };
-        o.push_str(&format!(
-            "    {fam} daddr {d} meta l4proto {{ tcp, udp }} th dport 53 accept\n"
-        ));
-    }
-    o.push_str("    meta l4proto { icmp, ipv6-icmp } accept\n    ip daddr @allow4 accept\n    ip6 daddr @allow6 accept\n");
-    o.push_str(&peer_rules("daddr"));
-    for a in allow.iter().filter(|a| a.port.is_some()) {
-        let fam = if a.is_v6() { "ip6" } else { "ip" };
-        o.push_str(&format!(
-            "    {fam} daddr {} tcp dport {} accept comment \"{}\"\n",
-            a.net,
-            a.port.unwrap_or(0),
-            a.source.replace('"', "")
-        ));
-    }
-    o.push_str("    log prefix \"gpudeck-egress-blocked \" counter reject\n  }\n");
     o.push_str(&format!(
-        "  chain input {{\n    type filter hook input priority 0; policy accept;\n    iif \"lo\" accept\n    ct state established,related accept\n    meta l4proto {{ icmp, ipv6-icmp }} accept\n    tcp dport {{ 22, {proxy_port} }} accept\n{ssh_rule}{}    log prefix \"gpudeck-ingress-blocked \" counter drop\n  }}\n}}\n",
-        peer_rules("saddr")
+        "  chain input {{\n    type filter hook input priority -10; policy accept;\n    iif \"lo\" accept comment \"gpudeck plan {hash}\"\n    ct state established,related accept\n"
     ));
+    if !g.preserve_ports.is_empty() {
+        o.push_str(&format!(
+            "    tcp dport {{ {} }} accept comment \"operator ssh, never blocked\"\n",
+            port_set(&g.preserve_ports)
+        ));
+    }
+    o.push_str(&peer_rules("saddr"));
+    let port = g.proxy_port;
+    if g.proxy_sources.is_some() {
+        o.push_str(&format!(
+            "    tcp dport {port} ip saddr @proxy4 accept comment \"direct mode: API layer\"\n    tcp dport {port} ip6 saddr @proxy6 accept comment \"direct mode: API layer\"\n"
+        ));
+    }
+    o.push_str(&format!(
+        "    tcp dport {port} counter drop comment \"gpudeck agent proxy\"\n"
+    ));
+    if let Some([a, b]) = g.ssh_ports {
+        o.push_str(&format!(
+            "    tcp dport {a}-{b} ip saddr @ssh4 accept comment \"ssh instances\"\n    tcp dport {a}-{b} ip6 saddr @ssh6 accept comment \"ssh instances\"\n    tcp dport {a}-{b} counter drop comment \"ssh instances\"\n"
+        ));
+    }
+    for [a, b] in &g.closed {
+        let r = if a == b {
+            a.to_string()
+        } else {
+            format!("{a}-{b}")
+        };
+        o.push_str(&format!(
+            "    tcp dport {r} counter drop comment \"loopback-only\"\n"
+        ));
+    }
+    if plan.egress.is_some() {
+        o.push_str("    meta l4proto { icmp, ipv6-icmp } accept\n    log prefix \"gpudeck-ingress-blocked \" counter drop\n");
+    }
+    o.push_str("  }\n");
+    if let Some(e) = &plan.egress {
+        o.push_str("  chain output {\n    type filter hook output priority 0; policy accept;\n    oif \"lo\" accept\n    ct state established,related accept\n");
+        for d in nets(&e.dns) {
+            let fam = if d.contains(':') { "ip6" } else { "ip" };
+            o.push_str(&format!(
+                "    {fam} daddr {d} meta l4proto {{ tcp, udp }} th dport 53 accept\n"
+            ));
+        }
+        o.push_str("    meta l4proto { icmp, ipv6-icmp } accept\n    ip daddr @allow4 accept\n    ip6 daddr @allow6 accept\n");
+        o.push_str(&peer_rules("daddr"));
+        for a in e.allow.iter().filter(|a| a.port.is_some()) {
+            let fam = if a.is_v6() { "ip6" } else { "ip" };
+            o.push_str(&format!(
+                "    {fam} daddr {} tcp dport {} accept comment \"{}\"\n",
+                a.net,
+                a.port.unwrap_or(0),
+                a.source.replace('"', "")
+            ));
+        }
+        o.push_str("    log prefix \"gpudeck-egress-blocked \" counter reject\n  }\n");
+    }
+    o.push_str("}\n");
     o
 }
 
@@ -378,133 +522,6 @@ pub fn destinations(
     out.extend(allowlist.iter().cloned());
     out.dedup();
     out
-}
-
-impl crate::agent::Agent {
-    /// Addresses of every peer of the cross-node groups this node is part of.
-    pub fn distributed_peers(&self) -> Vec<String> {
-        let mut v: Vec<String> = self
-            .instances
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .values()
-            .filter(|i| i.state != gpudeck_protocol::InstanceState::Stopped)
-            .filter_map(|i| i.args.launch.distributed.as_ref())
-            .flat_map(crate::distributed::peer_addresses)
-            .collect();
-        v.sort();
-        v.dedup();
-        v
-    }
-
-    /// Render (always) and program (only with `--apply-egress-lock`) the egress rules.
-    pub fn apply_egress(self: &std::sync::Arc<Self>) {
-        let a = self.clone();
-        tokio::spawn(async move {
-            let cfg = a.applied.lock().unwrap_or_else(|e| e.into_inner()).clone();
-            let allowlist = cfg
-                .as_ref()
-                .and_then(|c| c.egress_allowlist.clone())
-                .unwrap_or_default();
-            let ms = cfg
-                .as_ref()
-                .and_then(|c| c.model_sources.clone())
-                .unwrap_or_default();
-            let dests = destinations(
-                a.cfg.hub_url.as_deref(),
-                &allowlist,
-                ms.huggingface_endpoint.as_deref(),
-                ms.modelscope_endpoint.as_deref(),
-            );
-            // Host names are resolved only when the rules are programmed; otherwise they are
-            // rendered for inspection with the literal entries only (no DNS, no warnings).
-            let lookup = a.options.apply_egress_lock;
-            let allow = resolve_with(&dests, lookup).await;
-            let dns = resolvers();
-            let peers: Vec<String> = resolve_with(&a.distributed_peers(), lookup)
-                .await
-                .into_iter()
-                .map(|x| x.net)
-                .collect();
-            let inbound = Inbound {
-                proxy_port: a.cfg.proxy_port,
-                ssh_ports: a.container_runtime.as_ref().map(|_| a.cfg.ssh_port_range),
-                peers,
-            };
-            let (file, text, cmd): (_, _, Vec<String>) = match a.egress_kind {
-                EgressLockKind::Pf => {
-                    let f = a.paths.root.join("egress.pf");
-                    (
-                        f.clone(),
-                        render_pf(&allow, &dns, &inbound),
-                        vec![
-                            "/sbin/pfctl".into(),
-                            "-a".into(),
-                            PF_ANCHOR.into(),
-                            "-f".into(),
-                            f.display().to_string(),
-                        ],
-                    )
-                }
-                EgressLockKind::Nftables => {
-                    let f = a.paths.root.join("egress.nft");
-                    (
-                        f.clone(),
-                        render_nft(&allow, &dns, &inbound),
-                        vec!["nft".into(), "-f".into(), f.display().to_string()],
-                    )
-                }
-                _ => {
-                    tracing::warn!("egress lock requested but no firewall backend is available (egress_lock = none)");
-                    return;
-                }
-            };
-            if let Err(e) = crate::state::write_private(&file, text.as_bytes(), 0o600) {
-                tracing::warn!("write {}: {e}", file.display());
-                return;
-            }
-            if !a.options.apply_egress_lock {
-                return;
-            }
-            let out = tokio::process::Command::new(&cmd[0])
-                .args(&cmd[1..])
-                .output()
-                .await;
-            let ok = matches!(&out, Ok(o) if o.status.success());
-            if a.egress_kind == EgressLockKind::Pf && ok {
-                let _ = tokio::process::Command::new("/sbin/pfctl")
-                    .arg("-E")
-                    .output()
-                    .await;
-            }
-            let mut d = gpudeck_protocol::JsonObject::new();
-            d.insert("backend".into(), a.egress_kind.as_str().into());
-            d.insert("destinations".into(), dests.clone().into());
-            if ok {
-                tracing::info!(backend = %a.egress_kind, "egress lock applied ({} destinations)", allow.len());
-                a.event(
-                    gpudeck_protocol::Event::info(
-                        gpudeck_protocol::EventKind::ConfigApplied,
-                        "egress lock applied",
-                    )
-                    .details(d),
-                );
-            } else {
-                let err = out
-                    .map(|o| String::from_utf8_lossy(&o.stderr).to_string())
-                    .unwrap_or_else(|e| e.to_string());
-                d.insert("error".into(), err.clone().into());
-                tracing::error!("egress lock failed: {err}");
-                a.event(
-                    gpudeck_protocol::Event::critical(
-                        gpudeck_protocol::EventKind::EgressBlocked,
-                        "egress lock could not be applied",
-                    )
-                    .details(d),
-                );
-            }
-        });
-    }
 }
 
 #[cfg(test)]
@@ -578,54 +595,104 @@ mod tests {
         );
     }
 
+    fn guard(direct: bool) -> Guard {
+        Guard {
+            preserve_ports: vec![22, 2222],
+            proxy_port: 9443,
+            proxy_sources: direct.then(|| vec!["10.0.0.0/8".into(), "2001:db8::/32".into()]),
+            ssh_ports: Some([2200, 2299]),
+            ssh_sources: vec!["198.51.100.0/24".into(), "bogus; flush ruleset".into()],
+            closed: vec![[9100, 9100], [10240, 10340]],
+            peers: vec!["10.0.0.6".into()],
+        }
+    }
+
     #[test]
     fn pf_rules() {
-        let r = render_pf(&allow(), &["192.168.1.1".into()], &Inbound::new(9443));
-        assert!(!r.contains("ssh instances"));
-        let full = render_pf(
-            &allow(),
-            &[],
-            &Inbound {
-                proxy_port: 9443,
-                ssh_ports: Some([2200, 2299]),
-                peers: vec!["10.0.0.6".into()],
-            },
+        let tunnel = render_pf(&Plan {
+            guard: guard(false),
+            egress: None,
+        });
+        assert!(tunnel.contains("plan "));
+        assert!(tunnel.contains("pass in quick proto tcp to any port { 22, 2222 } keep state"));
+        // Tunnel mode: nothing may reach the proxy port; no pass rule for it at all.
+        assert!(!tunnel.contains("from <gpudeck_proxy>"));
+        assert!(tunnel.contains("block drop in quick proto tcp to any port 9443"));
+        assert!(tunnel.contains("pass in quick proto tcp from <gpudeck_ssh> to any port 2200:2299"));
+        assert!(tunnel.contains("block drop in quick proto tcp to any port 2200:2299"));
+        assert!(tunnel.contains("block drop in quick proto tcp to any port 10240:10340"));
+        assert!(tunnel.contains("block drop in quick proto tcp to any port 9100 "));
+        assert!(tunnel.contains("table <gpudeck_ssh> const { 198.51.100.0/24 }"));
+        assert!(!tunnel.contains("flush"), "entries cannot inject syntax");
+        // Operator SSH is accepted before any GPU Deck rule.
+        let ssh = tunnel.find("port { 22, 2222 }").unwrap();
+        assert!(ssh < tunnel.find("port 2200:2299").unwrap());
+        assert!(
+            !tunnel.contains("block drop in log quick all"),
+            "guard only: no default deny"
         );
-        assert!(full.contains("pass in quick proto tcp to any port 2200:2299 keep state"));
-        assert!(full.contains("pass in quick proto tcp from { 10.0.0.6 } keep state"));
-        assert!(full.contains("pass out quick proto { tcp udp } to { 10.0.0.6 } keep state"));
-        assert!(r.contains("table <gpudeck_allow> const { 18.0.0.0/8, 2600::1 }"));
-        assert!(r.contains("pass in quick proto tcp to any port 9443 keep state"));
-        assert!(r.contains("pass out quick inet proto tcp to 10.0.0.5 port 8443 keep state"));
-        assert!(r.contains("table <gpudeck_dns> const { 192.168.1.1 }"));
-        assert!(r.trim_end().ends_with("block drop in log quick all"));
-        assert!(r.contains("pass quick on lo0 all"));
+        let direct = render_pf(&Plan {
+            guard: guard(true),
+            egress: Some(EgressPlan {
+                allow: allow(),
+                dns: vec!["192.168.1.1".into()],
+            }),
+        });
+        assert!(direct.contains("table <gpudeck_proxy> const { 10.0.0.0/8, 2001:db8::/32 }"));
+        assert!(direct.contains("pass in quick proto tcp from <gpudeck_proxy> to any port 9443"));
+        assert!(direct.contains("table <gpudeck_allow> const { 18.0.0.0/8, 2600::1 }"));
+        assert!(direct.contains("pass out quick inet proto tcp to 10.0.0.5 port 8443 keep state"));
+        assert!(direct.contains("pass out quick proto { tcp udp } to { 10.0.0.6 } keep state"));
+        assert!(direct.trim_end().ends_with("block drop in log quick all"));
+        assert_ne!(
+            Plan {
+                guard: guard(true),
+                egress: None
+            }
+            .hash(),
+            Plan {
+                guard: guard(false),
+                egress: None
+            }
+            .hash()
+        );
     }
 
     #[test]
     fn nft_rules() {
-        let full = render_nft(
-            &allow(),
-            &[],
-            &Inbound {
-                proxy_port: 9443,
-                ssh_ports: Some([2200, 2299]),
-                peers: vec!["10.0.0.6".into()],
-            },
-        );
-        assert!(full.contains("tcp dport 2200-2299 accept"));
+        let tunnel = render_nft(&Plan {
+            guard: guard(false),
+            egress: None,
+        });
+        assert!(tunnel.starts_with("# GPU Deck host firewall"));
+        assert!(tunnel.contains("table inet gpudeck\ndelete table inet gpudeck\n"));
+        assert!(tunnel.contains("tcp dport { 22, 2222 } accept"));
+        assert!(!tunnel.contains("@proxy4 accept"));
+        assert!(tunnel.contains("tcp dport 9443 counter drop"));
+        assert!(tunnel.contains("tcp dport 2200-2299 ip saddr @ssh4 accept"));
+        assert!(tunnel.contains("elements = { 198.51.100.0/24 }"));
+        assert!(tunnel.contains("tcp dport 10240-10340 counter drop"));
+        assert!(tunnel.contains("ip saddr 10.0.0.6 accept"));
         assert!(
-            full.contains("ip saddr 10.0.0.6 accept") && full.contains("ip daddr 10.0.0.6 accept")
+            !tunnel.contains("chain output"),
+            "no egress lock unless asked"
         );
-        let r = render_nft(&allow(), &["1.1.1.1".into()], &Inbound::new(9443));
-        assert!(r.starts_with("# GPU Deck"));
-        assert!(r.contains("table inet gpudeck\ndelete table inet gpudeck\n"));
-        assert!(r.contains("elements = { 18.0.0.0/8 }"));
-        assert!(r.contains("elements = { 2600::1 }"));
-        assert!(r.contains("ip daddr 10.0.0.5 tcp dport 8443 accept"));
-        assert!(r.contains("ip daddr 1.1.1.1 meta l4proto { tcp, udp } th dport 53 accept"));
-        assert!(r.contains("tcp dport { 22, 9443 } accept"));
-        assert!(r.contains("log prefix \"gpudeck-egress-blocked \" counter reject"));
+        assert!(!tunnel.contains("flush"));
+        let direct = render_nft(&Plan {
+            guard: guard(true),
+            egress: Some(EgressPlan {
+                allow: allow(),
+                dns: vec!["1.1.1.1".into()],
+            }),
+        });
+        assert!(direct.contains("tcp dport 9443 ip saddr @proxy4 accept"));
+        assert!(direct.contains("elements = { 10.0.0.0/8 }"));
+        assert!(direct.contains("elements = { 2001:db8::/32 }"));
+        assert!(direct.contains("ip daddr 10.0.0.5 tcp dport 8443 accept"));
+        assert!(direct.contains("ip daddr 1.1.1.1 meta l4proto { tcp, udp } th dport 53 accept"));
+        assert!(direct.contains("log prefix \"gpudeck-egress-blocked \" counter reject"));
+        assert!(direct.contains("log prefix \"gpudeck-ingress-blocked \" counter drop"));
+        assert!(direct.contains("ip daddr 10.0.0.6 accept"));
     }
 
     #[tokio::test]
@@ -667,15 +734,16 @@ mod tests {
         .await;
         assert_eq!(r.len(), 1, "{r:?}");
         assert_eq!(r[0].net, "192.168.1.0/24");
-        let rules = render_pf(
-            &r,
-            &[],
-            &Inbound {
+        let rules = render_pf(&Plan {
+            guard: Guard {
                 proxy_port: 9443,
-                ssh_ports: None,
-                peers: vec![],
+                ..Default::default()
             },
-        );
+            egress: Some(EgressPlan {
+                allow: r.clone(),
+                dns: vec![],
+            }),
+        });
         assert!(!rules.contains("pass out quick all") && !rules.contains("pass out all"));
         assert_eq!(comment_safe("a\"b # c\nd"), "abcd");
     }

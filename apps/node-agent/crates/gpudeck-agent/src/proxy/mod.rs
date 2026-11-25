@@ -1,5 +1,11 @@
-//! The agent proxy on :9443 (`protocol.md` §6): TLS 1.3 with a required client certificate
-//! chained to the internal CA, subject allow-list + CRL enforced inside the handshake,
+//! The agent proxy (`protocol.md` §6, §13). One request handler ([`handle`]) serves both
+//! serving modes: the outbound tunnel (`tunnel.rs`, default: no listener at all) and the
+//! direct-mode listener on :9443, where a connection must first come from an allowed source
+//! address (closed before TLS otherwise), pass the per-source handshake rate limit, then
+//! complete TLS 1.3 with a client certificate chained to the internal CA, matching the subject
+//! rules, not in the CRL and — once a signed policy pinned it — carrying the API layer's key
+//! (all enforced inside the handshake: a rejected client gets a TLS alert, never HTTP).
+//! Then:
 //! `/instances/{id}/{engine_path}` routing to `127.0.0.1:{port}` from `config_push.routing`,
 //! draining (503 + Retry-After), engine admin paths blocked, model-name rewrite, per-instance
 //! concurrency cap with a bounded queue, unbuffered streaming, and per-request accounting that
@@ -89,6 +95,10 @@ pub struct ProxyState {
     pub active_connections: AtomicU64,
     tls: RwLock<Option<Arc<ServerConfig>>>,
     client: Client<hyper_util::client::legacy::connect::HttpConnector, Full<Bytes>>,
+    /// Direct mode: source addresses allowed to connect (checked before TLS).
+    allowed_sources: RwLock<Vec<ipnet::IpNet>>,
+    limiter: Mutex<crate::ingress::HandshakeLimiter>,
+    pending: RwLock<Arc<Semaphore>>,
 }
 
 fn error_body(code: &str, message: &str) -> Bytes {
@@ -136,7 +146,72 @@ impl ProxyState {
             client: Client::builder(TokioExecutor::new())
                 .pool_idle_timeout(Duration::from_secs(30))
                 .build(http),
+            allowed_sources: RwLock::new(crate::security::direct_sources(None)),
+            limiter: Mutex::new(crate::ingress::HandshakeLimiter::new(
+                crate::security::DEFAULT_HANDSHAKES_PER_MINUTE,
+                crate::security::DEFAULT_HANDSHAKE_BURST,
+            )),
+            pending: RwLock::new(Arc::new(Semaphore::new(
+                crate::security::DEFAULT_MAX_PENDING_HANDSHAKES as usize,
+            ))),
         }
+    }
+
+    /// Apply a verified security policy: API-layer key pins + subject rules (TLS handshake),
+    /// direct-mode source allow-list and handshake limits.
+    pub fn apply_policy(&self, policy: Option<&gpudeck_protocol::SecurityPolicy>) {
+        let (pins, subjects) = crate::security::api_layer_identity(policy);
+        {
+            let mut p = self.policy.write().unwrap_or_else(|e| e.into_inner());
+            if policy.and_then(|p| p.api_layer.as_ref()).is_some() {
+                p.set_pins(&pins, &subjects);
+            } else {
+                p.set_pins(&[], &[]);
+            }
+        }
+        *self
+            .allowed_sources
+            .write()
+            .unwrap_or_else(|e| e.into_inner()) = crate::security::direct_sources(policy);
+        let d = policy.and_then(|p| p.direct.clone()).unwrap_or_default();
+        self.limiter
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .configure(
+                d.handshakes_per_minute
+                    .unwrap_or(crate::security::DEFAULT_HANDSHAKES_PER_MINUTE),
+                d.handshake_burst
+                    .unwrap_or(crate::security::DEFAULT_HANDSHAKE_BURST),
+            );
+        let pending = d
+            .max_pending_handshakes
+            .unwrap_or(crate::security::DEFAULT_MAX_PENDING_HANDSHAKES)
+            .max(1) as usize;
+        let mut g = self.pending.write().unwrap_or_else(|e| e.into_inner());
+        if g.available_permits() != pending {
+            *g = Arc::new(Semaphore::new(pending));
+        }
+        drop(g);
+        // The verifier reads the shared ClientPolicy on every handshake; rebuild anyway so
+        // the next connection never reuses a session from before the change.
+        self.invalidate_tls();
+    }
+
+    pub fn source_allowed(&self, ip: std::net::IpAddr) -> bool {
+        crate::security::ip_in(
+            &self
+                .allowed_sources
+                .read()
+                .unwrap_or_else(|e| e.into_inner()),
+            ip,
+        )
+    }
+
+    pub fn allowed_sources(&self) -> Vec<ipnet::IpNet> {
+        self.allowed_sources
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     pub fn apply_settings(&self, p: &ProxySettings) {
@@ -361,12 +436,63 @@ pub fn server_config(
     Ok(cfg)
 }
 
-/// Accept loop.
+/// Why a handshake failed, as reported in `event(ingress_rejected).details.reasons`.
+pub fn handshake_reason(e: &std::io::Error) -> &'static str {
+    match e.get_ref().and_then(|i| i.downcast_ref::<rustls::Error>()) {
+        Some(rustls::Error::NoCertificatesPresented) => "no_client_certificate",
+        Some(rustls::Error::InvalidCertificate(_)) => "untrusted_client_certificate",
+        Some(rustls::Error::General(_)) => "client_identity_rejected",
+        Some(rustls::Error::PeerIncompatible(_)) | Some(rustls::Error::NoApplicationProtocol) => {
+            "tls_incompatible"
+        }
+        Some(_) => "tls_handshake_failed",
+        None => "tls_handshake_failed",
+    }
+}
+
+/// Close without a FIN handshake (RST): nothing is sent to a rejected client.
+fn reset(tcp: tokio::net::TcpStream) {
+    let _ = tcp.set_zero_linger();
+    drop(tcp);
+}
+
+/// Direct-mode accept loop: source allow-list and handshake rate limits before TLS, then the
+/// mutual TLS handshake (identity policy inside the verifier), then HTTP/2 or HTTP/1.1.
 pub async fn serve(agent: Arc<Agent>, listener: tokio::net::TcpListener) {
     loop {
         let (tcp, peer) = tokio::select! {
             r = listener.accept() => match r { Ok(x) => x, Err(e) => { tracing::warn!("proxy accept: {e}"); tokio::time::sleep(Duration::from_millis(100)).await; continue; } },
             _ = agent.shutdown.cancelled() => return,
+        };
+        let ip = peer.ip();
+        if !agent.proxy.source_allowed(ip) {
+            agent.ingress.record("proxy", "source_not_allowed", ip);
+            reset(tcp);
+            continue;
+        }
+        let allowed = agent
+            .proxy
+            .limiter
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .allow(ip, Instant::now());
+        if !allowed {
+            agent.ingress.record("proxy", "rate_limited", ip);
+            reset(tcp);
+            continue;
+        }
+        let pending = agent
+            .proxy
+            .pending
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+        let Ok(permit) = pending.try_acquire_owned() else {
+            agent
+                .ingress
+                .record("proxy", "too_many_pending_handshakes", ip);
+            reset(tcp);
+            continue;
         };
         let _ = tcp.set_nodelay(true);
         let agent = agent.clone();
@@ -386,43 +512,58 @@ pub async fn serve(agent: Arc<Agent>, listener: tokio::net::TcpListener) {
             {
                 Ok(Ok(s)) => s,
                 Ok(Err(e)) => {
-                    tracing::debug!(%peer, "proxy TLS handshake failed: {e}");
+                    let reason = handshake_reason(&e);
+                    tracing::debug!(%peer, reason, "proxy TLS handshake failed: {e}");
+                    agent.ingress.record("proxy", reason, ip);
                     return;
                 }
-                Err(_) => return,
+                Err(_) => {
+                    agent.ingress.record("proxy", "handshake_timeout", ip);
+                    return;
+                }
             };
-            agent
-                .proxy
-                .active_connections
-                .fetch_add(1, Ordering::Relaxed);
-            let a2 = agent.clone();
-            let svc = hyper::service::service_fn(move |req| {
-                let a = a2.clone();
-                async move { Ok::<_, Infallible>(handle(a, req, peer).await) }
-            });
-            let h2 = tls.get_ref().1.alpn_protocol() == Some(b"h2".as_slice());
-            if h2 {
-                let _ =
-                    hyper::server::conn::http2::Builder::new(hyper_util::rt::TokioExecutor::new())
-                        .timer(hyper_util::rt::TokioTimer::new())
-                        .keep_alive_interval(Some(Duration::from_secs(30)))
-                        .serve_connection(TokioIo::new(tls), svc)
-                        .await;
-            } else {
-                let _ = hyper::server::conn::http1::Builder::new()
-                    .keep_alive(true)
-                    .serve_connection(TokioIo::new(tls), svc)
-                    .await;
-            }
-            agent
-                .proxy
-                .active_connections
-                .fetch_sub(1, Ordering::Relaxed);
+            drop(permit);
+            serve_tls(agent, tls, peer).await;
         });
     }
 }
 
-async fn handle(
+/// Serve HTTP on an authenticated TLS stream (direct mode).
+async fn serve_tls(
+    agent: Arc<Agent>,
+    tls: tokio_rustls::server::TlsStream<tokio::net::TcpStream>,
+    peer: SocketAddr,
+) {
+    agent
+        .proxy
+        .active_connections
+        .fetch_add(1, Ordering::Relaxed);
+    let a2 = agent.clone();
+    let svc = hyper::service::service_fn(move |req| {
+        let a = a2.clone();
+        async move { Ok::<_, Infallible>(handle(a, req, peer).await) }
+    });
+    let h2 = tls.get_ref().1.alpn_protocol() == Some(b"h2".as_slice());
+    if h2 {
+        let _ = hyper::server::conn::http2::Builder::new(hyper_util::rt::TokioExecutor::new())
+            .timer(hyper_util::rt::TokioTimer::new())
+            .keep_alive_interval(Some(Duration::from_secs(30)))
+            .serve_connection(TokioIo::new(tls), svc)
+            .await;
+    } else {
+        let _ = hyper::server::conn::http1::Builder::new()
+            .keep_alive(true)
+            .serve_connection(TokioIo::new(tls), svc)
+            .await;
+    }
+    agent
+        .proxy
+        .active_connections
+        .fetch_sub(1, Ordering::Relaxed);
+}
+
+/// One request from the API layer, whichever way it arrived (tunnel or direct listener).
+pub async fn handle(
     agent: Arc<Agent>,
     req: Request<Incoming>,
     _peer: SocketAddr,
@@ -721,7 +862,9 @@ async fn forward(
         streamed: streaming,
         ..Default::default()
     };
+    let engine_started = Instant::now();
     let resp = tokio::time::timeout(cfg.request_timeout, proxy.client.request(up)).await;
+    let engine_ms = engine_started.elapsed().as_secs_f64() * 1000.0;
     let resp = match resp {
         Ok(Ok(r)) => r,
         Ok(Err(e)) => {
@@ -771,6 +914,13 @@ async fn forward(
         HeaderValue::from_str(&id.to_string()).expect("hv"),
     );
     oh.insert("x-accel-buffering", HeaderValue::from_static("no"));
+    if let Ok(v) = HeaderValue::from_str(&proxy_timing(
+        queue_ms,
+        engine_ms,
+        started.elapsed().as_secs_f64() * 1000.0,
+    )) {
+        oh.insert(PROXY_TIMING_HEADER, v);
+    }
     if let Some(rid) = &request_id {
         if let Ok(v) = HeaderValue::from_str(rid) {
             oh.insert("x-request-id", v);
@@ -794,6 +944,16 @@ async fn forward(
             "bad upstream response",
         )
     })
+}
+
+/// Response header with the node's share of a request (Server-Timing syntax, milliseconds):
+/// `queue` = waiting for a concurrency slot, `engine` = request sent to the engine -> its
+/// response headers, `node` = request accepted by the proxy -> response headers sent. The
+/// API layer reads it (network time = its upstream wait - `node`) and removes it.
+pub const PROXY_TIMING_HEADER: &str = "x-gpudeck-proxy-timing";
+
+pub fn proxy_timing(queue_ms: f64, engine_ms: f64, node_ms: f64) -> String {
+    format!("queue;dur={queue_ms:.3}, engine;dur={engine_ms:.3}, node;dur={node_ms:.3}")
 }
 
 fn copy_headers(from: &HeaderMap, to: &mut HeaderMap, request: bool) {
@@ -881,6 +1041,13 @@ mod tests {
         let narrow = vec!["/v1/chat/completions".to_string()];
         assert!(!path_allowed("/v1/chat/completionsX", &narrow, &blocked));
         assert!(!path_allowed("/v1/embeddings", &narrow, &blocked));
+    }
+
+    #[test]
+    fn proxy_timing_header() {
+        let v = proxy_timing(0.05, 12.3456, 13.0);
+        assert_eq!(v, "queue;dur=0.050, engine;dur=12.346, node;dur=13.000");
+        assert!(HeaderValue::from_str(&v).is_ok());
     }
 
     #[test]

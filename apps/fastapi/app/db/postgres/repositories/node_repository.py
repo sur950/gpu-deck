@@ -255,7 +255,9 @@ class NodeRepository(BaseRepository[Nodes]):
         """
         Offline nodes disconnected before the cut-off that have not been alerted for this
         disconnect yet; marks them (``metadata.offline_alerted_for`` = ``disconnected_at``)
-        in the same statement, so the hub and the jobs process never alert twice.
+        in the same statement, so the hub and the jobs process never alert twice. A node whose
+        agent is restarting for an update (``metadata.agent_update_active.until`` in the future,
+        agent protocol §14) is not offline in that sense: no alert until that passes.
         """
         result = await self.session.execute(
             text(
@@ -265,6 +267,8 @@ class NodeRepository(BaseRepository[Nodes]):
                 "AND disconnected_at IS NOT NULL AND disconnected_at < :cutoff "
                 "AND (CAST(:since AS timestamptz) IS NULL OR disconnected_at >= :since) "
                 "AND (metadata->>'offline_alerted_for') IS DISTINCT FROM disconnected_at::text "
+                "AND NOT COALESCE((metadata->'agent_update_active'->>'until')::timestamptz "
+                "> now(), false) "
                 "RETURNING id, name, cluster_id, disconnected_at, last_heartbeat_at, "
                 "status_message, drain_requested_at, drained_at"
             ),

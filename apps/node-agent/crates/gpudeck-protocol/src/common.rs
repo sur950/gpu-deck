@@ -871,6 +871,112 @@ pub mod error_code {
     pub const IMAGE_PULL_FAILED: &str = "image_pull_failed";
     pub const SSH_INSTANCE_NOT_FOUND: &str = "ssh_instance_not_found";
     pub const DISTRIBUTED_UNSUPPORTED: &str = "distributed_unsupported";
+    /// Agent updates (`protocol.md` §14).
+    pub const UPDATE_UNSUPPORTED: &str = "update_unsupported";
+    pub const SIGNATURE_INVALID: &str = "signature_invalid";
+    pub const NOT_STAGED: &str = "not_staged";
+    pub const UPDATE_IN_PROGRESS: &str = "update_in_progress";
+    pub const ROLLED_BACK: &str = "rolled_back";
+}
+
+// ---------------------------------------------------------------------------
+// Agent updates (`protocol.md` §14)
+// ---------------------------------------------------------------------------
+
+/// `common.json#/$defs/ReleaseManifest`: what the release workflow signs.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ReleaseManifest {
+    pub schema: u32,
+    pub product: String,
+    pub version: String,
+    #[serde(default = "ReleaseManifest::default_protocol")]
+    pub protocol_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<Timestamp>,
+    pub artifacts: Vec<ReleaseArtifact>,
+}
+
+impl ReleaseManifest {
+    fn default_protocol() -> u32 {
+        1
+    }
+
+    /// The artifact for `target` (exact triple).
+    pub fn artifact(&self, target: &str) -> Option<&ReleaseArtifact> {
+        self.artifacts.iter().find(|a| a.target == target)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ReleaseArtifact {
+    pub target: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sha256: Option<String>,
+    pub binary_sha256: String,
+    pub binary_size_bytes: u64,
+}
+
+/// `common.json#/$defs/SignedReleaseManifest`: manifest bytes + detached ed25519 signature.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SignedReleaseManifest {
+    /// Standard base64 of the manifest file bytes.
+    pub manifest: String,
+    /// Standard base64 of the 64-byte signature.
+    pub signature: String,
+    /// Always `ed25519`.
+    pub algorithm: String,
+}
+
+string_enum! {
+    /// How this agent can update itself (`AgentUpdateStatus.mode`).
+    AgentUpdateMode {
+        Helper => "helper",
+        SelfUpdate => "self",
+        Managed => "managed",
+        Unsupported => "unsupported",
+    }
+}
+
+string_enum! {
+    /// `AgentUpdateStatus.state`.
+    AgentUpdateState {
+        Idle => "idle",
+        Staging => "staging",
+        Staged => "staged",
+        Applying => "applying",
+    }
+}
+
+/// `common.json#/$defs/AgentUpdateStatus` (`hello.agent_update`, `inventory.agent_update`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AgentUpdateStatus {
+    pub mode: AgentUpdateMode,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<String>,
+    #[serde(default = "AgentUpdateStatus::default_state")]
+    pub state: AgentUpdateState,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub staged_version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub staged_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub staged_at: Option<Timestamp>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_version: Option<String>,
+    #[serde(default)]
+    pub release_keys: u32,
+}
+
+impl AgentUpdateStatus {
+    fn default_state() -> AgentUpdateState {
+        AgentUpdateState::Idle
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

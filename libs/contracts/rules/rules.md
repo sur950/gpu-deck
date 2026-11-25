@@ -4,6 +4,13 @@ Schemas in this folder define the **params** of each of the six rule types, the 
 
 ## 1. Evaluation loop
 
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../docs/diagrams/rule-loop-dark.svg">
+    <img src="../../../docs/diagrams/rule-loop-light.svg" alt="The rule evaluation loop for the six rule types (time schedule, idle unload, high load grow, low traffic shrink, make room by priority, auto heal). Every 10 seconds the jobs process holding the rules lease ticks; each enabled rule is evaluated in priority order when its interval is due; it reads its inputs (last request, requests per minute, queue and KV cache, free VRAM, health) and records one outcome with the reason: no_match, cooldown, skipped, dry_run, fired or error. Fired actions go to the swap manager as safe swaps; every outcome lands in the history (rule runs, audit log, alerts), then the next tick." width="880">
+  </picture>
+</p>
+
 - One evaluator runs at a time, in the jobs process that holds the `rules-evaluator` lease (`ha_leases`, TTL `HA_LEASE_TTL_SECONDS` 30 s, renew every 10 s). On lease loss the evaluator stops before its next tick; in-flight swaps continue in the swap manager (also leader-only via `jobs-leader`).
 - Tick every `RULES_TICK_SECONDS` (default 10 s). Each enabled rule is evaluated when `now - last_evaluated_at >= evaluation_interval_seconds` (per-rule, default 30 s). Rules are evaluated in `priority` ascending, then `created_at`.
 - `time_schedule` rules are evaluated on every `rules.tick` by the jobs leader (not as per-rule APScheduler cron jobs: the shared RedisJobStore would fire them on any replica and bypass leader election, dry run and catch-up). The next fire time is computed timezone-aware from the cron / `at`+`days` (CronTrigger), so the switch happens within `RULES_TICK_SECONDS` of the minute. DST: a repeated local hour (fall back) fires once; a skipped hour (spring forward) fires once at the shifted time. `catch_up` governs missed runs (applied on start-up only when the next run is more than 1 h away). `Rule.next_evaluation_at` in the API is that next fire time.
@@ -44,9 +51,17 @@ Global guard: at most `RULES_MAX_CONCURRENT_SWAPS` (default 2) swap operations i
 
 ### Dry run
 
+> [!TIP]
+> Create a rule in dry run first and read its history for a day: every evaluation shows what it
+> would have done and why, without touching a model. Then switch it to live.
+
 `rules.dry_run=true` (per rule) or `POST /rules/{id}/dry-run` (one-off, even for disabled rules) runs the full evaluation and planning (including scheduler placement for grow/move) and writes a `rule_runs` row with `dry_run=true` and the planned `actions`, but creates no `swap_operations` and sends no commands. Alerts of severity `info` are still emitted for dry-run fires if the channel's `event_filter` includes `rule.dry_run`.
 
 ## 2. Per-type semantics
+
+![The rule builder: the six rule types, each a short form that reads back as a sentence, with targets, cooldown and a dry-run switch](../../../docs/screenshots/rules-builder.svg)
+
+*The rule builder: each rule type is a short form generated from the schemas in this folder.*
 
 | Type | Fires when | Action | Protections |
 | --- | --- | --- | --- |
@@ -59,7 +74,18 @@ Global guard: at most `RULES_MAX_CONCURRENT_SWAPS` (default 2) swap operations i
 
 Priority ordering for `make_room_by_priority`: `always_on (3) > normal (2) > evictable (1)`. Ties never evict.
 
+![A rule's history: every evaluation with its outcome, the observed values and the reason, including runs that were held back by cooldown or protections](../../../docs/screenshots/rule-detail.svg)
+
+*A rule's history: every evaluation with what it observed and why it fired or held back.*
+
 ## 3. Swap safety sequence
+
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../docs/diagrams/safe-swap-dark.svg">
+    <img src="../../../docs/diagrams/safe-swap-light.svg" alt="The seven steps of a safe swap: 1 plan (reserve VRAM, save the rollback), 2 route off, 3 drain in-flight requests, 4 unload the old instance, 5 load the new one, 6 health (ready, then one probe), 7 route on. Steps 2 to 4 take the old instance out, 5 to 7 bring the new one in. Make before break: when the GPU has room the order is 1, 2, 5, 6, 3, 4, 7, so capacity never drops. If a step fails, the old instance is routed back on or reloaded from its saved spec; if that fails too the swap ends failed, the deployment is degraded and a critical alert fires." width="880">
+  </picture>
+</p>
 
 Every action becomes a `swap_operations` row executed by the swap manager (leader-only). Steps, each recorded in `steps[]` with timestamps and the `agent_commands.id`:
 
@@ -76,11 +102,24 @@ Every action becomes a `swap_operations` row executed by the swap manager (leade
 
 For `swap`/`move` where VRAM allows, steps 5–6 run **before** 3–4 (load the replacement first, then drain the old one) so capacity never drops; the planner decides based on free VRAM and records the chosen order in `plan.order`.
 
+> [!WARNING]
+> `force_after_timeout` is off by default: a drain that times out fails the swap and routes the
+> old instance back on, rather than cutting requests that are still running. Turn it on
+> (`SWAP_FORCE_AFTER_DRAIN_TIMEOUT` for rule-triggered swaps) only when clients retry.
+
 **Rollback.** On failure at or after step 4: if the old instance is still loaded (unload not executed or failed), `route_on` it again (state `rolled_back`). If the old instance is gone, try to reload it from `rollback.previous_spec` on the same devices; if that fails too the swap ends `failed`, the deployment goes `degraded`, an alert `swap.failed` (critical) fires and auto-heal may pick it up. Rollback is attempted at most once; `swap_operations.rollback` stores `{previous_instance_spec, previous_routing, attempted: bool, result}`.
 
 **Timeouts.** Each command carries `timeout_seconds` (drain: `drain_timeout_seconds + 10`; load: `health.startup_timeout_seconds + 60`). The whole swap has `SWAP_MAX_DURATION_SECONDS` (default 1800).
 
 **Layouts.** `apply_layout` builds one swap per deployment in `position` order from the diff (`POST /layouts/{id}/preview` returns the same diff without executing): instances to unload, load, move, re-weight. Independent deployments are applied in parallel up to `RULES_MAX_CONCURRENT_SWAPS`; a failure in one does not roll back the others (the layout screen shows per-item status).
+
+![Layouts: named Day and Night sets of models and replicas, switched on a timezone-aware schedule, with a preview of what a switch would load and unload](../../../docs/screenshots/layouts.svg)
+
+*Layouts: named sets of models switched on a schedule; the preview shows the diff before it runs.*
+
+![The Swaps screen: each swap's steps with their state and timing, including rollbacks](../../../docs/screenshots/swaps.svg)
+
+*Swaps: the steps above as they run, with timing and any rollback.*
 
 ## 4. Audit and alerts
 

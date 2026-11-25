@@ -18,8 +18,9 @@
         "benchmark_progress",
         "config_applied", "config_rejected",
         "cert_rotated", "cert_expiring",
-        "egress_blocked",
+        "egress_blocked", "ingress_rejected",
         "ssh_instance_state_changed",
+        "agent_update",
         "log"
       ]
     },
@@ -74,7 +75,7 @@
       },
       "additionalProperties": false
     },
-    "details": { "type": ["object", "null"], "description": "Free-form extra context (benchmark progress numbers, blocked egress host, cert not_after, ...)." }
+    "details": { "type": ["object", "null"], "description": "Free-form extra context (benchmark progress numbers, blocked egress host, cert not_after, ...). agent_update (protocol.md §14, only to hubs listing agent_updates): {\"phase\": staging | staged | stage_failed | swapping | restarting | readopting | health_check | succeeded | rolled_back | failed, \"version\", \"from_version\", \"request_id\", \"at\", \"adopted\", \"relaunched\", \"error_code\"}." }
   },
   "additionalProperties": false
 }

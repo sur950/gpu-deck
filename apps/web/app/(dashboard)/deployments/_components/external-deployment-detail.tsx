@@ -258,7 +258,7 @@ export function ExternalDeploymentDetail({
             />
             <div className="mt-4 flex flex-wrap gap-4 text-xs">
               <Link
-                href={`/observability/inference?deployment_id=${d.id}`}
+                href={`/observability/inference?deployment=${d.id}`}
                 className="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
               >
                 Inference metrics →

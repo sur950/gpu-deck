@@ -376,7 +376,7 @@ class ApiKeyService:
 
     @staticmethod
     async def as_dependency(
-        request: Request, db: AsyncSession = Depends(get_db)
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
     ) -> "ApiKeyService":
         return ApiKeyService(ApiKeyRepository(db))
 

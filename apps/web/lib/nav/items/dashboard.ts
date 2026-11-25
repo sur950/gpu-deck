@@ -10,7 +10,7 @@ export const dashboardNav: NavEntry[] = [
     icon: LayoutDashboard,
     group: 'overview',
     order: 0,
-    description: 'Fleet health, inference traffic and spend at a glance.',
+    description: 'Fleet health, inference traffic and automation at a glance.',
     keywords: ['overview', 'home'],
   },
 ];

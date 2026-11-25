@@ -2,9 +2,36 @@
 
 All changes are additive within protocol major `v1` (`envelope.v = 1`); older agents/hubs ignore or never send the new parts. Agent builds implementing them report `agent_version >= 1.0.0` (the first public release) and list them in `hello.capabilities.commands`.
 
+## Unreleased: network timing
+
+No new frames or fields; works with every agent and hub version.
+
+- **Proxy response header `X-GPUDeck-Proxy-Timing`** (§6): `queue`, `engine` and `node` durations of each proxied request in Server-Timing syntax. The API layer turns it into the request's network and engine time and removes it; API layers that do not know it ignore it.
+- **Control-plane RTT** (§3): the hub times the pongs of its existing WebSocket keep-alive pings; agents need no change.
+
+## Unreleased: agent self-update
+
+Additive and capability-gated (protocol.md §14): hubs list the feature `agent_updates`, agents list the two commands; older agents keep working and show "update manually", newer agents send nothing new to older hubs.
+
+- **Commands** `stage_update` (signed release manifest + download token; the agent downloads the binary from the hub it joined, verifies the ed25519 signature with a pinned release key and the sha256, checks it runs, keeps it staged) and `apply_update` (re-verify, atomic swap keeping the previous binary, restart, re-adopt engines, health check, automatic rollback).
+- **`common.json`**: `ReleaseManifest`, `SignedReleaseManifest`, `AgentUpdateStatus`; error codes `update_unsupported`, `signature_invalid`, `not_staged`, `update_in_progress`, `rolled_back`.
+- **`hello.agent_update` / `inventory.agent_update`**, **event kind `agent_update`** (`details.phase`).
+- **Security policy** `release.public_keys`: the release signing keys, signed by the CA like every other pin.
+
+## 1.6 — 2026-11-24
+
+Secure transport (protocol.md §13). Additive: hubs list the `secure_transport` feature, agents send the new fields only to such hubs, older agents ignore `config_push.security`.
+
+- **Serving modes**: `hello.proxy.mode` (`tunnel` | `direct`) and `hello.proxy.bind`. In `tunnel` (the new agent default) the agent dials the API layer (TLS 1.3, node certificate, ALPN `h2`) and serves its HTTP/2 requests over that connection; the node listens on no port. The routing table addresses such nodes as `tunnel://<node_id>`.
+- **Signed node security policy**: `security_policy.json`, carried as `common.json#/$defs/SignedPolicy` in `config_push.security` and in the join response (`security`), signed with the internal CA key: hub and API-layer key pins (SubjectPublicKeyInfo sha256, with next / previous keys for rotation), tunnel endpoints, direct-mode source allow-list and handshake limits, SSH-instance default CIDRs, rejected-attempt reporting. Verified against the pinned CA, bound to the node, no rollback; a push whose policy does not verify is rejected whole.
+- **Direct proxy hardening** (§6): source allow-list before TLS, per-source handshake rate limit and a cap on pending handshakes, the API layer's key pinned inside the handshake, private-interface bind by default.
+- **Event kind `ingress_rejected`**: rejected inbound attempts per interval (reasons, sources); `critical` at the burst threshold.
+- **SSH instances** (§8): a forwarder without source CIDRs accepts nobody (was: anybody); private-interface bind by default.
+- **Join**: `--ca-fingerprint` is required (`--insecure-skip-ca-pin` to override); no redirects are followed.
+
 ## 1.5 — 2026-11-24
 
-No new frames or fields; behaviour found on real hardware (H200):
+No new frames or fields; behaviour found on real hardware (a Hopper GPU):
 
 - **Engines outlive the agent** (protocol.md §7): an agent restart / upgrade no longer stops engines; the next agent process re-adopts them (pid + start time + health) with the same pid and port and sends no `engine_started` for them; only engines that are gone are relaunched, on their previous port. `engine_crashed` of an adopted engine has no exit code / signal (not observable).
 - **`hello.observed_engines`** is sent from the first `hello` (the last `hello_ack.features` is remembered across restarts); it is withheld only from a hub known not to list `observed_engines`, or after a hub closed the connection before `hello_ack` on a first contact.

@@ -44,22 +44,49 @@ const (
 	Release AgentBuildSource = "release"
 )
 
-// Defines values for BillingReportGroupBy.
+// Defines values for AgentRolloutState.
 const (
-	BillingReportGroupByApiKey     BillingReportGroupBy = "api_key"
-	BillingReportGroupByCluster    BillingReportGroupBy = "cluster"
-	BillingReportGroupByDeployment BillingReportGroupBy = "deployment"
-	BillingReportGroupByModel      BillingReportGroupBy = "model"
-	BillingReportGroupByNode       BillingReportGroupBy = "node"
+	AgentRolloutStateCancelled AgentRolloutState = "cancelled"
+	AgentRolloutStateFailed    AgentRolloutState = "failed"
+	AgentRolloutStateRunning   AgentRolloutState = "running"
+	AgentRolloutStateSucceeded AgentRolloutState = "succeeded"
 )
 
-// Defines values for BillingReportCreateGroupBy.
+// Defines values for AgentRolloutTrigger.
 const (
-	BillingReportCreateGroupByApiKey     BillingReportCreateGroupBy = "api_key"
-	BillingReportCreateGroupByCluster    BillingReportCreateGroupBy = "cluster"
-	BillingReportCreateGroupByDeployment BillingReportCreateGroupBy = "deployment"
-	BillingReportCreateGroupByModel      BillingReportCreateGroupBy = "model"
-	BillingReportCreateGroupByNode       BillingReportCreateGroupBy = "node"
+	AgentRolloutTriggerAuto   AgentRolloutTrigger = "auto"
+	AgentRolloutTriggerManual AgentRolloutTrigger = "manual"
+)
+
+// Defines values for AgentUpdatePolicyMode.
+const (
+	AgentUpdatePolicyModeAuto   AgentUpdatePolicyMode = "auto"
+	AgentUpdatePolicyModeManual AgentUpdatePolicyMode = "manual"
+)
+
+// Defines values for AgentUpdateRunTrigger.
+const (
+	AgentUpdateRunTriggerAuto    AgentUpdateRunTrigger = "auto"
+	AgentUpdateRunTriggerManual  AgentUpdateRunTrigger = "manual"
+	AgentUpdateRunTriggerRollout AgentUpdateRunTrigger = "rollout"
+)
+
+// Defines values for AgentUpdateWindowDays.
+const (
+	Fri AgentUpdateWindowDays = "fri"
+	Mon AgentUpdateWindowDays = "mon"
+	Sat AgentUpdateWindowDays = "sat"
+	Sun AgentUpdateWindowDays = "sun"
+	Thu AgentUpdateWindowDays = "thu"
+	Tue AgentUpdateWindowDays = "tue"
+	Wed AgentUpdateWindowDays = "wed"
+)
+
+// Defines values for ApiLayerLatencyMode.
+const (
+	ApiLayerLatencyModeDirect      ApiLayerLatencyMode = "direct"
+	ApiLayerLatencyModeLessThannil ApiLayerLatencyMode = "<nil>"
+	ApiLayerLatencyModeTunnel      ApiLayerLatencyMode = "tunnel"
 )
 
 // Defines values for CloudNodePendingAction.
@@ -184,6 +211,12 @@ const (
 	InstanceDrainRequestThenUnload  InstanceDrainRequestThen = "unload"
 )
 
+// Defines values for LatencySummarySource.
+const (
+	LatencySummarySourceApiLayer LatencySummarySource = "api_layer"
+	LatencySummarySourceHub      LatencySummarySource = "hub"
+)
+
 // Defines values for LayoutUnlistedPolicy.
 const (
 	LayoutUnlistedPolicyKeep   LayoutUnlistedPolicy = "keep"
@@ -245,6 +278,28 @@ const (
 	NodeActivityStale       NodeActivity = "stale"
 )
 
+// Defines values for NodeAgentUpdateMode.
+const (
+	NodeAgentUpdateModeHelper      NodeAgentUpdateMode = "helper"
+	NodeAgentUpdateModeManaged     NodeAgentUpdateMode = "managed"
+	NodeAgentUpdateModeManual      NodeAgentUpdateMode = "manual"
+	NodeAgentUpdateModeSelf        NodeAgentUpdateMode = "self"
+	NodeAgentUpdateModeUnsupported NodeAgentUpdateMode = "unsupported"
+)
+
+// Defines values for NodeAgentUpdateStatus.
+const (
+	NodeAgentUpdateStatusDisabled        NodeAgentUpdateStatus = "disabled"
+	NodeAgentUpdateStatusManaged         NodeAgentUpdateStatus = "managed"
+	NodeAgentUpdateStatusManual          NodeAgentUpdateStatus = "manual"
+	NodeAgentUpdateStatusStaged          NodeAgentUpdateStatus = "staged"
+	NodeAgentUpdateStatusStaging         NodeAgentUpdateStatus = "staging"
+	NodeAgentUpdateStatusUnsupported     NodeAgentUpdateStatus = "unsupported"
+	NodeAgentUpdateStatusUpToDate        NodeAgentUpdateStatus = "up_to_date"
+	NodeAgentUpdateStatusUpdateAvailable NodeAgentUpdateStatus = "update_available"
+	NodeAgentUpdateStatusUpdating        NodeAgentUpdateStatus = "updating"
+)
+
 // Defines values for ServiceCertificateRequestKind.
 const (
 	ServiceCertificateRequestKindAgentHub     ServiceCertificateRequestKind = "agent_hub"
@@ -261,10 +316,10 @@ const (
 
 // Defines values for SessionSampleState.
 const (
-	SessionSampleStateGenerating SessionSampleState = "generating"
-	SessionSampleStateIdle       SessionSampleState = "idle"
-	SessionSampleStateProcessing SessionSampleState = "processing"
-	SessionSampleStateWaiting    SessionSampleState = "waiting"
+	Generating SessionSampleState = "generating"
+	Idle       SessionSampleState = "idle"
+	Processing SessionSampleState = "processing"
+	Waiting    SessionSampleState = "waiting"
 )
 
 // Defines values for SwapCreateKind.
@@ -294,10 +349,10 @@ const (
 
 // Defines values for TrafficWeightsRequestStrategy.
 const (
-	TrafficWeightsRequestStrategyLeastSessions TrafficWeightsRequestStrategy = "least_sessions"
-	TrafficWeightsRequestStrategyLessThannil   TrafficWeightsRequestStrategy = "<nil>"
-	TrafficWeightsRequestStrategyRoundRobin    TrafficWeightsRequestStrategy = "round_robin"
-	TrafficWeightsRequestStrategyWeighted      TrafficWeightsRequestStrategy = "weighted"
+	LeastSessions TrafficWeightsRequestStrategy = "least_sessions"
+	LessThannil   TrafficWeightsRequestStrategy = "<nil>"
+	RoundRobin    TrafficWeightsRequestStrategy = "round_robin"
+	Weighted      TrafficWeightsRequestStrategy = "weighted"
 )
 
 // Defines values for AgentCommandState.
@@ -311,6 +366,21 @@ const (
 	AgentCommandStateSent      AgentCommandState = "sent"
 	AgentCommandStateSucceeded AgentCommandState = "succeeded"
 	AgentCommandStateTimedOut  AgentCommandState = "timed_out"
+)
+
+// Defines values for AgentUpdateState.
+const (
+	AgentUpdateStateCancelled   AgentUpdateState = "cancelled"
+	AgentUpdateStateFailed      AgentUpdateState = "failed"
+	AgentUpdateStateHealthCheck AgentUpdateState = "health_check"
+	AgentUpdateStatePending     AgentUpdateState = "pending"
+	AgentUpdateStateReadopting  AgentUpdateState = "readopting"
+	AgentUpdateStateRestarting  AgentUpdateState = "restarting"
+	AgentUpdateStateRolledBack  AgentUpdateState = "rolled_back"
+	AgentUpdateStateStaged      AgentUpdateState = "staged"
+	AgentUpdateStateStaging     AgentUpdateState = "staging"
+	AgentUpdateStateSucceeded   AgentUpdateState = "succeeded"
+	AgentUpdateStateSwapping    AgentUpdateState = "swapping"
 )
 
 // Defines values for AlertChannelType.
@@ -361,8 +431,8 @@ const (
 
 // Defines values for AuditOutcome.
 const (
-	AuditOutcomeFailure AuditOutcome = "failure"
-	AuditOutcomeSuccess AuditOutcome = "success"
+	Failure AuditOutcome = "failure"
+	Success AuditOutcome = "success"
 )
 
 // Defines values for BatchStatus.
@@ -379,14 +449,6 @@ const (
 	BenchmarkRunStatusFailed    BenchmarkRunStatus = "failed"
 	BenchmarkRunStatusPending   BenchmarkRunStatus = "pending"
 	BenchmarkRunStatusRunning   BenchmarkRunStatus = "running"
-)
-
-// Defines values for BillingReportStatus.
-const (
-	BillingReportStatusFailed     BillingReportStatus = "failed"
-	BillingReportStatusGenerating BillingReportStatus = "generating"
-	BillingReportStatusPending    BillingReportStatus = "pending"
-	BillingReportStatusReady      BillingReportStatus = "ready"
 )
 
 // Defines values for CacheState.
@@ -623,11 +685,11 @@ const (
 
 // Defines values for ModelFileFormat.
 const (
-	Gguf        ModelFileFormat = "gguf"
-	Mlx         ModelFileFormat = "mlx"
-	Other       ModelFileFormat = "other"
-	Pickle      ModelFileFormat = "pickle"
-	Safetensors ModelFileFormat = "safetensors"
+	ModelFileFormatGguf        ModelFileFormat = "gguf"
+	ModelFileFormatMlx         ModelFileFormat = "mlx"
+	ModelFileFormatOther       ModelFileFormat = "other"
+	ModelFileFormatPickle      ModelFileFormat = "pickle"
+	ModelFileFormatSafetensors ModelFileFormat = "safetensors"
 )
 
 // Defines values for ModelPriority.
@@ -697,12 +759,12 @@ const (
 
 // Defines values for RuleRunOutcome.
 const (
-	Cooldown RuleRunOutcome = "cooldown"
-	DryRun   RuleRunOutcome = "dry_run"
-	Error    RuleRunOutcome = "error"
-	Fired    RuleRunOutcome = "fired"
-	NoMatch  RuleRunOutcome = "no_match"
-	Skipped  RuleRunOutcome = "skipped"
+	RuleRunOutcomeCooldown RuleRunOutcome = "cooldown"
+	RuleRunOutcomeDryRun   RuleRunOutcome = "dry_run"
+	RuleRunOutcomeError    RuleRunOutcome = "error"
+	RuleRunOutcomeFired    RuleRunOutcome = "fired"
+	RuleRunOutcomeNoMatch  RuleRunOutcome = "no_match"
+	RuleRunOutcomeSkipped  RuleRunOutcome = "skipped"
 )
 
 // Defines values for RuleType.
@@ -756,14 +818,6 @@ const (
 	Anthropic UsageFormat = "anthropic"
 	Ollama    UsageFormat = "ollama"
 	Openai    UsageFormat = "openai"
-)
-
-// Defines values for UsageStatus.
-const (
-	UsageStatusCancelled UsageStatus = "cancelled"
-	UsageStatusError     UsageStatus = "error"
-	UsageStatusSuccess   UsageStatus = "success"
-	UsageStatusTimeout   UsageStatus = "timeout"
 )
 
 // Defines values for ListRemoteFilesParamsSource.
@@ -837,25 +891,6 @@ const (
 	QueryUsageMetricsParamsGroupByNone       QueryUsageMetricsParamsGroupBy = "none"
 )
 
-// Defines values for ExportUsageCsvParamsMode.
-const (
-	Events  ExportUsageCsvParamsMode = "events"
-	Summary ExportUsageCsvParamsMode = "summary"
-)
-
-// Defines values for GetUsageSummaryParamsGroupBy.
-const (
-	GetUsageSummaryParamsGroupByApiKey     GetUsageSummaryParamsGroupBy = "api_key"
-	GetUsageSummaryParamsGroupByCluster    GetUsageSummaryParamsGroupBy = "cluster"
-	GetUsageSummaryParamsGroupByDay        GetUsageSummaryParamsGroupBy = "day"
-	GetUsageSummaryParamsGroupByDeployment GetUsageSummaryParamsGroupBy = "deployment"
-	GetUsageSummaryParamsGroupByEndpoint   GetUsageSummaryParamsGroupBy = "endpoint"
-	GetUsageSummaryParamsGroupByFormat     GetUsageSummaryParamsGroupBy = "format"
-	GetUsageSummaryParamsGroupByHour       GetUsageSummaryParamsGroupBy = "hour"
-	GetUsageSummaryParamsGroupByModel      GetUsageSummaryParamsGroupBy = "model"
-	GetUsageSummaryParamsGroupByNode       GetUsageSummaryParamsGroupBy = "node"
-)
-
 // AdminUser defines model for AdminUser.
 type AdminUser struct {
 	CreatedAt         *time.Time         `json:"created_at,omitempty"`
@@ -916,6 +951,152 @@ type AgentCommand struct {
 	State           AgentCommandState       `json:"state"`
 	SwapOperationId *openapi_types.UUID     `json:"swap_operation_id"`
 }
+
+// AgentRollout A rolling agent update of a cluster.
+type AgentRollout struct {
+	ClusterId      openapi_types.UUID   `json:"cluster_id"`
+	CompletedCount int                  `json:"completed_count"`
+	CreatedAt      time.Time            `json:"created_at"`
+	CreatedBy      *openapi_types.UUID  `json:"created_by"`
+	CurrentNodeId  *openapi_types.UUID  `json:"current_node_id"`
+	FailedNodeId   *openapi_types.UUID  `json:"failed_node_id"`
+	FinishedAt     *time.Time           `json:"finished_at"`
+	Id             openapi_types.UUID   `json:"id"`
+	Message        *string              `json:"message"`
+	NodeIds        []openapi_types.UUID `json:"node_ids"`
+	Skipped        []struct {
+		NodeId   openapi_types.UUID `json:"node_id"`
+		NodeName *string            `json:"node_name"`
+		Reason   string             `json:"reason"`
+	} `json:"skipped"`
+	StartedAt     time.Time           `json:"started_at"`
+	State         AgentRolloutState   `json:"state"`
+	TargetVersion string              `json:"target_version"`
+	Trigger       AgentRolloutTrigger `json:"trigger"`
+	UpdatedAt     *time.Time          `json:"updated_at"`
+}
+
+// AgentRolloutState defines model for AgentRollout.State.
+type AgentRolloutState string
+
+// AgentRolloutTrigger defines model for AgentRollout.Trigger.
+type AgentRolloutTrigger string
+
+// AgentRolloutRequest defines model for AgentRolloutRequest.
+type AgentRolloutRequest struct {
+	// Version Default: the target version
+	Version *string `json:"version"`
+}
+
+// AgentStage defines model for AgentStage.
+type AgentStage struct {
+	CommandId *openapi_types.UUID `json:"command_id"`
+	NodeId    openapi_types.UUID  `json:"node_id"`
+	State     string              `json:"state"`
+	Version   string              `json:"version"`
+}
+
+// AgentUpdateCounts defines model for AgentUpdateCounts.
+type AgentUpdateCounts struct {
+	Managed         int `json:"managed"`
+	Manual          int `json:"manual"`
+	Offline         int `json:"offline"`
+	Staged          int `json:"staged"`
+	Total           int `json:"total"`
+	Unsupported     int `json:"unsupported"`
+	UpToDate        int `json:"up_to_date"`
+	UpdateAvailable int `json:"update_available"`
+	Updating        int `json:"updating"`
+}
+
+// AgentUpdateOverview defines model for AgentUpdateOverview.
+type AgentUpdateOverview struct {
+	AvailableVersions    *[]string         `json:"available_versions,omitempty"`
+	Counts               AgentUpdateCounts `json:"counts"`
+	Enabled              bool              `json:"enabled"`
+	HealthTimeoutSeconds *int              `json:"health_timeout_seconds,omitempty"`
+	Prestage             *bool             `json:"prestage,omitempty"`
+	Reason               *string           `json:"reason"`
+
+	// ReleaseKeys Keys in AGENT_RELEASE_PUBLIC_KEYS
+	ReleaseKeys int `json:"release_keys"`
+
+	// Source local (AGENT_DIST_DIR), cache or release (AGENT_RELEASE_URL)
+	Source        *string `json:"source"`
+	TargetVersion *string `json:"target_version"`
+
+	// Targets Build targets of the target release
+	Targets *[]string `json:"targets,omitempty"`
+}
+
+// AgentUpdatePolicy clusters.config.agent_updates. manual (default): an admin clicks Update or starts a rolling update. auto: the scheduler starts a rolling update inside the maintenance window once nodes have the target version staged.
+type AgentUpdatePolicy struct {
+	Mode   *AgentUpdatePolicyMode `json:"mode,omitempty"`
+	Window *AgentUpdateWindow     `json:"window"`
+}
+
+// AgentUpdatePolicyMode defines model for AgentUpdatePolicy.Mode.
+type AgentUpdatePolicyMode string
+
+// AgentUpdateRequest defines model for AgentUpdateRequest.
+type AgentUpdateRequest struct {
+	HealthTimeoutSeconds *int `json:"health_timeout_seconds"`
+
+	// Version Default: the target version
+	Version *string `json:"version"`
+}
+
+// AgentUpdateRun One agent update of one node (agent protocol §14).
+type AgentUpdateRun struct {
+	ClusterId  *openapi_types.UUID `json:"cluster_id"`
+	CreatedAt  time.Time           `json:"created_at"`
+	CreatedBy  *openapi_types.UUID `json:"created_by"`
+	DeadlineAt *time.Time          `json:"deadline_at"`
+
+	// ErrorCode rolled_back, timeout, stage_timeout, signature_invalid, update_unsupported, ...
+	ErrorCode            *string               `json:"error_code"`
+	ErrorMessage         *string               `json:"error_message"`
+	FinishedAt           *time.Time            `json:"finished_at"`
+	FromVersion          *string               `json:"from_version"`
+	HealthTimeoutSeconds *int                  `json:"health_timeout_seconds,omitempty"`
+	Id                   openapi_types.UUID    `json:"id"`
+	NodeId               openapi_types.UUID    `json:"node_id"`
+	NodeName             *string               `json:"node_name"`
+	RolloutId            *openapi_types.UUID   `json:"rollout_id"`
+	StartedAt            time.Time             `json:"started_at"`
+	State                AgentUpdateState      `json:"state"`
+	Steps                []AgentUpdateStep     `json:"steps"`
+	ToVersion            string                `json:"to_version"`
+	Trigger              AgentUpdateRunTrigger `json:"trigger"`
+	UpdatedAt            *time.Time            `json:"updated_at"`
+}
+
+// AgentUpdateRunTrigger defines model for AgentUpdateRun.Trigger.
+type AgentUpdateRunTrigger string
+
+// AgentUpdateStep defines model for AgentUpdateStep.
+type AgentUpdateStep struct {
+	At      *time.Time `json:"at"`
+	Message *string    `json:"message"`
+	Phase   string     `json:"phase"`
+}
+
+// AgentUpdateWindow defines model for AgentUpdateWindow.
+type AgentUpdateWindow struct {
+	Days []AgentUpdateWindowDays `json:"days"`
+
+	// End HH:MM; earlier than start = the window ends the next day
+	End string `json:"end"`
+
+	// Start HH:MM (24 h) in timezone
+	Start string `json:"start"`
+
+	// Timezone IANA time zone
+	Timezone *string `json:"timezone,omitempty"`
+}
+
+// AgentUpdateWindowDays defines model for AgentUpdateWindow.Days.
+type AgentUpdateWindowDays string
 
 // AlertChannel defines model for AlertChannel.
 type AlertChannel struct {
@@ -1074,6 +1255,34 @@ type ApiKeyUpdate struct {
 	Metadata    *map[string]interface{} `json:"metadata,omitempty"`
 	Name        *string                 `json:"name,omitempty"`
 }
+
+// ApiLayerLatency defines model for ApiLayerLatency.
+type ApiLayerLatency struct {
+	ApiLayerId string `json:"api_layer_id"`
+
+	// Failures Probes that got no answer
+	Failures *int `json:"failures,omitempty"`
+
+	// JitterMs Smoothed absolute difference between consecutive samples
+	JitterMs *float32 `json:"jitter_ms"`
+	LastMs   *float32 `json:"last_ms"`
+	MaxMs    *float32 `json:"max_ms"`
+	MinMs    *float32 `json:"min_ms"`
+
+	// Mode Serving path the API layer uses to reach the node
+	Mode   *ApiLayerLatencyMode `json:"mode"`
+	P50Ms  *float32             `json:"p50_ms"`
+	P95Ms  *float32             `json:"p95_ms"`
+	Region *string              `json:"region"`
+
+	// RttMs Smoothed RTT (EWMA, SERVING_RTT_EWMA_ALPHA)
+	RttMs     *float32   `json:"rtt_ms"`
+	Samples   *int       `json:"samples,omitempty"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+// ApiLayerLatencyMode Serving path the API layer uses to reach the node
+type ApiLayerLatencyMode string
 
 // ApplyRecommendationRequest defines model for ApplyRecommendationRequest.
 type ApplyRecommendationRequest struct {
@@ -1236,75 +1445,6 @@ type BenchmarkUpdate struct {
 	// Workload {input_tokens, output_tokens, requests_per_level, dataset, prompts[], stream}
 	Workload *map[string]interface{} `json:"workload,omitempty"`
 }
-
-// BillingEstimate defines model for BillingEstimate.
-type BillingEstimate struct {
-	AsOf        time.Time          `json:"as_of"`
-	ByApiKey    *[]UsageSummaryRow `json:"by_api_key,omitempty"`
-	ByModel     *[]UsageSummaryRow `json:"by_model,omitempty"`
-	ByNode      *[]UsageSummaryRow `json:"by_node,omitempty"`
-	PeriodEnd   time.Time          `json:"period_end"`
-	PeriodStart time.Time          `json:"period_start"`
-
-	// ProjectedCostUsd Linear projection to period_end
-	ProjectedCostUsd float32     `json:"projected_cost_usd"`
-	Totals           UsageTotals `json:"totals"`
-}
-
-// BillingLineItem defines model for BillingLineItem.
-type BillingLineItem struct {
-	CostBreakdown *struct {
-		CachedTokensUsd *float32 `json:"cached_tokens_usd,omitempty"`
-		GpuTimeUsd      *float32 `json:"gpu_time_usd,omitempty"`
-		InputTokensUsd  *float32 `json:"input_tokens_usd,omitempty"`
-		OutputTokensUsd *float32 `json:"output_tokens_usd,omitempty"`
-	} `json:"cost_breakdown,omitempty"`
-	Group         map[string]string   `json:"group"`
-	Labels        *map[string]string  `json:"labels,omitempty"`
-	PricePlanId   *openapi_types.UUID `json:"price_plan_id"`
-	PricePlanName *string             `json:"price_plan_name"`
-	Totals        UsageTotals         `json:"totals"`
-}
-
-// BillingReport defines model for BillingReport.
-type BillingReport struct {
-	CreatedAt    time.Time `json:"created_at"`
-	Currency     *string   `json:"currency,omitempty"`
-	ErrorMessage *string   `json:"error_message"`
-
-	// Filters {api_key_ids[], model_ids[], node_ids[], cluster_ids[]}
-	Filters     *map[string]interface{} `json:"filters,omitempty"`
-	GeneratedAt *time.Time              `json:"generated_at"`
-
-	// GroupBy Default [api_key, model]
-	GroupBy     *[]BillingReportGroupBy `json:"group_by,omitempty"`
-	Id          openapi_types.UUID      `json:"id"`
-	LineItems   *[]BillingLineItem      `json:"line_items,omitempty"`
-	Name        string                  `json:"name"`
-	PeriodEnd   time.Time               `json:"period_end"`
-	PeriodStart time.Time               `json:"period_start"`
-	Status      BillingReportStatus     `json:"status"`
-	Totals      *UsageTotals            `json:"totals,omitempty"`
-	UpdatedAt   *time.Time              `json:"updated_at,omitempty"`
-}
-
-// BillingReportGroupBy defines model for BillingReport.GroupBy.
-type BillingReportGroupBy string
-
-// BillingReportCreate defines model for BillingReportCreate.
-type BillingReportCreate struct {
-	// Filters {api_key_ids[], model_ids[], node_ids[], cluster_ids[]}
-	Filters *map[string]interface{} `json:"filters,omitempty"`
-
-	// GroupBy Default [api_key, model]
-	GroupBy     *[]BillingReportCreateGroupBy `json:"group_by,omitempty"`
-	Name        string                        `json:"name"`
-	PeriodEnd   time.Time                     `json:"period_end"`
-	PeriodStart time.Time                     `json:"period_start"`
-}
-
-// BillingReportCreateGroupBy defines model for BillingReportCreate.GroupBy.
-type BillingReportCreateGroupBy string
 
 // Branding defines model for Branding.
 type Branding struct {
@@ -1675,6 +1815,19 @@ type Cluster struct {
 	Status          ClusterStatus           `json:"status"`
 	Type            ClusterType             `json:"type"`
 	UpdatedAt       *time.Time              `json:"updated_at,omitempty"`
+}
+
+// ClusterAgentUpdate defines model for ClusterAgentUpdate.
+type ClusterAgentUpdate struct {
+	ClusterId    openapi_types.UUID `json:"cluster_id"`
+	Counts       AgentUpdateCounts  `json:"counts"`
+	InWindow     bool               `json:"in_window"`
+	NextWindowAt *time.Time         `json:"next_window_at"`
+
+	// Policy clusters.config.agent_updates. manual (default): an admin clicks Update or starts a rolling update. auto: the scheduler starts a rolling update inside the maintenance window once nodes have the target version staged.
+	Policy        AgentUpdatePolicy `json:"policy"`
+	Rollout       *AgentRollout     `json:"rollout"`
+	TargetVersion *string           `json:"target_version"`
 }
 
 // ClusterCounts defines model for ClusterCounts.
@@ -2892,6 +3045,70 @@ type JoinTokenCreated struct {
 	UsedByNodeId *openapi_types.UUID `json:"used_by_node_id"`
 }
 
+// LatencyHistory defines model for LatencyHistory.
+type LatencyHistory struct {
+	From      time.Time        `json:"from"`
+	Series    []TimeSeries     `json:"series"`
+	Step      string           `json:"step"`
+	Summaries []LatencySummary `json:"summaries"`
+	To        time.Time        `json:"to"`
+}
+
+// LatencyLive defines model for LatencyLive.
+type LatencyLive struct {
+	ApiLayers []struct {
+		Id string `json:"id"`
+
+		// Nodes Nodes this API layer measured in its last round
+		Nodes        *int       `json:"nodes"`
+		ProbeSeconds *float32   `json:"probe_seconds"`
+		Region       *string    `json:"region"`
+		SeenAt       *time.Time `json:"seen_at"`
+	} `json:"api_layers"`
+	GeneratedAt time.Time     `json:"generated_at"`
+	Nodes       []NodeLatency `json:"nodes"`
+}
+
+// LatencyStats Round-trip statistics of one path (milliseconds)
+type LatencyStats struct {
+	// Failures Probes that got no answer
+	Failures *int `json:"failures,omitempty"`
+
+	// JitterMs Smoothed absolute difference between consecutive samples
+	JitterMs *float32 `json:"jitter_ms"`
+	LastMs   *float32 `json:"last_ms"`
+	MaxMs    *float32 `json:"max_ms"`
+	MinMs    *float32 `json:"min_ms"`
+	P50Ms    *float32 `json:"p50_ms"`
+	P95Ms    *float32 `json:"p95_ms"`
+
+	// RttMs Smoothed RTT (EWMA, SERVING_RTT_EWMA_ALPHA)
+	RttMs     *float32   `json:"rtt_ms"`
+	Samples   *int       `json:"samples,omitempty"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+// LatencySummary defines model for LatencySummary.
+type LatencySummary struct {
+	ApiLayerId *string              `json:"api_layer_id"`
+	AvgMs      *float32             `json:"avg_ms"`
+	JitterMs   *float32             `json:"jitter_ms"`
+	LastAt     *time.Time           `json:"last_at"`
+	MaxMs      *float32             `json:"max_ms"`
+	MinMs      *float32             `json:"min_ms"`
+	Mode       *string              `json:"mode"`
+	NodeId     openapi_types.UUID   `json:"node_id"`
+	NodeName   *string              `json:"node_name"`
+	P50Ms      *float32             `json:"p50_ms"`
+	P95Ms      *float32             `json:"p95_ms"`
+	Points     *int                 `json:"points,omitempty"`
+	Region     *string              `json:"region"`
+	Source     LatencySummarySource `json:"source"`
+}
+
+// LatencySummarySource defines model for LatencySummary.Source.
+type LatencySummarySource string
+
 // Layout defines model for Layout.
 type Layout struct {
 	AppliedAt      *time.Time            `json:"applied_at"`
@@ -3238,7 +3455,10 @@ type ModelVersionCreate struct {
 // Node defines model for Node.
 type Node struct {
 	// Activity What the node's GPUs really do, from live samples (external = models running outside GPU Deck)
-	Activity          *NodeActivity           `json:"activity"`
+	Activity *NodeActivity `json:"activity"`
+
+	// AgentUpdate Agent self-update status (agent protocol §14)
+	AgentUpdate       *NodeAgentUpdate        `json:"agent_update"`
 	AgentVersion      *string                 `json:"agent_version"`
 	Arch              *NodeArch               `json:"arch"`
 	CacheDir          *string                 `json:"cache_dir"`
@@ -3292,6 +3512,32 @@ type Node struct {
 // NodeActivity What the node's GPUs really do, from live samples (external = models running outside GPU Deck)
 type NodeActivity string
 
+// NodeAgentUpdate Update status of a node. mode: helper (root-owned update helper), self (the agent owns its binary), managed (Kubernetes DaemonSet: Managed by Helm, never self-updates), unsupported (cannot replace its binary: reason), manual (agent predates self-update: update manually, see instructions).
+type NodeAgentUpdate struct {
+	ActiveRun       *AgentUpdateRun     `json:"active_run"`
+	CanUpdate       bool                `json:"can_update"`
+	CurrentVersion  *string             `json:"current_version"`
+	Instructions    *string             `json:"instructions"`
+	LastRun         *AgentUpdateRun     `json:"last_run"`
+	Mode            NodeAgentUpdateMode `json:"mode"`
+	PreviousVersion *string             `json:"previous_version"`
+	Reason          *string             `json:"reason"`
+	StagedAt        *time.Time          `json:"staged_at"`
+	StagedVersion   *string             `json:"staged_version"`
+
+	// State Reported by the agent: idle | staging | staged | applying
+	State           *string               `json:"state"`
+	Status          NodeAgentUpdateStatus `json:"status"`
+	TargetVersion   *string               `json:"target_version"`
+	UpdateAvailable bool                  `json:"update_available"`
+}
+
+// NodeAgentUpdateMode defines model for NodeAgentUpdate.Mode.
+type NodeAgentUpdateMode string
+
+// NodeAgentUpdateStatus defines model for NodeAgentUpdate.Status.
+type NodeAgentUpdateStatus string
+
 // NodeCertificate defines model for NodeCertificate.
 type NodeCertificate struct {
 	FingerprintSha256 string              `json:"fingerprint_sha256"`
@@ -3339,6 +3585,21 @@ type NodeHashRequest struct {
 	// Root paths are relative to root (must stay inside it)
 	Root        *string  `json:"root"`
 	WaitSeconds *float32 `json:"wait_seconds,omitempty"`
+}
+
+// NodeLatency defines model for NodeLatency.
+type NodeLatency struct {
+	// ApiLayers Nearest first
+	ApiLayers []ApiLayerLatency `json:"api_layers"`
+
+	// BestRttMs Lowest RTT from any API layer
+	BestRttMs *float32 `json:"best_rtt_ms"`
+
+	// Hub Agent hub -> agent (WebSocket ping / pong)
+	Hub      *LatencyStats      `json:"hub"`
+	NodeId   openapi_types.UUID `json:"node_id"`
+	NodeName *string            `json:"node_name"`
+	Status   *string            `json:"status"`
 }
 
 // NodeScanRequest defines model for NodeScanRequest.
@@ -3466,41 +3727,20 @@ type PrefetchRequest struct {
 	PinReason *string              `json:"pin_reason"`
 }
 
-// PricePlan defines model for PricePlan.
-type PricePlan struct {
-	CreatedAt            *time.Time         `json:"created_at,omitempty"`
-	Currency             string             `json:"currency"`
-	Description          *string            `json:"description"`
-	Id                   openapi_types.UUID `json:"id"`
-	IsDefault            bool               `json:"is_default"`
-	Name                 string             `json:"name"`
-	UpdatedAt            *time.Time         `json:"updated_at,omitempty"`
-	UsdPer1kCachedTokens float32            `json:"usd_per_1k_cached_tokens"`
-	UsdPer1kInputTokens  float32            `json:"usd_per_1k_input_tokens"`
-	UsdPer1kOutputTokens float32            `json:"usd_per_1k_output_tokens"`
-	UsdPerGpuMinute      float32            `json:"usd_per_gpu_minute"`
-}
+// RequestTiming defines model for RequestTiming.
+type RequestTiming struct {
+	From time.Time `json:"from"`
 
-// PricePlanCreate defines model for PricePlanCreate.
-type PricePlanCreate struct {
-	Description          *string  `json:"description"`
-	IsDefault            *bool    `json:"is_default,omitempty"`
-	Name                 string   `json:"name"`
-	UsdPer1kCachedTokens *float32 `json:"usd_per_1k_cached_tokens,omitempty"`
-	UsdPer1kInputTokens  *float32 `json:"usd_per_1k_input_tokens,omitempty"`
-	UsdPer1kOutputTokens *float32 `json:"usd_per_1k_output_tokens,omitempty"`
-	UsdPerGpuMinute      *float32 `json:"usd_per_gpu_minute,omitempty"`
-}
+	// Regions `region`, `requests` and the averages per API-layer region
+	Regions []map[string]interface{} `json:"regions"`
 
-// PricePlanUpdate Partial update; every field optional.
-type PricePlanUpdate struct {
-	Description          *string  `json:"description"`
-	IsDefault            *bool    `json:"is_default,omitempty"`
-	Name                 *string  `json:"name,omitempty"`
-	UsdPer1kCachedTokens *float32 `json:"usd_per_1k_cached_tokens,omitempty"`
-	UsdPer1kInputTokens  *float32 `json:"usd_per_1k_input_tokens,omitempty"`
-	UsdPer1kOutputTokens *float32 `json:"usd_per_1k_output_tokens,omitempty"`
-	UsdPerGpuMinute      *float32 `json:"usd_per_gpu_minute,omitempty"`
+	// Series One series per timing field (average per bucket, ms) plus `requests`
+	Series []TimeSeries `json:"series"`
+	Step   string       `json:"step"`
+
+	// Summary `requests`, the average of every timing field and `<phase>_p50_ms` / `<phase>_p95_ms` for ttft, total, upstream, net, rtt and engine
+	Summary map[string]*float32 `json:"summary"`
+	To      time.Time           `json:"to"`
 }
 
 // RevokeRequest defines model for RevokeRequest.
@@ -3867,39 +4107,6 @@ type TopologyNode struct {
 	Node    Node             `json:"node"`
 }
 
-// Trace defines model for Trace.
-type Trace struct {
-	DurationMs *float32 `json:"duration_ms"`
-
-	// OtlpUrl Deep link into the external tracing UI when OTEL_UI_URL is set
-	OtlpUrl *string     `json:"otlp_url"`
-	Root    *TraceSpan  `json:"root"`
-	Spans   []TraceSpan `json:"spans"`
-	TraceId string      `json:"trace_id"`
-}
-
-// TraceSpan defines model for TraceSpan.
-type TraceSpan struct {
-	ApiKeyId     *openapi_types.UUID     `json:"api_key_id"`
-	Attributes   *map[string]interface{} `json:"attributes"`
-	DeploymentId *openapi_types.UUID     `json:"deployment_id"`
-	DurationMs   *float32                `json:"duration_ms"`
-	Endpoint     *string                 `json:"endpoint"`
-	Error        bool                    `json:"error"`
-	Format       *UsageFormat            `json:"format"`
-	InstanceId   *openapi_types.UUID     `json:"instance_id"`
-	ModelId      *openapi_types.UUID     `json:"model_id"`
-	Name         string                  `json:"name"`
-	NodeId       *openapi_types.UUID     `json:"node_id"`
-	ParentSpanId *string                 `json:"parent_span_id"`
-	RequestId    *openapi_types.UUID     `json:"request_id"`
-	Service      string                  `json:"service"`
-	SpanId       string                  `json:"span_id"`
-	StatusCode   *int                    `json:"status_code"`
-	TraceId      string                  `json:"trace_id"`
-	Ts           time.Time               `json:"ts"`
-}
-
 // TrafficWeightsRequest defines model for TrafficWeightsRequest.
 type TrafficWeightsRequest struct {
 	Strategy *TrafficWeightsRequestStrategy `json:"strategy"`
@@ -3910,78 +4117,6 @@ type TrafficWeightsRequest struct {
 
 // TrafficWeightsRequestStrategy defines model for TrafficWeightsRequest.Strategy.
 type TrafficWeightsRequestStrategy string
-
-// UsageEvent defines model for UsageEvent.
-type UsageEvent struct {
-	ApiKeyId        *openapi_types.UUID     `json:"api_key_id"`
-	ApiKeyName      *string                 `json:"api_key_name"`
-	CachedTokens    int                     `json:"cached_tokens"`
-	ClusterId       *openapi_types.UUID     `json:"cluster_id"`
-	CostUsd         float32                 `json:"cost_usd"`
-	DeploymentId    *openapi_types.UUID     `json:"deployment_id"`
-	Endpoint        string                  `json:"endpoint"`
-	ErrorCode       *string                 `json:"error_code"`
-	Format          UsageFormat             `json:"format"`
-	GpuCount        *int                    `json:"gpu_count,omitempty"`
-	GpuSeconds      float32                 `json:"gpu_seconds"`
-	HttpStatus      *int                    `json:"http_status"`
-	Id              int                     `json:"id"`
-	InputTokens     int                     `json:"input_tokens"`
-	InstanceId      *openapi_types.UUID     `json:"instance_id"`
-	IpAddress       *string                 `json:"ip_address"`
-	LatencyMs       *int                    `json:"latency_ms"`
-	MediaUnits      *float32                `json:"media_units,omitempty"`
-	Metadata        *map[string]interface{} `json:"metadata"`
-	ModelId         *openapi_types.UUID     `json:"model_id"`
-	ModelName       string                  `json:"model_name"`
-	NodeId          *openapi_types.UUID     `json:"node_id"`
-	NodeName        *string                 `json:"node_name"`
-	OutputTokens    int                     `json:"output_tokens"`
-	PricePlanId     *openapi_types.UUID     `json:"price_plan_id"`
-	ReasoningTokens *int                    `json:"reasoning_tokens,omitempty"`
-	RequestCount    *int                    `json:"request_count,omitempty"`
-	RequestId       openapi_types.UUID      `json:"request_id"`
-	Status          UsageStatus             `json:"status"`
-	Stream          *bool                   `json:"stream,omitempty"`
-	Ts              time.Time               `json:"ts"`
-	TtftMs          *int                    `json:"ttft_ms"`
-}
-
-// UsageSummary defines model for UsageSummary.
-type UsageSummary struct {
-	From    time.Time         `json:"from"`
-	GroupBy []string          `json:"group_by"`
-	Rows    []UsageSummaryRow `json:"rows"`
-	To      time.Time         `json:"to"`
-	Totals  UsageTotals       `json:"totals"`
-}
-
-// UsageSummaryRow defines model for UsageSummaryRow.
-type UsageSummaryRow struct {
-	// Group group_by key -> id
-	Group map[string]string `json:"group"`
-
-	// Labels group_by key -> display name
-	Labels map[string]string `json:"labels"`
-	Totals UsageTotals       `json:"totals"`
-}
-
-// UsageTotals defines model for UsageTotals.
-type UsageTotals struct {
-	CachedTokens    int      `json:"cached_tokens"`
-	CostUsd         float32  `json:"cost_usd"`
-	ErrorCount      *int     `json:"error_count,omitempty"`
-	GpuMinutes      *float32 `json:"gpu_minutes,omitempty"`
-	GpuSeconds      float32  `json:"gpu_seconds"`
-	InputTokens     int      `json:"input_tokens"`
-	LatencyMsAvg    *float32 `json:"latency_ms_avg"`
-	MediaUnits      *float32 `json:"media_units,omitempty"`
-	OutputTokens    int      `json:"output_tokens"`
-	ReasoningTokens *int     `json:"reasoning_tokens,omitempty"`
-	RequestCount    int      `json:"request_count"`
-	SuccessCount    *int     `json:"success_count,omitempty"`
-	TtftMsAvg       *float32 `json:"ttft_ms_avg"`
-}
 
 // VaultMetadata defines model for VaultMetadata.
 type VaultMetadata struct {
@@ -4007,6 +4142,9 @@ type VerifyResult struct {
 
 // AgentCommandState defines model for agent_command_state.
 type AgentCommandState string
+
+// AgentUpdateState defines model for agent_update_state.
+type AgentUpdateState string
 
 // AlertChannelType defines model for alert_channel_type.
 type AlertChannelType string
@@ -4034,9 +4172,6 @@ type BatchStatus string
 
 // BenchmarkRunStatus defines model for benchmark_run_status.
 type BenchmarkRunStatus string
-
-// BillingReportStatus defines model for billing_report_status.
-type BillingReportStatus string
 
 // CacheState defines model for cache_state.
 type CacheState string
@@ -4161,9 +4296,6 @@ type SwapTrigger string
 // UsageFormat defines model for usage_format.
 type UsageFormat string
 
-// UsageStatus defines model for usage_status.
-type UsageStatus string
-
 // CsrfHeader defines model for CsrfHeader.
 type CsrfHeader = string
 
@@ -4217,6 +4349,45 @@ type Error502 = ErrorEnvelope
 
 // Error503 defines model for Error503.
 type Error503 = ErrorEnvelope
+
+// ListAgentRolloutsParams defines parameters for ListAgentRollouts.
+type ListAgentRolloutsParams struct {
+	// Page 1-based page
+	Page *Page `form:"page,omitempty" json:"page,omitempty"`
+
+	// PageSize Items per page (max 500)
+	PageSize *PageSize `form:"page_size,omitempty" json:"page_size,omitempty"`
+
+	// ClusterId Filter
+	ClusterId *openapi_types.UUID `form:"cluster_id,omitempty" json:"cluster_id,omitempty"`
+}
+
+// CancelAgentRolloutParams defines parameters for CancelAgentRollout.
+type CancelAgentRolloutParams struct {
+	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
+	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
+}
+
+// ListAgentUpdateRunsParams defines parameters for ListAgentUpdateRuns.
+type ListAgentUpdateRunsParams struct {
+	// Page 1-based page
+	Page *Page `form:"page,omitempty" json:"page,omitempty"`
+
+	// PageSize Items per page (max 500)
+	PageSize *PageSize `form:"page_size,omitempty" json:"page_size,omitempty"`
+
+	// NodeId Filter
+	NodeId *openapi_types.UUID `form:"node_id,omitempty" json:"node_id,omitempty"`
+
+	// ClusterId Filter
+	ClusterId *openapi_types.UUID `form:"cluster_id,omitempty" json:"cluster_id,omitempty"`
+
+	// RolloutId Filter
+	RolloutId *openapi_types.UUID `form:"rollout_id,omitempty" json:"rollout_id,omitempty"`
+
+	// State Filter
+	State *AgentUpdateState `form:"state,omitempty" json:"state,omitempty"`
+}
 
 // DownloadAgentParams defines parameters for DownloadAgent.
 type DownloadAgentParams struct {
@@ -4587,54 +4758,6 @@ type StartBenchmarkParams struct {
 	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
 }
 
-// GetBillingEstimateParams defines parameters for GetBillingEstimate.
-type GetBillingEstimateParams struct {
-	// PeriodStart Default: first of the month UTC
-	PeriodStart *time.Time `form:"period_start,omitempty" json:"period_start,omitempty"`
-
-	// PeriodEnd Default: first of next month
-	PeriodEnd *time.Time `form:"period_end,omitempty" json:"period_end,omitempty"`
-
-	// ClusterId Scope
-	ClusterId *openapi_types.UUID `form:"cluster_id,omitempty" json:"cluster_id,omitempty"`
-}
-
-// ListBillingReportsParams defines parameters for ListBillingReports.
-type ListBillingReportsParams struct {
-	// Page 1-based page
-	Page *Page `form:"page,omitempty" json:"page,omitempty"`
-
-	// PageSize Items per page (max 500)
-	PageSize *PageSize `form:"page_size,omitempty" json:"page_size,omitempty"`
-
-	// Search Case-insensitive substring/trigram search on name
-	Search *Search `form:"search,omitempty" json:"search,omitempty"`
-
-	// Sort Sort field; prefix with - for descending (e.g. -created_at). Default -created_at.
-	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
-
-	// Status Filter
-	Status *BillingReportStatus `form:"status,omitempty" json:"status,omitempty"`
-}
-
-// CreateBillingReportParams defines parameters for CreateBillingReport.
-type CreateBillingReportParams struct {
-	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
-	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
-}
-
-// DeleteBillingReportParams defines parameters for DeleteBillingReport.
-type DeleteBillingReportParams struct {
-	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
-	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
-}
-
-// RegenerateBillingReportParams defines parameters for RegenerateBillingReport.
-type RegenerateBillingReportParams struct {
-	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
-	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
-}
-
 // ScanLocalPathParams defines parameters for ScanLocalPath.
 type ScanLocalPathParams struct {
 	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
@@ -4733,12 +4856,6 @@ type DeleteCloudNodeParams struct {
 
 // UpdateCloudNodeParams defines parameters for UpdateCloudNode.
 type UpdateCloudNodeParams struct {
-	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
-	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
-}
-
-// ApplyCloudNodePricePlanParams defines parameters for ApplyCloudNodePricePlan.
-type ApplyCloudNodePricePlanParams struct {
 	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
 	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
 }
@@ -4862,6 +4979,18 @@ type DeleteClusterParams struct {
 
 // UpdateClusterParams defines parameters for UpdateCluster.
 type UpdateClusterParams struct {
+	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
+	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
+}
+
+// StartClusterAgentRolloutParams defines parameters for StartClusterAgentRollout.
+type StartClusterAgentRolloutParams struct {
+	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
+	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
+}
+
+// SetClusterAgentUpdatePolicyParams defines parameters for SetClusterAgentUpdatePolicy.
+type SetClusterAgentUpdatePolicyParams struct {
 	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
 	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
 }
@@ -5520,6 +5649,57 @@ type QueryInferenceMetricsParams struct {
 // QueryInferenceMetricsParamsAggregate defines parameters for QueryInferenceMetrics.
 type QueryInferenceMetricsParamsAggregate string
 
+// QueryLatencyHistoryParams defines parameters for QueryLatencyHistory.
+type QueryLatencyHistoryParams struct {
+	// From Range start (inclusive, RFC 3339). Default now-1h
+	From *From `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Range end (exclusive). Default now
+	To *To `form:"to,omitempty" json:"to,omitempty"`
+
+	// Step Bucket size (at least 1m)
+	Step *string `form:"step,omitempty" json:"step,omitempty"`
+
+	// NodeId Nodes (repeatable; default all)
+	NodeId *[]openapi_types.UUID `form:"node_id,omitempty" json:"node_id,omitempty"`
+}
+
+// GetLiveLatencyParams defines parameters for GetLiveLatency.
+type GetLiveLatencyParams struct {
+	// NodeId Only this node
+	NodeId *openapi_types.UUID `form:"node_id,omitempty" json:"node_id,omitempty"`
+}
+
+// QueryRequestTimingParams defines parameters for QueryRequestTiming.
+type QueryRequestTimingParams struct {
+	// From Range start (inclusive, RFC 3339). Default now-1h
+	From *From `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Range end (exclusive). Default now
+	To *To `form:"to,omitempty" json:"to,omitempty"`
+
+	// Step Bucket size (at least 1m)
+	Step *string `form:"step,omitempty" json:"step,omitempty"`
+
+	// DeploymentId Scope
+	DeploymentId *openapi_types.UUID `form:"deployment_id,omitempty" json:"deployment_id,omitempty"`
+
+	// NodeId Scope
+	NodeId *openapi_types.UUID `form:"node_id,omitempty" json:"node_id,omitempty"`
+
+	// ModelId Scope
+	ModelId *openapi_types.UUID `form:"model_id,omitempty" json:"model_id,omitempty"`
+
+	// ApiKeyId Scope
+	ApiKeyId *openapi_types.UUID `form:"api_key_id,omitempty" json:"api_key_id,omitempty"`
+
+	// Region API-layer region (API_LAYER_REGION)
+	Region *string `form:"region,omitempty" json:"region,omitempty"`
+
+	// Stream Only streaming (true) or non-streaming (false) requests
+	Stream *bool `form:"stream,omitempty" json:"stream,omitempty"`
+}
+
 // QuerySessionMetricsParams defines parameters for QuerySessionMetrics.
 type QuerySessionMetricsParams struct {
 	// From Range start (inclusive, RFC 3339). Default now-1h
@@ -5811,6 +5991,18 @@ type UpdateNodeParams struct {
 	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
 }
 
+// UpdateNodeAgentParams defines parameters for UpdateNodeAgent.
+type UpdateNodeAgentParams struct {
+	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
+	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
+}
+
+// StageNodeAgentUpdateParams defines parameters for StageNodeAgentUpdate.
+type StageNodeAgentUpdateParams struct {
+	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
+	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
+}
+
 // RotateNodeCertificateParams defines parameters for RotateNodeCertificate.
 type RotateNodeCertificateParams struct {
 	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
@@ -5894,39 +6086,6 @@ type RevokeCertificateParams struct {
 
 // IssueServiceCertificateParams defines parameters for IssueServiceCertificate.
 type IssueServiceCertificateParams struct {
-	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
-	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
-}
-
-// ListPricePlansParams defines parameters for ListPricePlans.
-type ListPricePlansParams struct {
-	// Page 1-based page
-	Page *Page `form:"page,omitempty" json:"page,omitempty"`
-
-	// PageSize Items per page (max 500)
-	PageSize *PageSize `form:"page_size,omitempty" json:"page_size,omitempty"`
-
-	// Search Case-insensitive substring/trigram search on name
-	Search *Search `form:"search,omitempty" json:"search,omitempty"`
-
-	// Sort Sort field; prefix with - for descending (e.g. -created_at). Default -created_at.
-	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
-}
-
-// CreatePricePlanParams defines parameters for CreatePricePlan.
-type CreatePricePlanParams struct {
-	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
-	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
-}
-
-// DeletePricePlanParams defines parameters for DeletePricePlan.
-type DeletePricePlanParams struct {
-	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
-	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
-}
-
-// UpdatePricePlanParams defines parameters for UpdatePricePlan.
-type UpdatePricePlanParams struct {
 	// XCSRFToken Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token.
 	XCSRFToken *CsrfHeader `json:"X-CSRF-Token,omitempty"`
 }
@@ -6105,174 +6264,6 @@ type GetTopologyParams struct {
 	IncludeStopped *bool `form:"include_stopped,omitempty" json:"include_stopped,omitempty"`
 }
 
-// ListTracesParams defines parameters for ListTraces.
-type ListTracesParams struct {
-	// Page 1-based page
-	Page *Page `form:"page,omitempty" json:"page,omitempty"`
-
-	// PageSize Items per page (max 500)
-	PageSize *PageSize `form:"page_size,omitempty" json:"page_size,omitempty"`
-
-	// From Range start (inclusive, RFC 3339). Default now-1h
-	From *From `form:"from,omitempty" json:"from,omitempty"`
-
-	// To Range end (exclusive). Default now
-	To *To `form:"to,omitempty" json:"to,omitempty"`
-
-	// Service Filter
-	Service *string `form:"service,omitempty" json:"service,omitempty"`
-
-	// ApiKeyId Filter
-	ApiKeyId *openapi_types.UUID `form:"api_key_id,omitempty" json:"api_key_id,omitempty"`
-
-	// ModelId Filter
-	ModelId *openapi_types.UUID `form:"model_id,omitempty" json:"model_id,omitempty"`
-
-	// DeploymentId Filter
-	DeploymentId *openapi_types.UUID `form:"deployment_id,omitempty" json:"deployment_id,omitempty"`
-
-	// InstanceId Filter
-	InstanceId *openapi_types.UUID `form:"instance_id,omitempty" json:"instance_id,omitempty"`
-
-	// NodeId Filter
-	NodeId *openapi_types.UUID `form:"node_id,omitempty" json:"node_id,omitempty"`
-
-	// Format Filter
-	Format *UsageFormat `form:"format,omitempty" json:"format,omitempty"`
-
-	// StatusCode Filter
-	StatusCode *int `form:"status_code,omitempty" json:"status_code,omitempty"`
-
-	// Error Only errors
-	Error *bool `form:"error,omitempty" json:"error,omitempty"`
-
-	// MinDurationMs Filter
-	MinDurationMs *float32 `form:"min_duration_ms,omitempty" json:"min_duration_ms,omitempty"`
-
-	// RequestId Filter
-	RequestId *openapi_types.UUID `form:"request_id,omitempty" json:"request_id,omitempty"`
-}
-
-// ListUsageEventsParams defines parameters for ListUsageEvents.
-type ListUsageEventsParams struct {
-	// Page 1-based page
-	Page *Page `form:"page,omitempty" json:"page,omitempty"`
-
-	// PageSize Items per page (max 500)
-	PageSize *PageSize `form:"page_size,omitempty" json:"page_size,omitempty"`
-
-	// Sort Sort field; prefix with - for descending (e.g. -created_at). Default -created_at.
-	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
-
-	// From Range start (inclusive, RFC 3339). Default now-1h
-	From *From `form:"from,omitempty" json:"from,omitempty"`
-
-	// To Range end (exclusive). Default now
-	To *To `form:"to,omitempty" json:"to,omitempty"`
-
-	// ApiKeyId Filter
-	ApiKeyId *openapi_types.UUID `form:"api_key_id,omitempty" json:"api_key_id,omitempty"`
-
-	// ModelId Filter
-	ModelId *openapi_types.UUID `form:"model_id,omitempty" json:"model_id,omitempty"`
-
-	// NodeId Filter
-	NodeId *openapi_types.UUID `form:"node_id,omitempty" json:"node_id,omitempty"`
-
-	// DeploymentId Filter
-	DeploymentId *openapi_types.UUID `form:"deployment_id,omitempty" json:"deployment_id,omitempty"`
-
-	// ClusterId Filter
-	ClusterId *openapi_types.UUID `form:"cluster_id,omitempty" json:"cluster_id,omitempty"`
-
-	// Format Filter
-	Format *UsageFormat `form:"format,omitempty" json:"format,omitempty"`
-
-	// Status Filter
-	Status *UsageStatus `form:"status,omitempty" json:"status,omitempty"`
-
-	// RequestId Filter
-	RequestId *openapi_types.UUID `form:"request_id,omitempty" json:"request_id,omitempty"`
-
-	// Endpoint Filter
-	Endpoint *string `form:"endpoint,omitempty" json:"endpoint,omitempty"`
-}
-
-// ExportUsageCsvParams defines parameters for ExportUsageCsv.
-type ExportUsageCsvParams struct {
-	// From Range start (inclusive, RFC 3339). Default now-1h
-	From *From `form:"from,omitempty" json:"from,omitempty"`
-
-	// To Range end (exclusive). Default now
-	To *To `form:"to,omitempty" json:"to,omitempty"`
-
-	// ApiKeyId Filter
-	ApiKeyId *openapi_types.UUID `form:"api_key_id,omitempty" json:"api_key_id,omitempty"`
-
-	// ModelId Filter
-	ModelId *openapi_types.UUID `form:"model_id,omitempty" json:"model_id,omitempty"`
-
-	// NodeId Filter
-	NodeId *openapi_types.UUID `form:"node_id,omitempty" json:"node_id,omitempty"`
-
-	// DeploymentId Filter
-	DeploymentId *openapi_types.UUID `form:"deployment_id,omitempty" json:"deployment_id,omitempty"`
-
-	// ClusterId Filter
-	ClusterId *openapi_types.UUID `form:"cluster_id,omitempty" json:"cluster_id,omitempty"`
-
-	// Format Filter
-	Format *UsageFormat `form:"format,omitempty" json:"format,omitempty"`
-
-	// Status Filter
-	Status *UsageStatus `form:"status,omitempty" json:"status,omitempty"`
-
-	// Mode events (raw) or summary
-	Mode *ExportUsageCsvParamsMode `form:"mode,omitempty" json:"mode,omitempty"`
-
-	// GroupBy For summary
-	GroupBy *[]string `form:"group_by,omitempty" json:"group_by,omitempty"`
-}
-
-// ExportUsageCsvParamsMode defines parameters for ExportUsageCsv.
-type ExportUsageCsvParamsMode string
-
-// GetUsageSummaryParams defines parameters for GetUsageSummary.
-type GetUsageSummaryParams struct {
-	// From Range start (inclusive, RFC 3339). Default now-1h
-	From *From `form:"from,omitempty" json:"from,omitempty"`
-
-	// To Range end (exclusive). Default now
-	To *To `form:"to,omitempty" json:"to,omitempty"`
-
-	// ApiKeyId Filter
-	ApiKeyId *openapi_types.UUID `form:"api_key_id,omitempty" json:"api_key_id,omitempty"`
-
-	// ModelId Filter
-	ModelId *openapi_types.UUID `form:"model_id,omitempty" json:"model_id,omitempty"`
-
-	// NodeId Filter
-	NodeId *openapi_types.UUID `form:"node_id,omitempty" json:"node_id,omitempty"`
-
-	// DeploymentId Filter
-	DeploymentId *openapi_types.UUID `form:"deployment_id,omitempty" json:"deployment_id,omitempty"`
-
-	// ClusterId Filter
-	ClusterId *openapi_types.UUID `form:"cluster_id,omitempty" json:"cluster_id,omitempty"`
-
-	// Format Filter
-	Format *UsageFormat `form:"format,omitempty" json:"format,omitempty"`
-
-	// Status Filter
-	Status *UsageStatus `form:"status,omitempty" json:"status,omitempty"`
-
-	// GroupBy Group keys (repeatable); default api_key
-	GroupBy *[]GetUsageSummaryParamsGroupBy `form:"group_by,omitempty" json:"group_by,omitempty"`
-}
-
-// GetUsageSummaryParamsGroupBy defines parameters for GetUsageSummary.
-type GetUsageSummaryParamsGroupBy string
-
 // ListCredentialsParams defines parameters for ListCredentials.
 type ListCredentialsParams struct {
 	// Page 1-based page
@@ -6363,9 +6354,6 @@ type AutoTuneBenchmarkJSONRequestBody = BenchmarkStartRequest
 // StartBenchmarkJSONRequestBody defines body for StartBenchmark for application/json ContentType.
 type StartBenchmarkJSONRequestBody = BenchmarkStartRequest
 
-// CreateBillingReportJSONRequestBody defines body for CreateBillingReport for application/json ContentType.
-type CreateBillingReportJSONRequestBody = BillingReportCreate
-
 // ScanLocalPathJSONRequestBody defines body for ScanLocalPath for application/json ContentType.
 type ScanLocalPathJSONRequestBody = LocalScanRequest
 
@@ -6389,6 +6377,12 @@ type CreateClusterJSONRequestBody = ClusterCreate
 
 // UpdateClusterJSONRequestBody defines body for UpdateCluster for application/json ContentType.
 type UpdateClusterJSONRequestBody = ClusterUpdate
+
+// StartClusterAgentRolloutJSONRequestBody defines body for StartClusterAgentRollout for application/json ContentType.
+type StartClusterAgentRolloutJSONRequestBody = AgentRolloutRequest
+
+// SetClusterAgentUpdatePolicyJSONRequestBody defines body for SetClusterAgentUpdatePolicy for application/json ContentType.
+type SetClusterAgentUpdatePolicyJSONRequestBody = AgentUpdatePolicy
 
 // CreateDeploymentJSONRequestBody defines body for CreateDeployment for application/json ContentType.
 type CreateDeploymentJSONRequestBody = DeploymentCreate
@@ -6495,6 +6489,12 @@ type CreateJoinTokenJSONRequestBody = JoinTokenCreate
 // UpdateNodeJSONRequestBody defines body for UpdateNode for application/json ContentType.
 type UpdateNodeJSONRequestBody = NodeUpdate
 
+// UpdateNodeAgentJSONRequestBody defines body for UpdateNodeAgent for application/json ContentType.
+type UpdateNodeAgentJSONRequestBody = AgentUpdateRequest
+
+// StageNodeAgentUpdateJSONRequestBody defines body for StageNodeAgentUpdate for application/json ContentType.
+type StageNodeAgentUpdateJSONRequestBody = AgentUpdateRequest
+
 // RevokeNodeCertificateJSONRequestBody defines body for RevokeNodeCertificate for application/json ContentType.
 type RevokeNodeCertificateJSONRequestBody = RevokeRequest
 
@@ -6512,12 +6512,6 @@ type RevokeCertificateJSONRequestBody = RevokeRequest
 
 // IssueServiceCertificateJSONRequestBody defines body for IssueServiceCertificate for application/json ContentType.
 type IssueServiceCertificateJSONRequestBody = ServiceCertificateRequest
-
-// CreatePricePlanJSONRequestBody defines body for CreatePricePlan for application/json ContentType.
-type CreatePricePlanJSONRequestBody = PricePlanCreate
-
-// UpdatePricePlanJSONRequestBody defines body for UpdatePricePlan for application/json ContentType.
-type UpdatePricePlanJSONRequestBody = PricePlanUpdate
 
 // CreateRuleJSONRequestBody defines body for CreateRule for application/json ContentType.
 type CreateRuleJSONRequestBody = RuleCreate
@@ -6712,6 +6706,24 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// GetAgentUpdateOverview request
+	GetAgentUpdateOverview(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListAgentRollouts request
+	ListAgentRollouts(ctx context.Context, params *ListAgentRolloutsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetAgentRollout request
+	GetAgentRollout(ctx context.Context, rolloutId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CancelAgentRollout request
+	CancelAgentRollout(ctx context.Context, rolloutId openapi_types.UUID, params *CancelAgentRolloutParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListAgentUpdateRuns request
+	ListAgentUpdateRuns(ctx context.Context, params *ListAgentUpdateRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetAgentUpdateRun request
+	GetAgentUpdateRun(ctx context.Context, runId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListAgentDownloads request
 	ListAgentDownloads(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -6887,29 +6899,6 @@ type ClientInterface interface {
 
 	StartBenchmark(ctx context.Context, benchmarkId openapi_types.UUID, params *StartBenchmarkParams, body StartBenchmarkJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetBillingEstimate request
-	GetBillingEstimate(ctx context.Context, params *GetBillingEstimateParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ListBillingReports request
-	ListBillingReports(ctx context.Context, params *ListBillingReportsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// CreateBillingReportWithBody request with any body
-	CreateBillingReportWithBody(ctx context.Context, params *CreateBillingReportParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	CreateBillingReport(ctx context.Context, params *CreateBillingReportParams, body CreateBillingReportJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// DeleteBillingReport request
-	DeleteBillingReport(ctx context.Context, reportId openapi_types.UUID, params *DeleteBillingReportParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetBillingReport request
-	GetBillingReport(ctx context.Context, reportId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ExportBillingReportCsv request
-	ExportBillingReportCsv(ctx context.Context, reportId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// RegenerateBillingReport request
-	RegenerateBillingReport(ctx context.Context, reportId openapi_types.UUID, params *RegenerateBillingReportParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// GetBranding request
 	GetBranding(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -6942,9 +6931,6 @@ type ClientInterface interface {
 	UpdateCloudNodeWithBody(ctx context.Context, cloudNodeId openapi_types.UUID, params *UpdateCloudNodeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	UpdateCloudNode(ctx context.Context, cloudNodeId openapi_types.UUID, params *UpdateCloudNodeParams, body UpdateCloudNodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ApplyCloudNodePricePlan request
-	ApplyCloudNodePricePlan(ctx context.Context, cloudNodeId openapi_types.UUID, params *ApplyCloudNodePricePlanParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RefreshCloudNode request
 	RefreshCloudNode(ctx context.Context, cloudNodeId openapi_types.UUID, params *RefreshCloudNodeParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -6997,6 +6983,19 @@ type ClientInterface interface {
 	UpdateClusterWithBody(ctx context.Context, clusterId openapi_types.UUID, params *UpdateClusterParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	UpdateCluster(ctx context.Context, clusterId openapi_types.UUID, params *UpdateClusterParams, body UpdateClusterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetClusterAgentUpdate request
+	GetClusterAgentUpdate(ctx context.Context, clusterId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// StartClusterAgentRolloutWithBody request with any body
+	StartClusterAgentRolloutWithBody(ctx context.Context, clusterId openapi_types.UUID, params *StartClusterAgentRolloutParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	StartClusterAgentRollout(ctx context.Context, clusterId openapi_types.UUID, params *StartClusterAgentRolloutParams, body StartClusterAgentRolloutJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetClusterAgentUpdatePolicyWithBody request with any body
+	SetClusterAgentUpdatePolicyWithBody(ctx context.Context, clusterId openapi_types.UUID, params *SetClusterAgentUpdatePolicyParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SetClusterAgentUpdatePolicy(ctx context.Context, clusterId openapi_types.UUID, params *SetClusterAgentUpdatePolicyParams, body SetClusterAgentUpdatePolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListClusterNodes request
 	ListClusterNodes(ctx context.Context, clusterId openapi_types.UUID, params *ListClusterNodesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -7266,11 +7265,20 @@ type ClientInterface interface {
 	// QueryInferenceMetrics request
 	QueryInferenceMetrics(ctx context.Context, params *QueryInferenceMetricsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// QueryLatencyHistory request
+	QueryLatencyHistory(ctx context.Context, params *QueryLatencyHistoryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetLiveLatency request
+	GetLiveLatency(ctx context.Context, params *GetLiveLatencyParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetOverview request
 	GetOverview(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetPrometheusExposition request
 	GetPrometheusExposition(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// QueryRequestTiming request
+	QueryRequestTiming(ctx context.Context, params *QueryRequestTimingParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// QuerySessionMetrics request
 	QuerySessionMetrics(ctx context.Context, params *QuerySessionMetricsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -7380,6 +7388,19 @@ type ClientInterface interface {
 
 	UpdateNode(ctx context.Context, nodeId openapi_types.UUID, params *UpdateNodeParams, body UpdateNodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetNodeAgentUpdate request
+	GetNodeAgentUpdate(ctx context.Context, nodeId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateNodeAgentWithBody request with any body
+	UpdateNodeAgentWithBody(ctx context.Context, nodeId openapi_types.UUID, params *UpdateNodeAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateNodeAgent(ctx context.Context, nodeId openapi_types.UUID, params *UpdateNodeAgentParams, body UpdateNodeAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// StageNodeAgentUpdateWithBody request with any body
+	StageNodeAgentUpdateWithBody(ctx context.Context, nodeId openapi_types.UUID, params *StageNodeAgentUpdateParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	StageNodeAgentUpdate(ctx context.Context, nodeId openapi_types.UUID, params *StageNodeAgentUpdateParams, body StageNodeAgentUpdateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetNodeCache request
 	GetNodeCache(ctx context.Context, nodeId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -7442,25 +7463,6 @@ type ClientInterface interface {
 	IssueServiceCertificateWithBody(ctx context.Context, params *IssueServiceCertificateParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	IssueServiceCertificate(ctx context.Context, params *IssueServiceCertificateParams, body IssueServiceCertificateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ListPricePlans request
-	ListPricePlans(ctx context.Context, params *ListPricePlansParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// CreatePricePlanWithBody request with any body
-	CreatePricePlanWithBody(ctx context.Context, params *CreatePricePlanParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	CreatePricePlan(ctx context.Context, params *CreatePricePlanParams, body CreatePricePlanJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// DeletePricePlan request
-	DeletePricePlan(ctx context.Context, planId openapi_types.UUID, params *DeletePricePlanParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetPricePlan request
-	GetPricePlan(ctx context.Context, planId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// UpdatePricePlanWithBody request with any body
-	UpdatePricePlanWithBody(ctx context.Context, planId openapi_types.UUID, params *UpdatePricePlanParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	UpdatePricePlan(ctx context.Context, planId openapi_types.UUID, params *UpdatePricePlanParams, body UpdatePricePlanJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListAllRuleRuns request
 	ListAllRuleRuns(ctx context.Context, params *ListAllRuleRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -7528,21 +7530,6 @@ type ClientInterface interface {
 	// GetTopology request
 	GetTopology(ctx context.Context, params *GetTopologyParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListTraces request
-	ListTraces(ctx context.Context, params *ListTracesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetTrace request
-	GetTrace(ctx context.Context, traceId string, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ListUsageEvents request
-	ListUsageEvents(ctx context.Context, params *ListUsageEventsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ExportUsageCsv request
-	ExportUsageCsv(ctx context.Context, params *ExportUsageCsvParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetUsageSummary request
-	GetUsageSummary(ctx context.Context, params *GetUsageSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ListCredentials request
 	ListCredentials(ctx context.Context, params *ListCredentialsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -7576,6 +7563,78 @@ type ClientInterface interface {
 
 	// GetCredentialUsage request
 	GetCredentialUsage(ctx context.Context, credentialId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) GetAgentUpdateOverview(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAgentUpdateOverviewRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListAgentRollouts(ctx context.Context, params *ListAgentRolloutsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListAgentRolloutsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetAgentRollout(ctx context.Context, rolloutId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAgentRolloutRequest(c.Server, rolloutId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CancelAgentRollout(ctx context.Context, rolloutId openapi_types.UUID, params *CancelAgentRolloutParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCancelAgentRolloutRequest(c.Server, rolloutId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListAgentUpdateRuns(ctx context.Context, params *ListAgentUpdateRunsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListAgentUpdateRunsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetAgentUpdateRun(ctx context.Context, runId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAgentUpdateRunRequest(c.Server, runId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) ListAgentDownloads(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -8322,102 +8381,6 @@ func (c *Client) StartBenchmark(ctx context.Context, benchmarkId openapi_types.U
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetBillingEstimate(ctx context.Context, params *GetBillingEstimateParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetBillingEstimateRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) ListBillingReports(ctx context.Context, params *ListBillingReportsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListBillingReportsRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) CreateBillingReportWithBody(ctx context.Context, params *CreateBillingReportParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateBillingReportRequestWithBody(c.Server, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) CreateBillingReport(ctx context.Context, params *CreateBillingReportParams, body CreateBillingReportJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateBillingReportRequest(c.Server, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) DeleteBillingReport(ctx context.Context, reportId openapi_types.UUID, params *DeleteBillingReportParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteBillingReportRequest(c.Server, reportId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) GetBillingReport(ctx context.Context, reportId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetBillingReportRequest(c.Server, reportId)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) ExportBillingReportCsv(ctx context.Context, reportId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewExportBillingReportCsvRequest(c.Server, reportId)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) RegenerateBillingReport(ctx context.Context, reportId openapi_types.UUID, params *RegenerateBillingReportParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRegenerateBillingReportRequest(c.Server, reportId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 func (c *Client) GetBranding(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetBrandingRequest(c.Server)
 	if err != nil {
@@ -8552,18 +8515,6 @@ func (c *Client) UpdateCloudNodeWithBody(ctx context.Context, cloudNodeId openap
 
 func (c *Client) UpdateCloudNode(ctx context.Context, cloudNodeId openapi_types.UUID, params *UpdateCloudNodeParams, body UpdateCloudNodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateCloudNodeRequest(c.Server, cloudNodeId, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) ApplyCloudNodePricePlan(ctx context.Context, cloudNodeId openapi_types.UUID, params *ApplyCloudNodePricePlanParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewApplyCloudNodePricePlanRequest(c.Server, cloudNodeId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -8792,6 +8743,66 @@ func (c *Client) UpdateClusterWithBody(ctx context.Context, clusterId openapi_ty
 
 func (c *Client) UpdateCluster(ctx context.Context, clusterId openapi_types.UUID, params *UpdateClusterParams, body UpdateClusterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateClusterRequest(c.Server, clusterId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetClusterAgentUpdate(ctx context.Context, clusterId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetClusterAgentUpdateRequest(c.Server, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) StartClusterAgentRolloutWithBody(ctx context.Context, clusterId openapi_types.UUID, params *StartClusterAgentRolloutParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewStartClusterAgentRolloutRequestWithBody(c.Server, clusterId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) StartClusterAgentRollout(ctx context.Context, clusterId openapi_types.UUID, params *StartClusterAgentRolloutParams, body StartClusterAgentRolloutJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewStartClusterAgentRolloutRequest(c.Server, clusterId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetClusterAgentUpdatePolicyWithBody(ctx context.Context, clusterId openapi_types.UUID, params *SetClusterAgentUpdatePolicyParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetClusterAgentUpdatePolicyRequestWithBody(c.Server, clusterId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetClusterAgentUpdatePolicy(ctx context.Context, clusterId openapi_types.UUID, params *SetClusterAgentUpdatePolicyParams, body SetClusterAgentUpdatePolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetClusterAgentUpdatePolicyRequest(c.Server, clusterId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9978,6 +9989,30 @@ func (c *Client) QueryInferenceMetrics(ctx context.Context, params *QueryInferen
 	return c.Client.Do(req)
 }
 
+func (c *Client) QueryLatencyHistory(ctx context.Context, params *QueryLatencyHistoryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewQueryLatencyHistoryRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetLiveLatency(ctx context.Context, params *GetLiveLatencyParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetLiveLatencyRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetOverview(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetOverviewRequest(c.Server)
 	if err != nil {
@@ -9992,6 +10027,18 @@ func (c *Client) GetOverview(ctx context.Context, reqEditors ...RequestEditorFn)
 
 func (c *Client) GetPrometheusExposition(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPrometheusExpositionRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) QueryRequestTiming(ctx context.Context, params *QueryRequestTimingParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewQueryRequestTimingRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10470,6 +10517,66 @@ func (c *Client) UpdateNode(ctx context.Context, nodeId openapi_types.UUID, para
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetNodeAgentUpdate(ctx context.Context, nodeId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetNodeAgentUpdateRequest(c.Server, nodeId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateNodeAgentWithBody(ctx context.Context, nodeId openapi_types.UUID, params *UpdateNodeAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateNodeAgentRequestWithBody(c.Server, nodeId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateNodeAgent(ctx context.Context, nodeId openapi_types.UUID, params *UpdateNodeAgentParams, body UpdateNodeAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateNodeAgentRequest(c.Server, nodeId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) StageNodeAgentUpdateWithBody(ctx context.Context, nodeId openapi_types.UUID, params *StageNodeAgentUpdateParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewStageNodeAgentUpdateRequestWithBody(c.Server, nodeId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) StageNodeAgentUpdate(ctx context.Context, nodeId openapi_types.UUID, params *StageNodeAgentUpdateParams, body StageNodeAgentUpdateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewStageNodeAgentUpdateRequest(c.Server, nodeId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetNodeCache(ctx context.Context, nodeId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetNodeCacheRequest(c.Server, nodeId)
 	if err != nil {
@@ -10736,90 +10843,6 @@ func (c *Client) IssueServiceCertificateWithBody(ctx context.Context, params *Is
 
 func (c *Client) IssueServiceCertificate(ctx context.Context, params *IssueServiceCertificateParams, body IssueServiceCertificateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewIssueServiceCertificateRequest(c.Server, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) ListPricePlans(ctx context.Context, params *ListPricePlansParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListPricePlansRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) CreatePricePlanWithBody(ctx context.Context, params *CreatePricePlanParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreatePricePlanRequestWithBody(c.Server, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) CreatePricePlan(ctx context.Context, params *CreatePricePlanParams, body CreatePricePlanJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreatePricePlanRequest(c.Server, params, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) DeletePricePlan(ctx context.Context, planId openapi_types.UUID, params *DeletePricePlanParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeletePricePlanRequest(c.Server, planId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) GetPricePlan(ctx context.Context, planId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetPricePlanRequest(c.Server, planId)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) UpdatePricePlanWithBody(ctx context.Context, planId openapi_types.UUID, params *UpdatePricePlanParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdatePricePlanRequestWithBody(c.Server, planId, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) UpdatePricePlan(ctx context.Context, planId openapi_types.UUID, params *UpdatePricePlanParams, body UpdatePricePlanJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdatePricePlanRequest(c.Server, planId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -11106,66 +11129,6 @@ func (c *Client) GetTopology(ctx context.Context, params *GetTopologyParams, req
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListTraces(ctx context.Context, params *ListTracesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListTracesRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) GetTrace(ctx context.Context, traceId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetTraceRequest(c.Server, traceId)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) ListUsageEvents(ctx context.Context, params *ListUsageEventsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListUsageEventsRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) ExportUsageCsv(ctx context.Context, params *ExportUsageCsvParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewExportUsageCsvRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) GetUsageSummary(ctx context.Context, params *GetUsageSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetUsageSummaryRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 func (c *Client) ListCredentials(ctx context.Context, params *ListCredentialsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListCredentialsRequest(c.Server, params)
 	if err != nil {
@@ -11308,6 +11271,360 @@ func (c *Client) GetCredentialUsage(ctx context.Context, credentialId openapi_ty
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewGetAgentUpdateOverviewRequest generates requests for GetAgentUpdateOverview
+func NewGetAgentUpdateOverviewRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/agent-updates")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListAgentRolloutsRequest generates requests for ListAgentRollouts
+func NewListAgentRolloutsRequest(server string, params *ListAgentRolloutsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/agent-updates/rollouts")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, *params.Page); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page_size", runtime.ParamLocationQuery, *params.PageSize); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.ClusterId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster_id", runtime.ParamLocationQuery, *params.ClusterId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetAgentRolloutRequest generates requests for GetAgentRollout
+func NewGetAgentRolloutRequest(server string, rolloutId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "rollout_id", runtime.ParamLocationPath, rolloutId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/agent-updates/rollouts/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCancelAgentRolloutRequest generates requests for CancelAgentRollout
+func NewCancelAgentRolloutRequest(server string, rolloutId openapi_types.UUID, params *CancelAgentRolloutParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "rollout_id", runtime.ParamLocationPath, rolloutId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/agent-updates/rollouts/%s/cancel", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XCSRFToken != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-CSRF-Token", runtime.ParamLocationHeader, *params.XCSRFToken)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-CSRF-Token", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewListAgentUpdateRunsRequest generates requests for ListAgentUpdateRuns
+func NewListAgentUpdateRunsRequest(server string, params *ListAgentUpdateRunsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/agent-updates/runs")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, *params.Page); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page_size", runtime.ParamLocationQuery, *params.PageSize); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.NodeId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "node_id", runtime.ParamLocationQuery, *params.NodeId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.ClusterId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster_id", runtime.ParamLocationQuery, *params.ClusterId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.RolloutId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "rollout_id", runtime.ParamLocationQuery, *params.RolloutId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.State != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "state", runtime.ParamLocationQuery, *params.State); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetAgentUpdateRunRequest generates requests for GetAgentUpdateRun
+func NewGetAgentUpdateRunRequest(server string, runId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "run_id", runtime.ParamLocationPath, runId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/agent-updates/runs/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewListAgentDownloadsRequest generates requests for ListAgentDownloads
@@ -14470,421 +14787,6 @@ func NewStartBenchmarkRequestWithBody(server string, benchmarkId openapi_types.U
 	return req, nil
 }
 
-// NewGetBillingEstimateRequest generates requests for GetBillingEstimate
-func NewGetBillingEstimateRequest(server string, params *GetBillingEstimateParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/billing/estimate")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.PeriodStart != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "period_start", runtime.ParamLocationQuery, *params.PeriodStart); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.PeriodEnd != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "period_end", runtime.ParamLocationQuery, *params.PeriodEnd); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.ClusterId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster_id", runtime.ParamLocationQuery, *params.ClusterId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewListBillingReportsRequest generates requests for ListBillingReports
-func NewListBillingReportsRequest(server string, params *ListBillingReportsParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/billing/reports")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.Page != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, *params.Page); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.PageSize != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page_size", runtime.ParamLocationQuery, *params.PageSize); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Search != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "search", runtime.ParamLocationQuery, *params.Search); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Sort != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sort", runtime.ParamLocationQuery, *params.Sort); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Status != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "status", runtime.ParamLocationQuery, *params.Status); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewCreateBillingReportRequest calls the generic CreateBillingReport builder with application/json body
-func NewCreateBillingReportRequest(server string, params *CreateBillingReportParams, body CreateBillingReportJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewCreateBillingReportRequestWithBody(server, params, "application/json", bodyReader)
-}
-
-// NewCreateBillingReportRequestWithBody generates requests for CreateBillingReport with any type of body
-func NewCreateBillingReportRequestWithBody(server string, params *CreateBillingReportParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/billing/reports")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		if params.XCSRFToken != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-CSRF-Token", runtime.ParamLocationHeader, *params.XCSRFToken)
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("X-CSRF-Token", headerParam0)
-		}
-
-	}
-
-	return req, nil
-}
-
-// NewDeleteBillingReportRequest generates requests for DeleteBillingReport
-func NewDeleteBillingReportRequest(server string, reportId openapi_types.UUID, params *DeleteBillingReportParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "report_id", runtime.ParamLocationPath, reportId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/billing/reports/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		if params.XCSRFToken != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-CSRF-Token", runtime.ParamLocationHeader, *params.XCSRFToken)
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("X-CSRF-Token", headerParam0)
-		}
-
-	}
-
-	return req, nil
-}
-
-// NewGetBillingReportRequest generates requests for GetBillingReport
-func NewGetBillingReportRequest(server string, reportId openapi_types.UUID) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "report_id", runtime.ParamLocationPath, reportId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/billing/reports/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewExportBillingReportCsvRequest generates requests for ExportBillingReportCsv
-func NewExportBillingReportCsvRequest(server string, reportId openapi_types.UUID) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "report_id", runtime.ParamLocationPath, reportId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/billing/reports/%s/export", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewRegenerateBillingReportRequest generates requests for RegenerateBillingReport
-func NewRegenerateBillingReportRequest(server string, reportId openapi_types.UUID, params *RegenerateBillingReportParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "report_id", runtime.ParamLocationPath, reportId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/billing/reports/%s/regenerate", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		if params.XCSRFToken != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-CSRF-Token", runtime.ParamLocationHeader, *params.XCSRFToken)
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("X-CSRF-Token", headerParam0)
-		}
-
-	}
-
-	return req, nil
-}
-
 // NewGetBrandingRequest generates requests for GetBranding
 func NewGetBrandingRequest(server string) (*http.Request, error) {
 	var err error
@@ -15551,55 +15453,6 @@ func NewUpdateCloudNodeRequestWithBody(server string, cloudNodeId openapi_types.
 	}
 
 	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		if params.XCSRFToken != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-CSRF-Token", runtime.ParamLocationHeader, *params.XCSRFToken)
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("X-CSRF-Token", headerParam0)
-		}
-
-	}
-
-	return req, nil
-}
-
-// NewApplyCloudNodePricePlanRequest generates requests for ApplyCloudNodePricePlan
-func NewApplyCloudNodePricePlanRequest(server string, cloudNodeId openapi_types.UUID, params *ApplyCloudNodePricePlanParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "cloud_node_id", runtime.ParamLocationPath, cloudNodeId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/cloud/nodes/%s/apply-price-plan", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
 
 	if params != nil {
 
@@ -16587,6 +16440,164 @@ func NewUpdateClusterRequestWithBody(server string, clusterId openapi_types.UUID
 	}
 
 	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XCSRFToken != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-CSRF-Token", runtime.ParamLocationHeader, *params.XCSRFToken)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-CSRF-Token", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewGetClusterAgentUpdateRequest generates requests for GetClusterAgentUpdate
+func NewGetClusterAgentUpdateRequest(server string, clusterId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "cluster_id", runtime.ParamLocationPath, clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/clusters/%s/agent-update", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewStartClusterAgentRolloutRequest calls the generic StartClusterAgentRollout builder with application/json body
+func NewStartClusterAgentRolloutRequest(server string, clusterId openapi_types.UUID, params *StartClusterAgentRolloutParams, body StartClusterAgentRolloutJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewStartClusterAgentRolloutRequestWithBody(server, clusterId, params, "application/json", bodyReader)
+}
+
+// NewStartClusterAgentRolloutRequestWithBody generates requests for StartClusterAgentRollout with any type of body
+func NewStartClusterAgentRolloutRequestWithBody(server string, clusterId openapi_types.UUID, params *StartClusterAgentRolloutParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "cluster_id", runtime.ParamLocationPath, clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/clusters/%s/agent-update", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XCSRFToken != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-CSRF-Token", runtime.ParamLocationHeader, *params.XCSRFToken)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-CSRF-Token", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewSetClusterAgentUpdatePolicyRequest calls the generic SetClusterAgentUpdatePolicy builder with application/json body
+func NewSetClusterAgentUpdatePolicyRequest(server string, clusterId openapi_types.UUID, params *SetClusterAgentUpdatePolicyParams, body SetClusterAgentUpdatePolicyJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetClusterAgentUpdatePolicyRequestWithBody(server, clusterId, params, "application/json", bodyReader)
+}
+
+// NewSetClusterAgentUpdatePolicyRequestWithBody generates requests for SetClusterAgentUpdatePolicy with any type of body
+func NewSetClusterAgentUpdatePolicyRequestWithBody(server string, clusterId openapi_types.UUID, params *SetClusterAgentUpdatePolicyParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "cluster_id", runtime.ParamLocationPath, clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/clusters/%s/agent-update/policy", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -21848,6 +21859,152 @@ func NewQueryInferenceMetricsRequest(server string, params *QueryInferenceMetric
 	return req, nil
 }
 
+// NewQueryLatencyHistoryRequest generates requests for QueryLatencyHistory
+func NewQueryLatencyHistoryRequest(server string, params *QueryLatencyHistoryParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/metrics/latency")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.From != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "from", runtime.ParamLocationQuery, *params.From); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.To != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "to", runtime.ParamLocationQuery, *params.To); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Step != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "step", runtime.ParamLocationQuery, *params.Step); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.NodeId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "node_id", runtime.ParamLocationQuery, *params.NodeId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetLiveLatencyRequest generates requests for GetLiveLatency
+func NewGetLiveLatencyRequest(server string, params *GetLiveLatencyParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/metrics/latency/live")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.NodeId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "node_id", runtime.ParamLocationQuery, *params.NodeId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetOverviewRequest generates requests for GetOverview
 func NewGetOverviewRequest(server string) (*http.Request, error) {
 	var err error
@@ -21892,6 +22049,183 @@ func NewGetPrometheusExpositionRequest(server string) (*http.Request, error) {
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewQueryRequestTimingRequest generates requests for QueryRequestTiming
+func NewQueryRequestTimingRequest(server string, params *QueryRequestTimingParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/metrics/request-timing")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.From != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "from", runtime.ParamLocationQuery, *params.From); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.To != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "to", runtime.ParamLocationQuery, *params.To); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Step != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "step", runtime.ParamLocationQuery, *params.Step); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.DeploymentId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "deployment_id", runtime.ParamLocationQuery, *params.DeploymentId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.NodeId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "node_id", runtime.ParamLocationQuery, *params.NodeId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.ModelId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "model_id", runtime.ParamLocationQuery, *params.ModelId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.ApiKeyId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "api_key_id", runtime.ParamLocationQuery, *params.ApiKeyId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Region != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "region", runtime.ParamLocationQuery, *params.Region); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Stream != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "stream", runtime.ParamLocationQuery, *params.Stream); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
@@ -24131,6 +24465,164 @@ func NewUpdateNodeRequestWithBody(server string, nodeId openapi_types.UUID, para
 	return req, nil
 }
 
+// NewGetNodeAgentUpdateRequest generates requests for GetNodeAgentUpdate
+func NewGetNodeAgentUpdateRequest(server string, nodeId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "node_id", runtime.ParamLocationPath, nodeId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/nodes/%s/agent-update", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateNodeAgentRequest calls the generic UpdateNodeAgent builder with application/json body
+func NewUpdateNodeAgentRequest(server string, nodeId openapi_types.UUID, params *UpdateNodeAgentParams, body UpdateNodeAgentJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateNodeAgentRequestWithBody(server, nodeId, params, "application/json", bodyReader)
+}
+
+// NewUpdateNodeAgentRequestWithBody generates requests for UpdateNodeAgent with any type of body
+func NewUpdateNodeAgentRequestWithBody(server string, nodeId openapi_types.UUID, params *UpdateNodeAgentParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "node_id", runtime.ParamLocationPath, nodeId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/nodes/%s/agent-update", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XCSRFToken != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-CSRF-Token", runtime.ParamLocationHeader, *params.XCSRFToken)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-CSRF-Token", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewStageNodeAgentUpdateRequest calls the generic StageNodeAgentUpdate builder with application/json body
+func NewStageNodeAgentUpdateRequest(server string, nodeId openapi_types.UUID, params *StageNodeAgentUpdateParams, body StageNodeAgentUpdateJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewStageNodeAgentUpdateRequestWithBody(server, nodeId, params, "application/json", bodyReader)
+}
+
+// NewStageNodeAgentUpdateRequestWithBody generates requests for StageNodeAgentUpdate with any type of body
+func NewStageNodeAgentUpdateRequestWithBody(server string, nodeId openapi_types.UUID, params *StageNodeAgentUpdateParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "node_id", runtime.ParamLocationPath, nodeId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/nodes/%s/agent-update/stage", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.XCSRFToken != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-CSRF-Token", runtime.ParamLocationHeader, *params.XCSRFToken)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-CSRF-Token", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
 // NewGetNodeCacheRequest generates requests for GetNodeCache
 func NewGetNodeCacheRequest(server string, nodeId openapi_types.UUID) (*http.Request, error) {
 	var err error
@@ -25047,303 +25539,6 @@ func NewIssueServiceCertificateRequestWithBody(server string, params *IssueServi
 	}
 
 	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		if params.XCSRFToken != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-CSRF-Token", runtime.ParamLocationHeader, *params.XCSRFToken)
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("X-CSRF-Token", headerParam0)
-		}
-
-	}
-
-	return req, nil
-}
-
-// NewListPricePlansRequest generates requests for ListPricePlans
-func NewListPricePlansRequest(server string, params *ListPricePlansParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/price-plans")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.Page != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, *params.Page); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.PageSize != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page_size", runtime.ParamLocationQuery, *params.PageSize); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Search != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "search", runtime.ParamLocationQuery, *params.Search); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Sort != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sort", runtime.ParamLocationQuery, *params.Sort); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewCreatePricePlanRequest calls the generic CreatePricePlan builder with application/json body
-func NewCreatePricePlanRequest(server string, params *CreatePricePlanParams, body CreatePricePlanJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewCreatePricePlanRequestWithBody(server, params, "application/json", bodyReader)
-}
-
-// NewCreatePricePlanRequestWithBody generates requests for CreatePricePlan with any type of body
-func NewCreatePricePlanRequestWithBody(server string, params *CreatePricePlanParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/price-plans")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		if params.XCSRFToken != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-CSRF-Token", runtime.ParamLocationHeader, *params.XCSRFToken)
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("X-CSRF-Token", headerParam0)
-		}
-
-	}
-
-	return req, nil
-}
-
-// NewDeletePricePlanRequest generates requests for DeletePricePlan
-func NewDeletePricePlanRequest(server string, planId openapi_types.UUID, params *DeletePricePlanParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "plan_id", runtime.ParamLocationPath, planId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/price-plans/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-
-		if params.XCSRFToken != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-CSRF-Token", runtime.ParamLocationHeader, *params.XCSRFToken)
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("X-CSRF-Token", headerParam0)
-		}
-
-	}
-
-	return req, nil
-}
-
-// NewGetPricePlanRequest generates requests for GetPricePlan
-func NewGetPricePlanRequest(server string, planId openapi_types.UUID) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "plan_id", runtime.ParamLocationPath, planId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/price-plans/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewUpdatePricePlanRequest calls the generic UpdatePricePlan builder with application/json body
-func NewUpdatePricePlanRequest(server string, planId openapi_types.UUID, params *UpdatePricePlanParams, body UpdatePricePlanJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewUpdatePricePlanRequestWithBody(server, planId, params, "application/json", bodyReader)
-}
-
-// NewUpdatePricePlanRequestWithBody generates requests for UpdatePricePlan with any type of body
-func NewUpdatePricePlanRequestWithBody(server string, planId openapi_types.UUID, params *UpdatePricePlanParams, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "plan_id", runtime.ParamLocationPath, planId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/price-plans/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PATCH", queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -26739,972 +26934,6 @@ func NewGetTopologyRequest(server string, params *GetTopologyParams) (*http.Requ
 	return req, nil
 }
 
-// NewListTracesRequest generates requests for ListTraces
-func NewListTracesRequest(server string, params *ListTracesParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/traces")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.Page != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, *params.Page); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.PageSize != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page_size", runtime.ParamLocationQuery, *params.PageSize); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.From != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "from", runtime.ParamLocationQuery, *params.From); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.To != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "to", runtime.ParamLocationQuery, *params.To); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Service != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "service", runtime.ParamLocationQuery, *params.Service); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.ApiKeyId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "api_key_id", runtime.ParamLocationQuery, *params.ApiKeyId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.ModelId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "model_id", runtime.ParamLocationQuery, *params.ModelId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.DeploymentId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "deployment_id", runtime.ParamLocationQuery, *params.DeploymentId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.InstanceId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "instance_id", runtime.ParamLocationQuery, *params.InstanceId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.NodeId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "node_id", runtime.ParamLocationQuery, *params.NodeId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Format != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "format", runtime.ParamLocationQuery, *params.Format); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.StatusCode != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "status_code", runtime.ParamLocationQuery, *params.StatusCode); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Error != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "error", runtime.ParamLocationQuery, *params.Error); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.MinDurationMs != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "min_duration_ms", runtime.ParamLocationQuery, *params.MinDurationMs); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.RequestId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "request_id", runtime.ParamLocationQuery, *params.RequestId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewGetTraceRequest generates requests for GetTrace
-func NewGetTraceRequest(server string, traceId string) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "trace_id", runtime.ParamLocationPath, traceId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/traces/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewListUsageEventsRequest generates requests for ListUsageEvents
-func NewListUsageEventsRequest(server string, params *ListUsageEventsParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/usage")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.Page != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, *params.Page); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.PageSize != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page_size", runtime.ParamLocationQuery, *params.PageSize); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Sort != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sort", runtime.ParamLocationQuery, *params.Sort); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.From != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "from", runtime.ParamLocationQuery, *params.From); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.To != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "to", runtime.ParamLocationQuery, *params.To); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.ApiKeyId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "api_key_id", runtime.ParamLocationQuery, *params.ApiKeyId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.ModelId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "model_id", runtime.ParamLocationQuery, *params.ModelId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.NodeId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "node_id", runtime.ParamLocationQuery, *params.NodeId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.DeploymentId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "deployment_id", runtime.ParamLocationQuery, *params.DeploymentId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.ClusterId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster_id", runtime.ParamLocationQuery, *params.ClusterId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Format != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "format", runtime.ParamLocationQuery, *params.Format); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Status != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "status", runtime.ParamLocationQuery, *params.Status); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.RequestId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "request_id", runtime.ParamLocationQuery, *params.RequestId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Endpoint != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "endpoint", runtime.ParamLocationQuery, *params.Endpoint); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewExportUsageCsvRequest generates requests for ExportUsageCsv
-func NewExportUsageCsvRequest(server string, params *ExportUsageCsvParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/usage/export")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.From != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "from", runtime.ParamLocationQuery, *params.From); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.To != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "to", runtime.ParamLocationQuery, *params.To); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.ApiKeyId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "api_key_id", runtime.ParamLocationQuery, *params.ApiKeyId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.ModelId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "model_id", runtime.ParamLocationQuery, *params.ModelId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.NodeId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "node_id", runtime.ParamLocationQuery, *params.NodeId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.DeploymentId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "deployment_id", runtime.ParamLocationQuery, *params.DeploymentId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.ClusterId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster_id", runtime.ParamLocationQuery, *params.ClusterId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Format != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "format", runtime.ParamLocationQuery, *params.Format); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Status != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "status", runtime.ParamLocationQuery, *params.Status); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Mode != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "mode", runtime.ParamLocationQuery, *params.Mode); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.GroupBy != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "group_by", runtime.ParamLocationQuery, *params.GroupBy); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewGetUsageSummaryRequest generates requests for GetUsageSummary
-func NewGetUsageSummaryRequest(server string, params *GetUsageSummaryParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/usage/summary")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.From != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "from", runtime.ParamLocationQuery, *params.From); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.To != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "to", runtime.ParamLocationQuery, *params.To); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.ApiKeyId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "api_key_id", runtime.ParamLocationQuery, *params.ApiKeyId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.ModelId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "model_id", runtime.ParamLocationQuery, *params.ModelId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.NodeId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "node_id", runtime.ParamLocationQuery, *params.NodeId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.DeploymentId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "deployment_id", runtime.ParamLocationQuery, *params.DeploymentId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.ClusterId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster_id", runtime.ParamLocationQuery, *params.ClusterId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Format != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "format", runtime.ParamLocationQuery, *params.Format); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Status != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "status", runtime.ParamLocationQuery, *params.Status); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.GroupBy != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "group_by", runtime.ParamLocationQuery, *params.GroupBy); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 // NewListCredentialsRequest generates requests for ListCredentials
 func NewListCredentialsRequest(server string, params *ListCredentialsParams) (*http.Request, error) {
 	var err error
@@ -28295,6 +27524,24 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// GetAgentUpdateOverviewWithResponse request
+	GetAgentUpdateOverviewWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAgentUpdateOverviewResponse, error)
+
+	// ListAgentRolloutsWithResponse request
+	ListAgentRolloutsWithResponse(ctx context.Context, params *ListAgentRolloutsParams, reqEditors ...RequestEditorFn) (*ListAgentRolloutsResponse, error)
+
+	// GetAgentRolloutWithResponse request
+	GetAgentRolloutWithResponse(ctx context.Context, rolloutId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetAgentRolloutResponse, error)
+
+	// CancelAgentRolloutWithResponse request
+	CancelAgentRolloutWithResponse(ctx context.Context, rolloutId openapi_types.UUID, params *CancelAgentRolloutParams, reqEditors ...RequestEditorFn) (*CancelAgentRolloutResponse, error)
+
+	// ListAgentUpdateRunsWithResponse request
+	ListAgentUpdateRunsWithResponse(ctx context.Context, params *ListAgentUpdateRunsParams, reqEditors ...RequestEditorFn) (*ListAgentUpdateRunsResponse, error)
+
+	// GetAgentUpdateRunWithResponse request
+	GetAgentUpdateRunWithResponse(ctx context.Context, runId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetAgentUpdateRunResponse, error)
+
 	// ListAgentDownloadsWithResponse request
 	ListAgentDownloadsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListAgentDownloadsResponse, error)
 
@@ -28470,29 +27717,6 @@ type ClientWithResponsesInterface interface {
 
 	StartBenchmarkWithResponse(ctx context.Context, benchmarkId openapi_types.UUID, params *StartBenchmarkParams, body StartBenchmarkJSONRequestBody, reqEditors ...RequestEditorFn) (*StartBenchmarkResponse, error)
 
-	// GetBillingEstimateWithResponse request
-	GetBillingEstimateWithResponse(ctx context.Context, params *GetBillingEstimateParams, reqEditors ...RequestEditorFn) (*GetBillingEstimateResponse, error)
-
-	// ListBillingReportsWithResponse request
-	ListBillingReportsWithResponse(ctx context.Context, params *ListBillingReportsParams, reqEditors ...RequestEditorFn) (*ListBillingReportsResponse, error)
-
-	// CreateBillingReportWithBodyWithResponse request with any body
-	CreateBillingReportWithBodyWithResponse(ctx context.Context, params *CreateBillingReportParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateBillingReportResponse, error)
-
-	CreateBillingReportWithResponse(ctx context.Context, params *CreateBillingReportParams, body CreateBillingReportJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateBillingReportResponse, error)
-
-	// DeleteBillingReportWithResponse request
-	DeleteBillingReportWithResponse(ctx context.Context, reportId openapi_types.UUID, params *DeleteBillingReportParams, reqEditors ...RequestEditorFn) (*DeleteBillingReportResponse, error)
-
-	// GetBillingReportWithResponse request
-	GetBillingReportWithResponse(ctx context.Context, reportId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetBillingReportResponse, error)
-
-	// ExportBillingReportCsvWithResponse request
-	ExportBillingReportCsvWithResponse(ctx context.Context, reportId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ExportBillingReportCsvResponse, error)
-
-	// RegenerateBillingReportWithResponse request
-	RegenerateBillingReportWithResponse(ctx context.Context, reportId openapi_types.UUID, params *RegenerateBillingReportParams, reqEditors ...RequestEditorFn) (*RegenerateBillingReportResponse, error)
-
 	// GetBrandingWithResponse request
 	GetBrandingWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetBrandingResponse, error)
 
@@ -28525,9 +27749,6 @@ type ClientWithResponsesInterface interface {
 	UpdateCloudNodeWithBodyWithResponse(ctx context.Context, cloudNodeId openapi_types.UUID, params *UpdateCloudNodeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateCloudNodeResponse, error)
 
 	UpdateCloudNodeWithResponse(ctx context.Context, cloudNodeId openapi_types.UUID, params *UpdateCloudNodeParams, body UpdateCloudNodeJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateCloudNodeResponse, error)
-
-	// ApplyCloudNodePricePlanWithResponse request
-	ApplyCloudNodePricePlanWithResponse(ctx context.Context, cloudNodeId openapi_types.UUID, params *ApplyCloudNodePricePlanParams, reqEditors ...RequestEditorFn) (*ApplyCloudNodePricePlanResponse, error)
 
 	// RefreshCloudNodeWithResponse request
 	RefreshCloudNodeWithResponse(ctx context.Context, cloudNodeId openapi_types.UUID, params *RefreshCloudNodeParams, reqEditors ...RequestEditorFn) (*RefreshCloudNodeResponse, error)
@@ -28580,6 +27801,19 @@ type ClientWithResponsesInterface interface {
 	UpdateClusterWithBodyWithResponse(ctx context.Context, clusterId openapi_types.UUID, params *UpdateClusterParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateClusterResponse, error)
 
 	UpdateClusterWithResponse(ctx context.Context, clusterId openapi_types.UUID, params *UpdateClusterParams, body UpdateClusterJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateClusterResponse, error)
+
+	// GetClusterAgentUpdateWithResponse request
+	GetClusterAgentUpdateWithResponse(ctx context.Context, clusterId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetClusterAgentUpdateResponse, error)
+
+	// StartClusterAgentRolloutWithBodyWithResponse request with any body
+	StartClusterAgentRolloutWithBodyWithResponse(ctx context.Context, clusterId openapi_types.UUID, params *StartClusterAgentRolloutParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*StartClusterAgentRolloutResponse, error)
+
+	StartClusterAgentRolloutWithResponse(ctx context.Context, clusterId openapi_types.UUID, params *StartClusterAgentRolloutParams, body StartClusterAgentRolloutJSONRequestBody, reqEditors ...RequestEditorFn) (*StartClusterAgentRolloutResponse, error)
+
+	// SetClusterAgentUpdatePolicyWithBodyWithResponse request with any body
+	SetClusterAgentUpdatePolicyWithBodyWithResponse(ctx context.Context, clusterId openapi_types.UUID, params *SetClusterAgentUpdatePolicyParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetClusterAgentUpdatePolicyResponse, error)
+
+	SetClusterAgentUpdatePolicyWithResponse(ctx context.Context, clusterId openapi_types.UUID, params *SetClusterAgentUpdatePolicyParams, body SetClusterAgentUpdatePolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*SetClusterAgentUpdatePolicyResponse, error)
 
 	// ListClusterNodesWithResponse request
 	ListClusterNodesWithResponse(ctx context.Context, clusterId openapi_types.UUID, params *ListClusterNodesParams, reqEditors ...RequestEditorFn) (*ListClusterNodesResponse, error)
@@ -28849,11 +28083,20 @@ type ClientWithResponsesInterface interface {
 	// QueryInferenceMetricsWithResponse request
 	QueryInferenceMetricsWithResponse(ctx context.Context, params *QueryInferenceMetricsParams, reqEditors ...RequestEditorFn) (*QueryInferenceMetricsResponse, error)
 
+	// QueryLatencyHistoryWithResponse request
+	QueryLatencyHistoryWithResponse(ctx context.Context, params *QueryLatencyHistoryParams, reqEditors ...RequestEditorFn) (*QueryLatencyHistoryResponse, error)
+
+	// GetLiveLatencyWithResponse request
+	GetLiveLatencyWithResponse(ctx context.Context, params *GetLiveLatencyParams, reqEditors ...RequestEditorFn) (*GetLiveLatencyResponse, error)
+
 	// GetOverviewWithResponse request
 	GetOverviewWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetOverviewResponse, error)
 
 	// GetPrometheusExpositionWithResponse request
 	GetPrometheusExpositionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetPrometheusExpositionResponse, error)
+
+	// QueryRequestTimingWithResponse request
+	QueryRequestTimingWithResponse(ctx context.Context, params *QueryRequestTimingParams, reqEditors ...RequestEditorFn) (*QueryRequestTimingResponse, error)
 
 	// QuerySessionMetricsWithResponse request
 	QuerySessionMetricsWithResponse(ctx context.Context, params *QuerySessionMetricsParams, reqEditors ...RequestEditorFn) (*QuerySessionMetricsResponse, error)
@@ -28963,6 +28206,19 @@ type ClientWithResponsesInterface interface {
 
 	UpdateNodeWithResponse(ctx context.Context, nodeId openapi_types.UUID, params *UpdateNodeParams, body UpdateNodeJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateNodeResponse, error)
 
+	// GetNodeAgentUpdateWithResponse request
+	GetNodeAgentUpdateWithResponse(ctx context.Context, nodeId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetNodeAgentUpdateResponse, error)
+
+	// UpdateNodeAgentWithBodyWithResponse request with any body
+	UpdateNodeAgentWithBodyWithResponse(ctx context.Context, nodeId openapi_types.UUID, params *UpdateNodeAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateNodeAgentResponse, error)
+
+	UpdateNodeAgentWithResponse(ctx context.Context, nodeId openapi_types.UUID, params *UpdateNodeAgentParams, body UpdateNodeAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateNodeAgentResponse, error)
+
+	// StageNodeAgentUpdateWithBodyWithResponse request with any body
+	StageNodeAgentUpdateWithBodyWithResponse(ctx context.Context, nodeId openapi_types.UUID, params *StageNodeAgentUpdateParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*StageNodeAgentUpdateResponse, error)
+
+	StageNodeAgentUpdateWithResponse(ctx context.Context, nodeId openapi_types.UUID, params *StageNodeAgentUpdateParams, body StageNodeAgentUpdateJSONRequestBody, reqEditors ...RequestEditorFn) (*StageNodeAgentUpdateResponse, error)
+
 	// GetNodeCacheWithResponse request
 	GetNodeCacheWithResponse(ctx context.Context, nodeId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetNodeCacheResponse, error)
 
@@ -29025,25 +28281,6 @@ type ClientWithResponsesInterface interface {
 	IssueServiceCertificateWithBodyWithResponse(ctx context.Context, params *IssueServiceCertificateParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*IssueServiceCertificateResponse, error)
 
 	IssueServiceCertificateWithResponse(ctx context.Context, params *IssueServiceCertificateParams, body IssueServiceCertificateJSONRequestBody, reqEditors ...RequestEditorFn) (*IssueServiceCertificateResponse, error)
-
-	// ListPricePlansWithResponse request
-	ListPricePlansWithResponse(ctx context.Context, params *ListPricePlansParams, reqEditors ...RequestEditorFn) (*ListPricePlansResponse, error)
-
-	// CreatePricePlanWithBodyWithResponse request with any body
-	CreatePricePlanWithBodyWithResponse(ctx context.Context, params *CreatePricePlanParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreatePricePlanResponse, error)
-
-	CreatePricePlanWithResponse(ctx context.Context, params *CreatePricePlanParams, body CreatePricePlanJSONRequestBody, reqEditors ...RequestEditorFn) (*CreatePricePlanResponse, error)
-
-	// DeletePricePlanWithResponse request
-	DeletePricePlanWithResponse(ctx context.Context, planId openapi_types.UUID, params *DeletePricePlanParams, reqEditors ...RequestEditorFn) (*DeletePricePlanResponse, error)
-
-	// GetPricePlanWithResponse request
-	GetPricePlanWithResponse(ctx context.Context, planId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetPricePlanResponse, error)
-
-	// UpdatePricePlanWithBodyWithResponse request with any body
-	UpdatePricePlanWithBodyWithResponse(ctx context.Context, planId openapi_types.UUID, params *UpdatePricePlanParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdatePricePlanResponse, error)
-
-	UpdatePricePlanWithResponse(ctx context.Context, planId openapi_types.UUID, params *UpdatePricePlanParams, body UpdatePricePlanJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdatePricePlanResponse, error)
 
 	// ListAllRuleRunsWithResponse request
 	ListAllRuleRunsWithResponse(ctx context.Context, params *ListAllRuleRunsParams, reqEditors ...RequestEditorFn) (*ListAllRuleRunsResponse, error)
@@ -29111,21 +28348,6 @@ type ClientWithResponsesInterface interface {
 	// GetTopologyWithResponse request
 	GetTopologyWithResponse(ctx context.Context, params *GetTopologyParams, reqEditors ...RequestEditorFn) (*GetTopologyResponse, error)
 
-	// ListTracesWithResponse request
-	ListTracesWithResponse(ctx context.Context, params *ListTracesParams, reqEditors ...RequestEditorFn) (*ListTracesResponse, error)
-
-	// GetTraceWithResponse request
-	GetTraceWithResponse(ctx context.Context, traceId string, reqEditors ...RequestEditorFn) (*GetTraceResponse, error)
-
-	// ListUsageEventsWithResponse request
-	ListUsageEventsWithResponse(ctx context.Context, params *ListUsageEventsParams, reqEditors ...RequestEditorFn) (*ListUsageEventsResponse, error)
-
-	// ExportUsageCsvWithResponse request
-	ExportUsageCsvWithResponse(ctx context.Context, params *ExportUsageCsvParams, reqEditors ...RequestEditorFn) (*ExportUsageCsvResponse, error)
-
-	// GetUsageSummaryWithResponse request
-	GetUsageSummaryWithResponse(ctx context.Context, params *GetUsageSummaryParams, reqEditors ...RequestEditorFn) (*GetUsageSummaryResponse, error)
-
 	// ListCredentialsWithResponse request
 	ListCredentialsWithResponse(ctx context.Context, params *ListCredentialsParams, reqEditors ...RequestEditorFn) (*ListCredentialsResponse, error)
 
@@ -29159,6 +28381,231 @@ type ClientWithResponsesInterface interface {
 
 	// GetCredentialUsageWithResponse request
 	GetCredentialUsageWithResponse(ctx context.Context, credentialId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetCredentialUsageResponse, error)
+}
+
+type GetAgentUpdateOverviewResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Data    AgentUpdateOverview              `json:"data"`
+		Error   interface{}                      `json:"error"`
+		Meta    *map[string]interface{}          `json:"meta"`
+		Success GetAgentUpdateOverview200Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON404 *Error404
+	JSON409 *Error409
+	JSON422 *Error422
+	JSON429 *Error429
+	JSON500 *Error500
+	JSON503 *Error503
+}
+type GetAgentUpdateOverview200Success bool
+
+// Status returns HTTPResponse.Status
+func (r GetAgentUpdateOverviewResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetAgentUpdateOverviewResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListAgentRolloutsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Data    []AgentRollout              `json:"data"`
+		Error   interface{}                 `json:"error"`
+		Meta    ListMeta                    `json:"meta"`
+		Success ListAgentRollouts200Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON404 *Error404
+	JSON409 *Error409
+	JSON422 *Error422
+	JSON429 *Error429
+	JSON500 *Error500
+	JSON503 *Error503
+}
+type ListAgentRollouts200Success bool
+
+// Status returns HTTPResponse.Status
+func (r ListAgentRolloutsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListAgentRolloutsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetAgentRolloutResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		// Data A rolling agent update of a cluster.
+		Data    AgentRollout              `json:"data"`
+		Error   interface{}               `json:"error"`
+		Meta    *map[string]interface{}   `json:"meta"`
+		Success GetAgentRollout200Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON404 *Error404
+	JSON409 *Error409
+	JSON422 *Error422
+	JSON429 *Error429
+	JSON500 *Error500
+	JSON503 *Error503
+}
+type GetAgentRollout200Success bool
+
+// Status returns HTTPResponse.Status
+func (r GetAgentRolloutResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetAgentRolloutResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CancelAgentRolloutResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		// Data A rolling agent update of a cluster.
+		Data    AgentRollout                 `json:"data"`
+		Error   interface{}                  `json:"error"`
+		Meta    *map[string]interface{}      `json:"meta"`
+		Success CancelAgentRollout200Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON404 *Error404
+	JSON409 *Error409
+	JSON422 *Error422
+	JSON429 *Error429
+	JSON500 *Error500
+	JSON503 *Error503
+}
+type CancelAgentRollout200Success bool
+
+// Status returns HTTPResponse.Status
+func (r CancelAgentRolloutResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CancelAgentRolloutResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListAgentUpdateRunsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Data    []AgentUpdateRun              `json:"data"`
+		Error   interface{}                   `json:"error"`
+		Meta    ListMeta                      `json:"meta"`
+		Success ListAgentUpdateRuns200Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON404 *Error404
+	JSON409 *Error409
+	JSON422 *Error422
+	JSON429 *Error429
+	JSON500 *Error500
+	JSON503 *Error503
+}
+type ListAgentUpdateRuns200Success bool
+
+// Status returns HTTPResponse.Status
+func (r ListAgentUpdateRunsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListAgentUpdateRunsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetAgentUpdateRunResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		// Data One agent update of one node (agent protocol §14).
+		Data    AgentUpdateRun              `json:"data"`
+		Error   interface{}                 `json:"error"`
+		Meta    *map[string]interface{}     `json:"meta"`
+		Success GetAgentUpdateRun200Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON404 *Error404
+	JSON409 *Error409
+	JSON422 *Error422
+	JSON429 *Error429
+	JSON500 *Error500
+	JSON503 *Error503
+}
+type GetAgentUpdateRun200Success bool
+
+// Status returns HTTPResponse.Status
+func (r GetAgentUpdateRunResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetAgentUpdateRunResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type ListAgentDownloadsResponse struct {
@@ -30969,251 +30416,6 @@ func (r StartBenchmarkResponse) StatusCode() int {
 	return 0
 }
 
-type GetBillingEstimateResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Data    BillingEstimate              `json:"data"`
-		Error   interface{}                  `json:"error"`
-		Meta    *map[string]interface{}      `json:"meta"`
-		Success GetBillingEstimate200Success `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON503 *Error503
-}
-type GetBillingEstimate200Success bool
-
-// Status returns HTTPResponse.Status
-func (r GetBillingEstimateResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetBillingEstimateResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type ListBillingReportsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Data    []BillingReport              `json:"data"`
-		Error   interface{}                  `json:"error"`
-		Meta    ListMeta                     `json:"meta"`
-		Success ListBillingReports200Success `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON503 *Error503
-}
-type ListBillingReports200Success bool
-
-// Status returns HTTPResponse.Status
-func (r ListBillingReportsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListBillingReportsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type CreateBillingReportResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON202      *struct {
-		Data    BillingReport                 `json:"data"`
-		Error   interface{}                   `json:"error"`
-		Meta    *map[string]interface{}       `json:"meta"`
-		Success CreateBillingReport202Success `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON503 *Error503
-}
-type CreateBillingReport202Success bool
-
-// Status returns HTTPResponse.Status
-func (r CreateBillingReportResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r CreateBillingReportResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type DeleteBillingReportResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON400      *Error400
-	JSON401      *Error401
-	JSON403      *Error403
-	JSON404      *Error404
-	JSON409      *Error409
-	JSON422      *Error422
-	JSON429      *Error429
-	JSON500      *Error500
-	JSON503      *Error503
-}
-
-// Status returns HTTPResponse.Status
-func (r DeleteBillingReportResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r DeleteBillingReportResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type GetBillingReportResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Data    BillingReport              `json:"data"`
-		Error   interface{}                `json:"error"`
-		Meta    *map[string]interface{}    `json:"meta"`
-		Success GetBillingReport200Success `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON503 *Error503
-}
-type GetBillingReport200Success bool
-
-// Status returns HTTPResponse.Status
-func (r GetBillingReportResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetBillingReportResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type ExportBillingReportCsvResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON400      *Error400
-	JSON401      *Error401
-	JSON403      *Error403
-	JSON404      *Error404
-	JSON409      *Error409
-	JSON422      *Error422
-	JSON429      *Error429
-	JSON500      *Error500
-	JSON503      *Error503
-}
-
-// Status returns HTTPResponse.Status
-func (r ExportBillingReportCsvResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ExportBillingReportCsvResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type RegenerateBillingReportResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON202      *struct {
-		Data    BillingReport                     `json:"data"`
-		Error   interface{}                       `json:"error"`
-		Meta    *map[string]interface{}           `json:"meta"`
-		Success RegenerateBillingReport202Success `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON503 *Error503
-}
-type RegenerateBillingReport202Success bool
-
-// Status returns HTTPResponse.Status
-func (r RegenerateBillingReportResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r RegenerateBillingReportResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type GetBrandingResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -31538,45 +30740,6 @@ func (r UpdateCloudNodeResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r UpdateCloudNodeResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type ApplyCloudNodePricePlanResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Data    CloudNode                         `json:"data"`
-		Error   interface{}                       `json:"error"`
-		Meta    *map[string]interface{}           `json:"meta"`
-		Success ApplyCloudNodePricePlan200Success `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON424 *ErrorEnvelope
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON502 *Error502
-	JSON503 *Error503
-}
-type ApplyCloudNodePricePlan200Success bool
-
-// Status returns HTTPResponse.Status
-func (r ApplyCloudNodePricePlanResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ApplyCloudNodePricePlanResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -32106,6 +31269,119 @@ func (r UpdateClusterResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r UpdateClusterResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetClusterAgentUpdateResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Data    ClusterAgentUpdate              `json:"data"`
+		Error   interface{}                     `json:"error"`
+		Meta    *map[string]interface{}         `json:"meta"`
+		Success GetClusterAgentUpdate200Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON404 *Error404
+	JSON409 *Error409
+	JSON422 *Error422
+	JSON429 *Error429
+	JSON500 *Error500
+	JSON503 *Error503
+}
+type GetClusterAgentUpdate200Success bool
+
+// Status returns HTTPResponse.Status
+func (r GetClusterAgentUpdateResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetClusterAgentUpdateResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type StartClusterAgentRolloutResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON202      *struct {
+		// Data A rolling agent update of a cluster.
+		Data    AgentRollout                       `json:"data"`
+		Error   interface{}                        `json:"error"`
+		Meta    *map[string]interface{}            `json:"meta"`
+		Success StartClusterAgentRollout202Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON404 *Error404
+	JSON409 *Error409
+	JSON422 *Error422
+	JSON429 *Error429
+	JSON500 *Error500
+	JSON503 *Error503
+}
+type StartClusterAgentRollout202Success bool
+
+// Status returns HTTPResponse.Status
+func (r StartClusterAgentRolloutResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r StartClusterAgentRolloutResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type SetClusterAgentUpdatePolicyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		// Data clusters.config.agent_updates. manual (default): an admin clicks Update or starts a rolling update. auto: the scheduler starts a rolling update inside the maintenance window once nodes have the target version staged.
+		Data    AgentUpdatePolicy                     `json:"data"`
+		Error   interface{}                           `json:"error"`
+		Meta    *map[string]interface{}               `json:"meta"`
+		Success SetClusterAgentUpdatePolicy200Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON404 *Error404
+	JSON409 *Error409
+	JSON422 *Error422
+	JSON429 *Error429
+	JSON500 *Error500
+	JSON503 *Error503
+}
+type SetClusterAgentUpdatePolicy200Success bool
+
+// Status returns HTTPResponse.Status
+func (r SetClusterAgentUpdatePolicyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetClusterAgentUpdatePolicyResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -34708,6 +33984,72 @@ func (r QueryInferenceMetricsResponse) StatusCode() int {
 	return 0
 }
 
+type QueryLatencyHistoryResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Data    LatencyHistory                `json:"data"`
+		Error   interface{}                   `json:"error"`
+		Meta    *map[string]interface{}       `json:"meta"`
+		Success QueryLatencyHistory200Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON422 *Error422
+	JSON500 *Error500
+}
+type QueryLatencyHistory200Success bool
+
+// Status returns HTTPResponse.Status
+func (r QueryLatencyHistoryResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r QueryLatencyHistoryResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetLiveLatencyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Data    LatencyLive              `json:"data"`
+		Error   interface{}              `json:"error"`
+		Meta    *map[string]interface{}  `json:"meta"`
+		Success GetLiveLatency200Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON422 *Error422
+	JSON500 *Error500
+}
+type GetLiveLatency200Success bool
+
+// Status returns HTTPResponse.Status
+func (r GetLiveLatencyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetLiveLatencyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type GetOverviewResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -34763,6 +34105,39 @@ func (r GetPrometheusExpositionResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetPrometheusExpositionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type QueryRequestTimingResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Data    RequestTiming                `json:"data"`
+		Error   interface{}                  `json:"error"`
+		Meta    *map[string]interface{}      `json:"meta"`
+		Success QueryRequestTiming200Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON422 *Error422
+	JSON500 *Error500
+}
+type QueryRequestTiming200Success bool
+
+// Status returns HTTPResponse.Status
+func (r QueryRequestTimingResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r QueryRequestTimingResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -35854,6 +35229,119 @@ func (r UpdateNodeResponse) StatusCode() int {
 	return 0
 }
 
+type GetNodeAgentUpdateResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		// Data Update status of a node. mode: helper (root-owned update helper), self (the agent owns its binary), managed (Kubernetes DaemonSet: Managed by Helm, never self-updates), unsupported (cannot replace its binary: reason), manual (agent predates self-update: update manually, see instructions).
+		Data    NodeAgentUpdate              `json:"data"`
+		Error   interface{}                  `json:"error"`
+		Meta    *map[string]interface{}      `json:"meta"`
+		Success GetNodeAgentUpdate200Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON404 *Error404
+	JSON409 *Error409
+	JSON422 *Error422
+	JSON429 *Error429
+	JSON500 *Error500
+	JSON503 *Error503
+}
+type GetNodeAgentUpdate200Success bool
+
+// Status returns HTTPResponse.Status
+func (r GetNodeAgentUpdateResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetNodeAgentUpdateResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateNodeAgentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON202      *struct {
+		// Data One agent update of one node (agent protocol §14).
+		Data    AgentUpdateRun            `json:"data"`
+		Error   interface{}               `json:"error"`
+		Meta    *map[string]interface{}   `json:"meta"`
+		Success UpdateNodeAgent202Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON404 *Error404
+	JSON409 *Error409
+	JSON422 *Error422
+	JSON429 *Error429
+	JSON500 *Error500
+	JSON503 *Error503
+}
+type UpdateNodeAgent202Success bool
+
+// Status returns HTTPResponse.Status
+func (r UpdateNodeAgentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateNodeAgentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type StageNodeAgentUpdateResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON202      *struct {
+		Data    AgentStage                     `json:"data"`
+		Error   interface{}                    `json:"error"`
+		Meta    *map[string]interface{}        `json:"meta"`
+		Success StageNodeAgentUpdate202Success `json:"success"`
+	}
+	JSON400 *Error400
+	JSON401 *Error401
+	JSON403 *Error403
+	JSON404 *Error404
+	JSON409 *Error409
+	JSON422 *Error422
+	JSON429 *Error429
+	JSON500 *Error500
+	JSON503 *Error503
+}
+type StageNodeAgentUpdate202Success bool
+
+// Status returns HTTPResponse.Status
+func (r StageNodeAgentUpdateResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r StageNodeAgentUpdateResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type GetNodeCacheResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -36477,184 +35965,6 @@ func (r IssueServiceCertificateResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r IssueServiceCertificateResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type ListPricePlansResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Data    []PricePlan              `json:"data"`
-		Error   interface{}              `json:"error"`
-		Meta    ListMeta                 `json:"meta"`
-		Success ListPricePlans200Success `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON503 *Error503
-}
-type ListPricePlans200Success bool
-
-// Status returns HTTPResponse.Status
-func (r ListPricePlansResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListPricePlansResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type CreatePricePlanResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON201      *struct {
-		Data    PricePlan                 `json:"data"`
-		Error   interface{}               `json:"error"`
-		Meta    *map[string]interface{}   `json:"meta"`
-		Success CreatePricePlan201Success `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON503 *Error503
-}
-type CreatePricePlan201Success bool
-
-// Status returns HTTPResponse.Status
-func (r CreatePricePlanResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r CreatePricePlanResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type DeletePricePlanResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON400      *Error400
-	JSON401      *Error401
-	JSON403      *Error403
-	JSON404      *Error404
-	JSON409      *Error409
-	JSON422      *Error422
-	JSON429      *Error429
-	JSON500      *Error500
-	JSON503      *Error503
-}
-
-// Status returns HTTPResponse.Status
-func (r DeletePricePlanResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r DeletePricePlanResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type GetPricePlanResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Data    PricePlan               `json:"data"`
-		Error   interface{}             `json:"error"`
-		Meta    *map[string]interface{} `json:"meta"`
-		Success GetPricePlan200Success  `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON503 *Error503
-}
-type GetPricePlan200Success bool
-
-// Status returns HTTPResponse.Status
-func (r GetPricePlanResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetPricePlanResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type UpdatePricePlanResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Data    PricePlan                 `json:"data"`
-		Error   interface{}               `json:"error"`
-		Meta    *map[string]interface{}   `json:"meta"`
-		Success UpdatePricePlan200Success `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON503 *Error503
-}
-type UpdatePricePlan200Success bool
-
-// Status returns HTTPResponse.Status
-func (r UpdatePricePlanResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r UpdatePricePlanResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -37394,184 +36704,6 @@ func (r GetTopologyResponse) StatusCode() int {
 	return 0
 }
 
-type ListTracesResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Data    []TraceSpan          `json:"data"`
-		Error   interface{}          `json:"error"`
-		Meta    ListMeta             `json:"meta"`
-		Success ListTraces200Success `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON503 *Error503
-}
-type ListTraces200Success bool
-
-// Status returns HTTPResponse.Status
-func (r ListTracesResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListTracesResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type GetTraceResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Data    Trace                   `json:"data"`
-		Error   interface{}             `json:"error"`
-		Meta    *map[string]interface{} `json:"meta"`
-		Success GetTrace200Success      `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON503 *Error503
-}
-type GetTrace200Success bool
-
-// Status returns HTTPResponse.Status
-func (r GetTraceResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetTraceResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type ListUsageEventsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Data    []UsageEvent              `json:"data"`
-		Error   interface{}               `json:"error"`
-		Meta    ListMeta                  `json:"meta"`
-		Success ListUsageEvents200Success `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON503 *Error503
-}
-type ListUsageEvents200Success bool
-
-// Status returns HTTPResponse.Status
-func (r ListUsageEventsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListUsageEventsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type ExportUsageCsvResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON400      *Error400
-	JSON401      *Error401
-	JSON403      *Error403
-	JSON404      *Error404
-	JSON409      *Error409
-	JSON422      *Error422
-	JSON429      *Error429
-	JSON500      *Error500
-	JSON503      *Error503
-}
-
-// Status returns HTTPResponse.Status
-func (r ExportUsageCsvResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ExportUsageCsvResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type GetUsageSummaryResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Data    UsageSummary              `json:"data"`
-		Error   interface{}               `json:"error"`
-		Meta    *map[string]interface{}   `json:"meta"`
-		Success GetUsageSummary200Success `json:"success"`
-	}
-	JSON400 *Error400
-	JSON401 *Error401
-	JSON403 *Error403
-	JSON404 *Error404
-	JSON409 *Error409
-	JSON422 *Error422
-	JSON429 *Error429
-	JSON500 *Error500
-	JSON503 *Error503
-}
-type GetUsageSummary200Success bool
-
-// Status returns HTTPResponse.Status
-func (r GetUsageSummaryResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetUsageSummaryResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type ListCredentialsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -37933,6 +37065,60 @@ func (r GetCredentialUsageResponse) StatusCode() int {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
+}
+
+// GetAgentUpdateOverviewWithResponse request returning *GetAgentUpdateOverviewResponse
+func (c *ClientWithResponses) GetAgentUpdateOverviewWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAgentUpdateOverviewResponse, error) {
+	rsp, err := c.GetAgentUpdateOverview(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetAgentUpdateOverviewResponse(rsp)
+}
+
+// ListAgentRolloutsWithResponse request returning *ListAgentRolloutsResponse
+func (c *ClientWithResponses) ListAgentRolloutsWithResponse(ctx context.Context, params *ListAgentRolloutsParams, reqEditors ...RequestEditorFn) (*ListAgentRolloutsResponse, error) {
+	rsp, err := c.ListAgentRollouts(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListAgentRolloutsResponse(rsp)
+}
+
+// GetAgentRolloutWithResponse request returning *GetAgentRolloutResponse
+func (c *ClientWithResponses) GetAgentRolloutWithResponse(ctx context.Context, rolloutId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetAgentRolloutResponse, error) {
+	rsp, err := c.GetAgentRollout(ctx, rolloutId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetAgentRolloutResponse(rsp)
+}
+
+// CancelAgentRolloutWithResponse request returning *CancelAgentRolloutResponse
+func (c *ClientWithResponses) CancelAgentRolloutWithResponse(ctx context.Context, rolloutId openapi_types.UUID, params *CancelAgentRolloutParams, reqEditors ...RequestEditorFn) (*CancelAgentRolloutResponse, error) {
+	rsp, err := c.CancelAgentRollout(ctx, rolloutId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCancelAgentRolloutResponse(rsp)
+}
+
+// ListAgentUpdateRunsWithResponse request returning *ListAgentUpdateRunsResponse
+func (c *ClientWithResponses) ListAgentUpdateRunsWithResponse(ctx context.Context, params *ListAgentUpdateRunsParams, reqEditors ...RequestEditorFn) (*ListAgentUpdateRunsResponse, error) {
+	rsp, err := c.ListAgentUpdateRuns(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListAgentUpdateRunsResponse(rsp)
+}
+
+// GetAgentUpdateRunWithResponse request returning *GetAgentUpdateRunResponse
+func (c *ClientWithResponses) GetAgentUpdateRunWithResponse(ctx context.Context, runId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetAgentUpdateRunResponse, error) {
+	rsp, err := c.GetAgentUpdateRun(ctx, runId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetAgentUpdateRunResponse(rsp)
 }
 
 // ListAgentDownloadsWithResponse request returning *ListAgentDownloadsResponse
@@ -38482,77 +37668,6 @@ func (c *ClientWithResponses) StartBenchmarkWithResponse(ctx context.Context, be
 	return ParseStartBenchmarkResponse(rsp)
 }
 
-// GetBillingEstimateWithResponse request returning *GetBillingEstimateResponse
-func (c *ClientWithResponses) GetBillingEstimateWithResponse(ctx context.Context, params *GetBillingEstimateParams, reqEditors ...RequestEditorFn) (*GetBillingEstimateResponse, error) {
-	rsp, err := c.GetBillingEstimate(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetBillingEstimateResponse(rsp)
-}
-
-// ListBillingReportsWithResponse request returning *ListBillingReportsResponse
-func (c *ClientWithResponses) ListBillingReportsWithResponse(ctx context.Context, params *ListBillingReportsParams, reqEditors ...RequestEditorFn) (*ListBillingReportsResponse, error) {
-	rsp, err := c.ListBillingReports(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListBillingReportsResponse(rsp)
-}
-
-// CreateBillingReportWithBodyWithResponse request with arbitrary body returning *CreateBillingReportResponse
-func (c *ClientWithResponses) CreateBillingReportWithBodyWithResponse(ctx context.Context, params *CreateBillingReportParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateBillingReportResponse, error) {
-	rsp, err := c.CreateBillingReportWithBody(ctx, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateBillingReportResponse(rsp)
-}
-
-func (c *ClientWithResponses) CreateBillingReportWithResponse(ctx context.Context, params *CreateBillingReportParams, body CreateBillingReportJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateBillingReportResponse, error) {
-	rsp, err := c.CreateBillingReport(ctx, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateBillingReportResponse(rsp)
-}
-
-// DeleteBillingReportWithResponse request returning *DeleteBillingReportResponse
-func (c *ClientWithResponses) DeleteBillingReportWithResponse(ctx context.Context, reportId openapi_types.UUID, params *DeleteBillingReportParams, reqEditors ...RequestEditorFn) (*DeleteBillingReportResponse, error) {
-	rsp, err := c.DeleteBillingReport(ctx, reportId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeleteBillingReportResponse(rsp)
-}
-
-// GetBillingReportWithResponse request returning *GetBillingReportResponse
-func (c *ClientWithResponses) GetBillingReportWithResponse(ctx context.Context, reportId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetBillingReportResponse, error) {
-	rsp, err := c.GetBillingReport(ctx, reportId, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetBillingReportResponse(rsp)
-}
-
-// ExportBillingReportCsvWithResponse request returning *ExportBillingReportCsvResponse
-func (c *ClientWithResponses) ExportBillingReportCsvWithResponse(ctx context.Context, reportId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ExportBillingReportCsvResponse, error) {
-	rsp, err := c.ExportBillingReportCsv(ctx, reportId, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseExportBillingReportCsvResponse(rsp)
-}
-
-// RegenerateBillingReportWithResponse request returning *RegenerateBillingReportResponse
-func (c *ClientWithResponses) RegenerateBillingReportWithResponse(ctx context.Context, reportId openapi_types.UUID, params *RegenerateBillingReportParams, reqEditors ...RequestEditorFn) (*RegenerateBillingReportResponse, error) {
-	rsp, err := c.RegenerateBillingReport(ctx, reportId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRegenerateBillingReportResponse(rsp)
-}
-
 // GetBrandingWithResponse request returning *GetBrandingResponse
 func (c *ClientWithResponses) GetBrandingWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetBrandingResponse, error) {
 	rsp, err := c.GetBranding(ctx, reqEditors...)
@@ -38656,15 +37771,6 @@ func (c *ClientWithResponses) UpdateCloudNodeWithResponse(ctx context.Context, c
 		return nil, err
 	}
 	return ParseUpdateCloudNodeResponse(rsp)
-}
-
-// ApplyCloudNodePricePlanWithResponse request returning *ApplyCloudNodePricePlanResponse
-func (c *ClientWithResponses) ApplyCloudNodePricePlanWithResponse(ctx context.Context, cloudNodeId openapi_types.UUID, params *ApplyCloudNodePricePlanParams, reqEditors ...RequestEditorFn) (*ApplyCloudNodePricePlanResponse, error) {
-	rsp, err := c.ApplyCloudNodePricePlan(ctx, cloudNodeId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseApplyCloudNodePricePlanResponse(rsp)
 }
 
 // RefreshCloudNodeWithResponse request returning *RefreshCloudNodeResponse
@@ -38831,6 +37937,49 @@ func (c *ClientWithResponses) UpdateClusterWithResponse(ctx context.Context, clu
 		return nil, err
 	}
 	return ParseUpdateClusterResponse(rsp)
+}
+
+// GetClusterAgentUpdateWithResponse request returning *GetClusterAgentUpdateResponse
+func (c *ClientWithResponses) GetClusterAgentUpdateWithResponse(ctx context.Context, clusterId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetClusterAgentUpdateResponse, error) {
+	rsp, err := c.GetClusterAgentUpdate(ctx, clusterId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetClusterAgentUpdateResponse(rsp)
+}
+
+// StartClusterAgentRolloutWithBodyWithResponse request with arbitrary body returning *StartClusterAgentRolloutResponse
+func (c *ClientWithResponses) StartClusterAgentRolloutWithBodyWithResponse(ctx context.Context, clusterId openapi_types.UUID, params *StartClusterAgentRolloutParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*StartClusterAgentRolloutResponse, error) {
+	rsp, err := c.StartClusterAgentRolloutWithBody(ctx, clusterId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseStartClusterAgentRolloutResponse(rsp)
+}
+
+func (c *ClientWithResponses) StartClusterAgentRolloutWithResponse(ctx context.Context, clusterId openapi_types.UUID, params *StartClusterAgentRolloutParams, body StartClusterAgentRolloutJSONRequestBody, reqEditors ...RequestEditorFn) (*StartClusterAgentRolloutResponse, error) {
+	rsp, err := c.StartClusterAgentRollout(ctx, clusterId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseStartClusterAgentRolloutResponse(rsp)
+}
+
+// SetClusterAgentUpdatePolicyWithBodyWithResponse request with arbitrary body returning *SetClusterAgentUpdatePolicyResponse
+func (c *ClientWithResponses) SetClusterAgentUpdatePolicyWithBodyWithResponse(ctx context.Context, clusterId openapi_types.UUID, params *SetClusterAgentUpdatePolicyParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetClusterAgentUpdatePolicyResponse, error) {
+	rsp, err := c.SetClusterAgentUpdatePolicyWithBody(ctx, clusterId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetClusterAgentUpdatePolicyResponse(rsp)
+}
+
+func (c *ClientWithResponses) SetClusterAgentUpdatePolicyWithResponse(ctx context.Context, clusterId openapi_types.UUID, params *SetClusterAgentUpdatePolicyParams, body SetClusterAgentUpdatePolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*SetClusterAgentUpdatePolicyResponse, error) {
+	rsp, err := c.SetClusterAgentUpdatePolicy(ctx, clusterId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetClusterAgentUpdatePolicyResponse(rsp)
 }
 
 // ListClusterNodesWithResponse request returning *ListClusterNodesResponse
@@ -39689,6 +38838,24 @@ func (c *ClientWithResponses) QueryInferenceMetricsWithResponse(ctx context.Cont
 	return ParseQueryInferenceMetricsResponse(rsp)
 }
 
+// QueryLatencyHistoryWithResponse request returning *QueryLatencyHistoryResponse
+func (c *ClientWithResponses) QueryLatencyHistoryWithResponse(ctx context.Context, params *QueryLatencyHistoryParams, reqEditors ...RequestEditorFn) (*QueryLatencyHistoryResponse, error) {
+	rsp, err := c.QueryLatencyHistory(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseQueryLatencyHistoryResponse(rsp)
+}
+
+// GetLiveLatencyWithResponse request returning *GetLiveLatencyResponse
+func (c *ClientWithResponses) GetLiveLatencyWithResponse(ctx context.Context, params *GetLiveLatencyParams, reqEditors ...RequestEditorFn) (*GetLiveLatencyResponse, error) {
+	rsp, err := c.GetLiveLatency(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetLiveLatencyResponse(rsp)
+}
+
 // GetOverviewWithResponse request returning *GetOverviewResponse
 func (c *ClientWithResponses) GetOverviewWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetOverviewResponse, error) {
 	rsp, err := c.GetOverview(ctx, reqEditors...)
@@ -39705,6 +38872,15 @@ func (c *ClientWithResponses) GetPrometheusExpositionWithResponse(ctx context.Co
 		return nil, err
 	}
 	return ParseGetPrometheusExpositionResponse(rsp)
+}
+
+// QueryRequestTimingWithResponse request returning *QueryRequestTimingResponse
+func (c *ClientWithResponses) QueryRequestTimingWithResponse(ctx context.Context, params *QueryRequestTimingParams, reqEditors ...RequestEditorFn) (*QueryRequestTimingResponse, error) {
+	rsp, err := c.QueryRequestTiming(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseQueryRequestTimingResponse(rsp)
 }
 
 // QuerySessionMetricsWithResponse request returning *QuerySessionMetricsResponse
@@ -40049,6 +39225,49 @@ func (c *ClientWithResponses) UpdateNodeWithResponse(ctx context.Context, nodeId
 	return ParseUpdateNodeResponse(rsp)
 }
 
+// GetNodeAgentUpdateWithResponse request returning *GetNodeAgentUpdateResponse
+func (c *ClientWithResponses) GetNodeAgentUpdateWithResponse(ctx context.Context, nodeId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetNodeAgentUpdateResponse, error) {
+	rsp, err := c.GetNodeAgentUpdate(ctx, nodeId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetNodeAgentUpdateResponse(rsp)
+}
+
+// UpdateNodeAgentWithBodyWithResponse request with arbitrary body returning *UpdateNodeAgentResponse
+func (c *ClientWithResponses) UpdateNodeAgentWithBodyWithResponse(ctx context.Context, nodeId openapi_types.UUID, params *UpdateNodeAgentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateNodeAgentResponse, error) {
+	rsp, err := c.UpdateNodeAgentWithBody(ctx, nodeId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateNodeAgentResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateNodeAgentWithResponse(ctx context.Context, nodeId openapi_types.UUID, params *UpdateNodeAgentParams, body UpdateNodeAgentJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateNodeAgentResponse, error) {
+	rsp, err := c.UpdateNodeAgent(ctx, nodeId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateNodeAgentResponse(rsp)
+}
+
+// StageNodeAgentUpdateWithBodyWithResponse request with arbitrary body returning *StageNodeAgentUpdateResponse
+func (c *ClientWithResponses) StageNodeAgentUpdateWithBodyWithResponse(ctx context.Context, nodeId openapi_types.UUID, params *StageNodeAgentUpdateParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*StageNodeAgentUpdateResponse, error) {
+	rsp, err := c.StageNodeAgentUpdateWithBody(ctx, nodeId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseStageNodeAgentUpdateResponse(rsp)
+}
+
+func (c *ClientWithResponses) StageNodeAgentUpdateWithResponse(ctx context.Context, nodeId openapi_types.UUID, params *StageNodeAgentUpdateParams, body StageNodeAgentUpdateJSONRequestBody, reqEditors ...RequestEditorFn) (*StageNodeAgentUpdateResponse, error) {
+	rsp, err := c.StageNodeAgentUpdate(ctx, nodeId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseStageNodeAgentUpdateResponse(rsp)
+}
+
 // GetNodeCacheWithResponse request returning *GetNodeCacheResponse
 func (c *ClientWithResponses) GetNodeCacheWithResponse(ctx context.Context, nodeId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetNodeCacheResponse, error) {
 	rsp, err := c.GetNodeCache(ctx, nodeId, reqEditors...)
@@ -40248,67 +39467,6 @@ func (c *ClientWithResponses) IssueServiceCertificateWithResponse(ctx context.Co
 		return nil, err
 	}
 	return ParseIssueServiceCertificateResponse(rsp)
-}
-
-// ListPricePlansWithResponse request returning *ListPricePlansResponse
-func (c *ClientWithResponses) ListPricePlansWithResponse(ctx context.Context, params *ListPricePlansParams, reqEditors ...RequestEditorFn) (*ListPricePlansResponse, error) {
-	rsp, err := c.ListPricePlans(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListPricePlansResponse(rsp)
-}
-
-// CreatePricePlanWithBodyWithResponse request with arbitrary body returning *CreatePricePlanResponse
-func (c *ClientWithResponses) CreatePricePlanWithBodyWithResponse(ctx context.Context, params *CreatePricePlanParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreatePricePlanResponse, error) {
-	rsp, err := c.CreatePricePlanWithBody(ctx, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreatePricePlanResponse(rsp)
-}
-
-func (c *ClientWithResponses) CreatePricePlanWithResponse(ctx context.Context, params *CreatePricePlanParams, body CreatePricePlanJSONRequestBody, reqEditors ...RequestEditorFn) (*CreatePricePlanResponse, error) {
-	rsp, err := c.CreatePricePlan(ctx, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreatePricePlanResponse(rsp)
-}
-
-// DeletePricePlanWithResponse request returning *DeletePricePlanResponse
-func (c *ClientWithResponses) DeletePricePlanWithResponse(ctx context.Context, planId openapi_types.UUID, params *DeletePricePlanParams, reqEditors ...RequestEditorFn) (*DeletePricePlanResponse, error) {
-	rsp, err := c.DeletePricePlan(ctx, planId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeletePricePlanResponse(rsp)
-}
-
-// GetPricePlanWithResponse request returning *GetPricePlanResponse
-func (c *ClientWithResponses) GetPricePlanWithResponse(ctx context.Context, planId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetPricePlanResponse, error) {
-	rsp, err := c.GetPricePlan(ctx, planId, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetPricePlanResponse(rsp)
-}
-
-// UpdatePricePlanWithBodyWithResponse request with arbitrary body returning *UpdatePricePlanResponse
-func (c *ClientWithResponses) UpdatePricePlanWithBodyWithResponse(ctx context.Context, planId openapi_types.UUID, params *UpdatePricePlanParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdatePricePlanResponse, error) {
-	rsp, err := c.UpdatePricePlanWithBody(ctx, planId, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdatePricePlanResponse(rsp)
-}
-
-func (c *ClientWithResponses) UpdatePricePlanWithResponse(ctx context.Context, planId openapi_types.UUID, params *UpdatePricePlanParams, body UpdatePricePlanJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdatePricePlanResponse, error) {
-	rsp, err := c.UpdatePricePlan(ctx, planId, params, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdatePricePlanResponse(rsp)
 }
 
 // ListAllRuleRunsWithResponse request returning *ListAllRuleRunsResponse
@@ -40515,51 +39673,6 @@ func (c *ClientWithResponses) GetTopologyWithResponse(ctx context.Context, param
 	return ParseGetTopologyResponse(rsp)
 }
 
-// ListTracesWithResponse request returning *ListTracesResponse
-func (c *ClientWithResponses) ListTracesWithResponse(ctx context.Context, params *ListTracesParams, reqEditors ...RequestEditorFn) (*ListTracesResponse, error) {
-	rsp, err := c.ListTraces(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListTracesResponse(rsp)
-}
-
-// GetTraceWithResponse request returning *GetTraceResponse
-func (c *ClientWithResponses) GetTraceWithResponse(ctx context.Context, traceId string, reqEditors ...RequestEditorFn) (*GetTraceResponse, error) {
-	rsp, err := c.GetTrace(ctx, traceId, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetTraceResponse(rsp)
-}
-
-// ListUsageEventsWithResponse request returning *ListUsageEventsResponse
-func (c *ClientWithResponses) ListUsageEventsWithResponse(ctx context.Context, params *ListUsageEventsParams, reqEditors ...RequestEditorFn) (*ListUsageEventsResponse, error) {
-	rsp, err := c.ListUsageEvents(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListUsageEventsResponse(rsp)
-}
-
-// ExportUsageCsvWithResponse request returning *ExportUsageCsvResponse
-func (c *ClientWithResponses) ExportUsageCsvWithResponse(ctx context.Context, params *ExportUsageCsvParams, reqEditors ...RequestEditorFn) (*ExportUsageCsvResponse, error) {
-	rsp, err := c.ExportUsageCsv(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseExportUsageCsvResponse(rsp)
-}
-
-// GetUsageSummaryWithResponse request returning *GetUsageSummaryResponse
-func (c *ClientWithResponses) GetUsageSummaryWithResponse(ctx context.Context, params *GetUsageSummaryParams, reqEditors ...RequestEditorFn) (*GetUsageSummaryResponse, error) {
-	rsp, err := c.GetUsageSummary(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetUsageSummaryResponse(rsp)
-}
-
 // ListCredentialsWithResponse request returning *ListCredentialsResponse
 func (c *ClientWithResponses) ListCredentialsWithResponse(ctx context.Context, params *ListCredentialsParams, reqEditors ...RequestEditorFn) (*ListCredentialsResponse, error) {
 	rsp, err := c.ListCredentials(ctx, params, reqEditors...)
@@ -40664,6 +39777,573 @@ func (c *ClientWithResponses) GetCredentialUsageWithResponse(ctx context.Context
 		return nil, err
 	}
 	return ParseGetCredentialUsageResponse(rsp)
+}
+
+// ParseGetAgentUpdateOverviewResponse parses an HTTP response from a GetAgentUpdateOverviewWithResponse call
+func ParseGetAgentUpdateOverviewResponse(rsp *http.Response) (*GetAgentUpdateOverviewResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetAgentUpdateOverviewResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Data    AgentUpdateOverview              `json:"data"`
+			Error   interface{}                      `json:"error"`
+			Meta    *map[string]interface{}          `json:"meta"`
+			Success GetAgentUpdateOverview200Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error404
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error409
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error429
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error503
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListAgentRolloutsResponse parses an HTTP response from a ListAgentRolloutsWithResponse call
+func ParseListAgentRolloutsResponse(rsp *http.Response) (*ListAgentRolloutsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListAgentRolloutsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Data    []AgentRollout              `json:"data"`
+			Error   interface{}                 `json:"error"`
+			Meta    ListMeta                    `json:"meta"`
+			Success ListAgentRollouts200Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error404
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error409
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error429
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error503
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetAgentRolloutResponse parses an HTTP response from a GetAgentRolloutWithResponse call
+func ParseGetAgentRolloutResponse(rsp *http.Response) (*GetAgentRolloutResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetAgentRolloutResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			// Data A rolling agent update of a cluster.
+			Data    AgentRollout              `json:"data"`
+			Error   interface{}               `json:"error"`
+			Meta    *map[string]interface{}   `json:"meta"`
+			Success GetAgentRollout200Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error404
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error409
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error429
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error503
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCancelAgentRolloutResponse parses an HTTP response from a CancelAgentRolloutWithResponse call
+func ParseCancelAgentRolloutResponse(rsp *http.Response) (*CancelAgentRolloutResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CancelAgentRolloutResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			// Data A rolling agent update of a cluster.
+			Data    AgentRollout                 `json:"data"`
+			Error   interface{}                  `json:"error"`
+			Meta    *map[string]interface{}      `json:"meta"`
+			Success CancelAgentRollout200Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error404
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error409
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error429
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error503
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListAgentUpdateRunsResponse parses an HTTP response from a ListAgentUpdateRunsWithResponse call
+func ParseListAgentUpdateRunsResponse(rsp *http.Response) (*ListAgentUpdateRunsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListAgentUpdateRunsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Data    []AgentUpdateRun              `json:"data"`
+			Error   interface{}                   `json:"error"`
+			Meta    ListMeta                      `json:"meta"`
+			Success ListAgentUpdateRuns200Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error404
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error409
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error429
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error503
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetAgentUpdateRunResponse parses an HTTP response from a GetAgentUpdateRunWithResponse call
+func ParseGetAgentUpdateRunResponse(rsp *http.Response) (*GetAgentUpdateRunResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetAgentUpdateRunResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			// Data One agent update of one node (agent protocol §14).
+			Data    AgentUpdateRun              `json:"data"`
+			Error   interface{}                 `json:"error"`
+			Meta    *map[string]interface{}     `json:"meta"`
+			Success GetAgentUpdateRun200Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error404
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error409
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error429
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error503
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseListAgentDownloadsResponse parses an HTTP response from a ListAgentDownloadsWithResponse call
@@ -45303,640 +44983,6 @@ func ParseStartBenchmarkResponse(rsp *http.Response) (*StartBenchmarkResponse, e
 	return response, nil
 }
 
-// ParseGetBillingEstimateResponse parses an HTTP response from a GetBillingEstimateWithResponse call
-func ParseGetBillingEstimateResponse(rsp *http.Response) (*GetBillingEstimateResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetBillingEstimateResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Data    BillingEstimate              `json:"data"`
-			Error   interface{}                  `json:"error"`
-			Meta    *map[string]interface{}      `json:"meta"`
-			Success GetBillingEstimate200Success `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseListBillingReportsResponse parses an HTTP response from a ListBillingReportsWithResponse call
-func ParseListBillingReportsResponse(rsp *http.Response) (*ListBillingReportsResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListBillingReportsResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Data    []BillingReport              `json:"data"`
-			Error   interface{}                  `json:"error"`
-			Meta    ListMeta                     `json:"meta"`
-			Success ListBillingReports200Success `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseCreateBillingReportResponse parses an HTTP response from a CreateBillingReportWithResponse call
-func ParseCreateBillingReportResponse(rsp *http.Response) (*CreateBillingReportResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &CreateBillingReportResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
-		var dest struct {
-			Data    BillingReport                 `json:"data"`
-			Error   interface{}                   `json:"error"`
-			Meta    *map[string]interface{}       `json:"meta"`
-			Success CreateBillingReport202Success `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON202 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseDeleteBillingReportResponse parses an HTTP response from a DeleteBillingReportWithResponse call
-func ParseDeleteBillingReportResponse(rsp *http.Response) (*DeleteBillingReportResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &DeleteBillingReportResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetBillingReportResponse parses an HTTP response from a GetBillingReportWithResponse call
-func ParseGetBillingReportResponse(rsp *http.Response) (*GetBillingReportResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetBillingReportResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Data    BillingReport              `json:"data"`
-			Error   interface{}                `json:"error"`
-			Meta    *map[string]interface{}    `json:"meta"`
-			Success GetBillingReport200Success `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseExportBillingReportCsvResponse parses an HTTP response from a ExportBillingReportCsvWithResponse call
-func ParseExportBillingReportCsvResponse(rsp *http.Response) (*ExportBillingReportCsvResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ExportBillingReportCsvResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseRegenerateBillingReportResponse parses an HTTP response from a RegenerateBillingReportWithResponse call
-func ParseRegenerateBillingReportResponse(rsp *http.Response) (*RegenerateBillingReportResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &RegenerateBillingReportResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
-		var dest struct {
-			Data    BillingReport                     `json:"data"`
-			Error   interface{}                       `json:"error"`
-			Meta    *map[string]interface{}           `json:"meta"`
-			Success RegenerateBillingReport202Success `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON202 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseGetBrandingResponse parses an HTTP response from a GetBrandingWithResponse call
 func ParseGetBrandingResponse(rsp *http.Response) (*GetBrandingResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -46674,114 +45720,6 @@ func ParseUpdateCloudNodeResponse(rsp *http.Response) (*UpdateCloudNodeResponse,
 			Error   interface{}               `json:"error"`
 			Meta    *map[string]interface{}   `json:"meta"`
 			Success UpdateCloudNode200Success `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 424:
-		var dest ErrorEnvelope
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON424 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
-		var dest Error502
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON502 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseApplyCloudNodePricePlanResponse parses an HTTP response from a ApplyCloudNodePricePlanWithResponse call
-func ParseApplyCloudNodePricePlanResponse(rsp *http.Response) (*ApplyCloudNodePricePlanResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ApplyCloudNodePricePlanResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Data    CloudNode                         `json:"data"`
-			Error   interface{}                       `json:"error"`
-			Meta    *map[string]interface{}           `json:"meta"`
-			Success ApplyCloudNodePricePlan200Success `json:"success"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -48226,6 +47164,290 @@ func ParseUpdateClusterResponse(rsp *http.Response) (*UpdateClusterResponse, err
 			Error   interface{}             `json:"error"`
 			Meta    *map[string]interface{} `json:"meta"`
 			Success UpdateCluster200Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error404
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error409
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error429
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error503
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetClusterAgentUpdateResponse parses an HTTP response from a GetClusterAgentUpdateWithResponse call
+func ParseGetClusterAgentUpdateResponse(rsp *http.Response) (*GetClusterAgentUpdateResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetClusterAgentUpdateResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Data    ClusterAgentUpdate              `json:"data"`
+			Error   interface{}                     `json:"error"`
+			Meta    *map[string]interface{}         `json:"meta"`
+			Success GetClusterAgentUpdate200Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error404
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error409
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error429
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error503
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseStartClusterAgentRolloutResponse parses an HTTP response from a StartClusterAgentRolloutWithResponse call
+func ParseStartClusterAgentRolloutResponse(rsp *http.Response) (*StartClusterAgentRolloutResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &StartClusterAgentRolloutResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest struct {
+			// Data A rolling agent update of a cluster.
+			Data    AgentRollout                       `json:"data"`
+			Error   interface{}                        `json:"error"`
+			Meta    *map[string]interface{}            `json:"meta"`
+			Success StartClusterAgentRollout202Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error404
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error409
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error429
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error503
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetClusterAgentUpdatePolicyResponse parses an HTTP response from a SetClusterAgentUpdatePolicyWithResponse call
+func ParseSetClusterAgentUpdatePolicyResponse(rsp *http.Response) (*SetClusterAgentUpdatePolicyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetClusterAgentUpdatePolicyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			// Data clusters.config.agent_updates. manual (default): an admin clicks Update or starts a rolling update. auto: the scheduler starts a rolling update inside the maintenance window once nodes have the target version staged.
+			Data    AgentUpdatePolicy                     `json:"data"`
+			Error   interface{}                           `json:"error"`
+			Meta    *map[string]interface{}               `json:"meta"`
+			Success SetClusterAgentUpdatePolicy200Success `json:"success"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -54704,6 +53926,138 @@ func ParseQueryInferenceMetricsResponse(rsp *http.Response) (*QueryInferenceMetr
 	return response, nil
 }
 
+// ParseQueryLatencyHistoryResponse parses an HTTP response from a QueryLatencyHistoryWithResponse call
+func ParseQueryLatencyHistoryResponse(rsp *http.Response) (*QueryLatencyHistoryResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &QueryLatencyHistoryResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Data    LatencyHistory                `json:"data"`
+			Error   interface{}                   `json:"error"`
+			Meta    *map[string]interface{}       `json:"meta"`
+			Success QueryLatencyHistory200Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetLiveLatencyResponse parses an HTTP response from a GetLiveLatencyWithResponse call
+func ParseGetLiveLatencyResponse(rsp *http.Response) (*GetLiveLatencyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetLiveLatencyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Data    LatencyLive              `json:"data"`
+			Error   interface{}              `json:"error"`
+			Meta    *map[string]interface{}  `json:"meta"`
+			Success GetLiveLatency200Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetOverviewResponse parses an HTTP response from a GetOverviewWithResponse call
 func ParseGetOverviewResponse(rsp *http.Response) (*GetOverviewResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -54825,6 +54179,72 @@ func ParseGetPrometheusExpositionResponse(rsp *http.Response) (*GetPrometheusExp
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseQueryRequestTimingResponse parses an HTTP response from a QueryRequestTimingWithResponse call
+func ParseQueryRequestTimingResponse(rsp *http.Response) (*QueryRequestTimingResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &QueryRequestTimingResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Data    RequestTiming                `json:"data"`
+			Error   interface{}                  `json:"error"`
+			Meta    *map[string]interface{}      `json:"meta"`
+			Success QueryRequestTiming200Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest Error500
@@ -57613,6 +57033,290 @@ func ParseUpdateNodeResponse(rsp *http.Response) (*UpdateNodeResponse, error) {
 	return response, nil
 }
 
+// ParseGetNodeAgentUpdateResponse parses an HTTP response from a GetNodeAgentUpdateWithResponse call
+func ParseGetNodeAgentUpdateResponse(rsp *http.Response) (*GetNodeAgentUpdateResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetNodeAgentUpdateResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			// Data Update status of a node. mode: helper (root-owned update helper), self (the agent owns its binary), managed (Kubernetes DaemonSet: Managed by Helm, never self-updates), unsupported (cannot replace its binary: reason), manual (agent predates self-update: update manually, see instructions).
+			Data    NodeAgentUpdate              `json:"data"`
+			Error   interface{}                  `json:"error"`
+			Meta    *map[string]interface{}      `json:"meta"`
+			Success GetNodeAgentUpdate200Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error404
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error409
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error429
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error503
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateNodeAgentResponse parses an HTTP response from a UpdateNodeAgentWithResponse call
+func ParseUpdateNodeAgentResponse(rsp *http.Response) (*UpdateNodeAgentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateNodeAgentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest struct {
+			// Data One agent update of one node (agent protocol §14).
+			Data    AgentUpdateRun            `json:"data"`
+			Error   interface{}               `json:"error"`
+			Meta    *map[string]interface{}   `json:"meta"`
+			Success UpdateNodeAgent202Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error404
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error409
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error429
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error503
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseStageNodeAgentUpdateResponse parses an HTTP response from a StageNodeAgentUpdateWithResponse call
+func ParseStageNodeAgentUpdateResponse(rsp *http.Response) (*StageNodeAgentUpdateResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &StageNodeAgentUpdateResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest struct {
+			Data    AgentStage                     `json:"data"`
+			Error   interface{}                    `json:"error"`
+			Meta    *map[string]interface{}        `json:"meta"`
+			Success StageNodeAgentUpdate202Success `json:"success"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error400
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error401
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error403
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error404
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error409
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error422
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error429
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error500
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error503
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetNodeCacheResponse parses an HTTP response from a GetNodeCacheWithResponse call
 func ParseGetNodeCacheResponse(rsp *http.Response) (*GetNodeCacheResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -59056,464 +58760,6 @@ func ParseIssueServiceCertificateResponse(rsp *http.Response) (*IssueServiceCert
 			return nil, err
 		}
 		response.JSON201 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseListPricePlansResponse parses an HTTP response from a ListPricePlansWithResponse call
-func ParseListPricePlansResponse(rsp *http.Response) (*ListPricePlansResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListPricePlansResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Data    []PricePlan              `json:"data"`
-			Error   interface{}              `json:"error"`
-			Meta    ListMeta                 `json:"meta"`
-			Success ListPricePlans200Success `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseCreatePricePlanResponse parses an HTTP response from a CreatePricePlanWithResponse call
-func ParseCreatePricePlanResponse(rsp *http.Response) (*CreatePricePlanResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &CreatePricePlanResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest struct {
-			Data    PricePlan                 `json:"data"`
-			Error   interface{}               `json:"error"`
-			Meta    *map[string]interface{}   `json:"meta"`
-			Success CreatePricePlan201Success `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON201 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseDeletePricePlanResponse parses an HTTP response from a DeletePricePlanWithResponse call
-func ParseDeletePricePlanResponse(rsp *http.Response) (*DeletePricePlanResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &DeletePricePlanResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetPricePlanResponse parses an HTTP response from a GetPricePlanWithResponse call
-func ParseGetPricePlanResponse(rsp *http.Response) (*GetPricePlanResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetPricePlanResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Data    PricePlan               `json:"data"`
-			Error   interface{}             `json:"error"`
-			Meta    *map[string]interface{} `json:"meta"`
-			Success GetPricePlan200Success  `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseUpdatePricePlanResponse parses an HTTP response from a UpdatePricePlanWithResponse call
-func ParseUpdatePricePlanResponse(rsp *http.Response) (*UpdatePricePlanResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &UpdatePricePlanResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Data    PricePlan                 `json:"data"`
-			Error   interface{}               `json:"error"`
-			Meta    *map[string]interface{}   `json:"meta"`
-			Success UpdatePricePlan200Success `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
 		var dest Error400
@@ -61377,464 +60623,6 @@ func ParseGetTopologyResponse(rsp *http.Response) (*GetTopologyResponse, error) 
 			Error   interface{}             `json:"error"`
 			Meta    *map[string]interface{} `json:"meta"`
 			Success GetTopology200Success   `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseListTracesResponse parses an HTTP response from a ListTracesWithResponse call
-func ParseListTracesResponse(rsp *http.Response) (*ListTracesResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListTracesResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Data    []TraceSpan          `json:"data"`
-			Error   interface{}          `json:"error"`
-			Meta    ListMeta             `json:"meta"`
-			Success ListTraces200Success `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetTraceResponse parses an HTTP response from a GetTraceWithResponse call
-func ParseGetTraceResponse(rsp *http.Response) (*GetTraceResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetTraceResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Data    Trace                   `json:"data"`
-			Error   interface{}             `json:"error"`
-			Meta    *map[string]interface{} `json:"meta"`
-			Success GetTrace200Success      `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseListUsageEventsResponse parses an HTTP response from a ListUsageEventsWithResponse call
-func ParseListUsageEventsResponse(rsp *http.Response) (*ListUsageEventsResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListUsageEventsResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Data    []UsageEvent              `json:"data"`
-			Error   interface{}               `json:"error"`
-			Meta    ListMeta                  `json:"meta"`
-			Success ListUsageEvents200Success `json:"success"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseExportUsageCsvResponse parses an HTTP response from a ExportUsageCsvWithResponse call
-func ParseExportUsageCsvResponse(rsp *http.Response) (*ExportUsageCsvResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ExportUsageCsvResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error400
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
-		var dest Error401
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON401 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest Error403
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest Error404
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest Error409
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest Error422
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
-		var dest Error429
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON429 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error500
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error503
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetUsageSummaryResponse parses an HTTP response from a GetUsageSummaryWithResponse call
-func ParseGetUsageSummaryResponse(rsp *http.Response) (*GetUsageSummaryResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetUsageSummaryResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Data    UsageSummary              `json:"data"`
-			Error   interface{}               `json:"error"`
-			Meta    *map[string]interface{}   `json:"meta"`
-			Success GetUsageSummary200Success `json:"success"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

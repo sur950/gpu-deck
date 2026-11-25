@@ -54,7 +54,9 @@ class AuthService:
         self.sessions = SessionManager(db)
 
     @staticmethod
-    async def as_dependency(request: Request, db: AsyncSession = Depends(get_db)) -> "AuthService":
+    async def as_dependency(
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
+    ) -> "AuthService":
         return AuthService(db)
 
     # ---------- lockout counters ----------

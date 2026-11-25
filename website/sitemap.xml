@@ -2,130 +2,212 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://sur950.github.io/gpu-deck/</loc>
+    <lastmod>2026-11-25</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/</loc>
+    <lastmod>2026-11-25</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/introduction/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/architecture/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/testing/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/deployment/</loc>
+    <lastmod>2026-11-25</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/infrastructure/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/node-agent/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/cloud-gpu-vms/</loc>
+    <lastmod>2026-11-24</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://sur950.github.io/gpu-deck/docs/hardware/</loc>
+    <lastmod>2026-11-24</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://sur950.github.io/gpu-deck/docs/hardware-nvidia/</loc>
+    <lastmod>2026-11-24</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://sur950.github.io/gpu-deck/docs/hardware-amd/</loc>
+    <lastmod>2026-11-24</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://sur950.github.io/gpu-deck/docs/hardware-apple-silicon/</loc>
+    <lastmod>2026-11-24</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://sur950.github.io/gpu-deck/docs/hardware-hygon/</loc>
+    <lastmod>2026-11-24</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://sur950.github.io/gpu-deck/docs/hardware-metax/</loc>
+    <lastmod>2026-11-24</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://sur950.github.io/gpu-deck/docs/hardware-moore-threads/</loc>
+    <lastmod>2026-11-24</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://sur950.github.io/gpu-deck/docs/hardware-t-head/</loc>
+    <lastmod>2026-11-24</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://sur950.github.io/gpu-deck/docs/hardware-cpu/</loc>
+    <lastmod>2026-11-24</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://sur950.github.io/gpu-deck/docs/hardware-engines/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/serving-api/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/rules/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/cli/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/terraform/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/desktop-app/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/operations/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/metrics/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/security-model/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/security-policy/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/environment-variables/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/agent-protocol/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/agent-protocol-changelog/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/contracts/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/changelog/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/contributing/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/development/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/backend/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/migrations/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/e2e-tests/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/releasing/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/brand/</loc>
+    <lastmod>2026-11-25</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/support/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://sur950.github.io/gpu-deck/docs/code-of-conduct/</loc>
+    <lastmod>2026-11-24</lastmod>
     <priority>0.6</priority>
   </url>
 </urlset>

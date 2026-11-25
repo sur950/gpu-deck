@@ -5,6 +5,8 @@ name: Release
 #     runners), with BuildKit provenance + SBOM, a GitHub attestation and a keyless cosign
 #     signature, after a Trivy scan
 #   - node agent binaries (Linux glibc/musl x86_64 + aarch64, macOS Apple Silicon + Intel)
+#     and the agent release manifest gpudeck-agent-<version>-manifest.json(.sig), signed with
+#     the AGENT_RELEASE_SIGNING_KEY secret (ed25519) for agent self-update
 #   - desktop installers (macOS universal dmg, Windows msi + nsis, Linux AppImage + deb), signed
 #     and notarized when the secrets exist, plus the updater manifest latest.json
 #   - CLI wheel + sdist (optionally published to PyPI), Terraform provider zips (GoReleaser,
@@ -611,6 +613,30 @@ jobs:
             cat "$A/latest.json"
           else
             echo "::warning::No updater signatures: no latest.json (installed desktop apps will not update themselves)."
+          fi
+      - name: Agent release manifest (signed, for agent self-update)
+        # Per target: the archive and the gpudeck-agent binary inside it (sha256, size), signed
+        # with ed25519 by the release signing key. Control planes offer a release as an agent
+        # update only when the signature verifies with AGENT_RELEASE_PUBLIC_KEYS; nodes verify
+        # it again with the key pinned in their signed security policy. The private key lives
+        # only in the AGENT_RELEASE_SIGNING_KEY secret (docs/DEPLOYMENT.md, release signing);
+        # the optional AGENT_RELEASE_PUBLIC_KEY variable guards against signing with a wrong key.
+        env:
+          AGENT_RELEASE_SIGNING_KEY: ${{ secrets.AGENT_RELEASE_SIGNING_KEY }}
+          AGENT_RELEASE_PUBLIC_KEY: ${{ vars.AGENT_RELEASE_PUBLIC_KEY }}
+        run: |
+          A="$RUNNER_TEMP/artifacts"
+          python3 scripts/agent_release_manifest.py manifest "$A" "$VERSION"
+          if [[ -n "$AGENT_RELEASE_SIGNING_KEY" ]]; then
+            python3 -m pip install --quiet --user "cryptography==50.0.2"
+            python3 scripts/agent_release_manifest.py sign "$A/gpudeck-agent-$VERSION-manifest.json" \
+              --expect-public-key "$AGENT_RELEASE_PUBLIC_KEY"
+            if [[ -n "$AGENT_RELEASE_PUBLIC_KEY" ]]; then
+              python3 scripts/agent_release_manifest.py verify "$A/gpudeck-agent-$VERSION-manifest.json" \
+                --public-key "$AGENT_RELEASE_PUBLIC_KEY"
+            fi
+          else
+            echo "::warning::No AGENT_RELEASE_SIGNING_KEY secret: the agent manifest is unsigned, so control planes will not offer this release as an agent update (nodes update by re-running the installer)."
           fi
       - name: Checksums
         working-directory: ${{ runner.temp }}/artifacts

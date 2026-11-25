@@ -117,7 +117,7 @@ export function DeploymentDetail() {
                 <FlaskConical className="mr-2 h-4 w-4" />
                 Benchmark it
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/observability/inference?deployment_id=${d.id}`)}>
+              <DropdownMenuItem onClick={() => router.push(`/observability/inference?deployment=${d.id}`)}>
                 <Activity className="mr-2 h-4 w-4" />
                 Inference metrics
               </DropdownMenuItem>

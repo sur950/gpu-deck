@@ -173,7 +173,6 @@ var nodesDataSourceDef = dataSourceDef{
 		{Name: "memory_total_bytes", Kind: kInt, Description: "System memory."},
 		{Name: "device_count", Kind: kInt, Description: "Accelerators."},
 		{Name: "instance_count", Kind: kInt, Description: "Running instances."},
-		{Name: "price_plan_id", Kind: kString, Description: "Node price plan override."},
 		{Name: "last_heartbeat_at", Kind: kString, Description: "Last heartbeat."},
 	},
 	List: func(ctx context.Context, api *client.API, f values, page int, diags *diag.Diagnostics) (*http.Response, error) {

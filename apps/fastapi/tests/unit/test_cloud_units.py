@@ -179,9 +179,10 @@ def test_cloud_routes_are_mounted_and_require_admin(test_client):
         ("POST", "/api/v1/cloud/nodes/{cloud_node_id}/start"),
         ("POST", "/api/v1/cloud/nodes/{cloud_node_id}/terminate"),
         ("POST", "/api/v1/cloud/nodes/{cloud_node_id}/refresh"),
-        ("POST", "/api/v1/cloud/nodes/{cloud_node_id}/apply-price-plan"),
     }
     assert expected <= mounted
+    # Price plans are v2 (app/api/v1/routes_v2): the list-price plan route is not mounted.
+    assert ("POST", "/api/v1/cloud/nodes/{cloud_node_id}/apply-price-plan") not in mounted
     for method, path in [
         ("GET", "/api/v1/cloud/providers"),
         ("GET", "/api/v1/cloud/nodes"),

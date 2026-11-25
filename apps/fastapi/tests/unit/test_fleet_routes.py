@@ -1,5 +1,5 @@
 """
-Route wiring: every fleet / metrics / logs / traces / PKI operation from
+Route wiring: every fleet / metrics / logs / PKI operation from
 admin.yaml is mounted with the documented method, and all of them refuse
 unauthenticated callers (no DB needed: the auth dependency fails first).
 """
@@ -17,7 +17,6 @@ FLEET_TAGS = {
     "Topology",
     "Metrics",
     "Logs",
-    "Traces",
     "PKI",
     "Live",
 }
@@ -75,7 +74,6 @@ def test_live_ws_requires_a_session(test_client):
         ("GET", "/api/v1/metrics/overview"),
         ("GET", "/api/v1/metrics/gpu"),
         ("GET", "/api/v1/logs"),
-        ("GET", "/api/v1/traces"),
         ("GET", "/api/v1/pki/ca"),
     ],
 )

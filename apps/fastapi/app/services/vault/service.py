@@ -217,7 +217,9 @@ class VaultService:
         self.usage_repo = usage_repo or CredentialUsageRepository(db)
 
     @staticmethod
-    async def as_dependency(request: Request, db: AsyncSession = Depends(get_db)) -> "VaultService":
+    async def as_dependency(
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
+    ) -> "VaultService":
         return VaultService(db)
 
     # ---------- cache ----------

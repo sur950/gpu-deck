@@ -152,14 +152,13 @@ export function useUpdateCloudNode() {
   });
 }
 
-type Action = 'stop' | 'start' | 'terminate' | 'refresh' | 'apply-price-plan';
+type Action = 'stop' | 'start' | 'terminate' | 'refresh';
 
 const ACTION_TEXT: Record<Action, (n: CloudNode) => string> = {
   stop: (n) => `Stopping ${n.name}${n.status === 'draining' ? ' — draining the node first' : ''}`,
   start: (n) => `Starting ${n.name}`,
   terminate: (n) => `Terminating ${n.name}${n.status === 'draining' ? ' — draining the node first' : ''}`,
   refresh: () => 'Polled the provider',
-  'apply-price-plan': (n) => `Price plan attached to ${n.node_name ?? n.name}`,
 };
 
 export function useCloudNodeAction() {
@@ -176,8 +175,6 @@ export function useCloudNodeAction() {
           return api.terminateCloudNode(id, opts);
         case 'refresh':
           return api.refreshCloudNode(id);
-        case 'apply-price-plan':
-          return api.applyCloudPricePlan(id);
       }
     },
     onSuccess: (node, { action }) => {

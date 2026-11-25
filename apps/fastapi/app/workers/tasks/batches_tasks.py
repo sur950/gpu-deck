@@ -10,6 +10,11 @@ Anthropic Message Batch tasks.
   after ``model_not_ready``/busy answers, and expiry.
 - ``batches.retention`` (daily): archive ended batches older than
   ``SERVING_BATCH_RESULTS_RETENTION_DAYS`` (their items are deleted).
+
+Nodes in serving mode ``tunnel`` (protocol.md §13) are reachable only over the tunnels the
+API-layer processes hold, so ``process_batch`` first hands the batch to a running API layer
+(pub/sub ``gpu-deck:batches:run``, ``services/serving/batch_runner.py``); it runs the items here
+only when no API layer is subscribed.
 """
 
 import asyncio
@@ -29,9 +34,24 @@ QUEUE = "default"
 DISPATCH_DEDUPE_SECONDS = 60
 
 
+async def _handoff(batch_id: str) -> bool:
+    """Ask the API layer to run the batch (it holds the node tunnels). True when one got it."""
+    from app.db.redis.client import get_redis, redis_key
+
+    try:
+        client = await get_redis()
+        return int(await client.publish(redis_key("batches", "run"), str(batch_id))) > 0
+    except Exception as exc:  # noqa: BLE001 - run it here instead
+        logger.debug(f"batch {batch_id}: hand-off to the API layer failed: {exc}")
+        return False
+
+
 async def _process(batch_id: str) -> Dict[str, int]:
     from app.services.serving.batches import process_batch as run
 
+    if await _handoff(batch_id):
+        # The API layer releases the dispatch claim when it is done.
+        return {"handed_off": 1}
     try:
         return await run(batch_id)
     finally:

@@ -15,7 +15,7 @@ import { Segmented } from '@/components/automation/segmented';
 
 export const CHANNEL_ICONS = { slack: Hash, email: Mail, webhook: Webhook } as const;
 
-/** Event types the control plane emits (rules.md §4 plus fleet / billing events); globs allowed. */
+/** Event types the control plane emits (rules.md §4 plus fleet events); globs allowed. */
 export const EVENT_TYPES = [
   { value: 'rule.*', label: 'All rule events' },
   { value: 'rule.fired', label: 'Rule acted' },

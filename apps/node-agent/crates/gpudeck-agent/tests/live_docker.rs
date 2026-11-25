@@ -67,6 +67,8 @@ async fn ssh_instance_and_container_engine() {
     let dir = tempfile::tempdir().unwrap();
     let cfg_path = dir.path().join("agent.toml");
     let mut cfg = AgentConfig {
+        // Tests never program the host firewall.
+        firewall: "off".into(),
         state_dir: dir.path().join("state"),
         ssh_bind: Some("127.0.0.1".into()),
         ssh_port_range: [22200, 22299],

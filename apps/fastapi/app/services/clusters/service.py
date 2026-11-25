@@ -49,7 +49,7 @@ class ClusterService:
 
     @staticmethod
     async def as_dependency(
-        request: Request, db: AsyncSession = Depends(get_db)
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
     ) -> "ClusterService":
         return ClusterService(ClusterRepository(db), NodeRepository(db), FleetEventRepository(db))
 
@@ -199,6 +199,10 @@ class ClusterService:
         if "egress_allowlist" in changes:
             await self.repo.session.commit()
             await self._push_egress(cluster_id)
+        if "config" in changes:
+            # config.node_security (proxy / SSH source CIDRs) is part of the signed policy.
+            await self.repo.session.commit()
+            await self._push_sections(cluster_id, ["security"])
         return (await self._with_counts([row]))[0]
 
     async def delete(self, cluster_id: uuid.UUID, actor_id: Optional[uuid.UUID]) -> None:
@@ -219,13 +223,16 @@ class ClusterService:
         logger.info(f"cluster deleted id={cluster_id}")
 
     async def _push_egress(self, cluster_id: uuid.UUID) -> None:
+        await self._push_sections(cluster_id, ["egress_allowlist"])
+
+    async def _push_sections(self, cluster_id: uuid.UUID, sections: List[str]) -> None:
         from app.services.agent_hub.service import AgentHub
 
         for node in await self.nodes.list_active(cluster_id):
             try:
-                await AgentHub.push_config(node.id, full=False, sections=["egress_allowlist"])
+                await AgentHub.push_config(node.id, full=False, sections=sections)
             except Exception as exc:  # noqa: BLE001
-                logger.warning(f"egress push failed node={node.id}: {exc}")
+                logger.warning(f"{','.join(sections)} push failed node={node.id}: {exc}")
 
 
 def _jsonable(data: Dict[str, Any]) -> Dict[str, Any]:

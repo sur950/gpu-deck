@@ -97,7 +97,6 @@ app = FastAPI(
 * **Fleet** — clusters, nodes, join tokens, device inventory, live metrics, topology.
 * **Models** — catalog, engines, deployments, placement, model cache, benchmarks.
 * **Automation** — rules, layouts, swap manager, alerts.
-* **Metering & billing** — usage per key/model, price plans, reports.
 
 All responses use the envelope `{{"success", "data", "error", "meta"}}`.
 """,

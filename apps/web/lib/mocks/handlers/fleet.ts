@@ -30,7 +30,6 @@ type JoinToken = Schemas['JoinToken'];
 type NodeCertificate = Schemas['NodeCertificate'];
 type AgentCommand = Schemas['AgentCommand'];
 type Credential = Schemas['Credential'];
-type PricePlan = Schemas['PricePlan'];
 type CacheItem = Schemas['CacheItem'];
 
 const iso = (ms: number) => new Date(ms).toISOString();
@@ -47,48 +46,6 @@ export function newId(kind: string): string {
 // ─── Store ──────────────────────────────────────────────────────────────────
 
 const CLOUD_CLUSTER_ID = uuid('cluster:aws-mumbai');
-
-const PRICE_PLANS: PricePlan[] = [
-  {
-    id: uuid('price-plan:lab'),
-    name: 'Lab (internal)',
-    description: 'Internal teams — GPU minutes only, tokens free',
-    currency: 'USD',
-    is_default: true,
-    usd_per_gpu_minute: 0.004,
-    usd_per_1k_input_tokens: 0,
-    usd_per_1k_output_tokens: 0,
-    usd_per_1k_cached_tokens: 0,
-    created_at: daysAgo(21),
-    updated_at: daysAgo(4),
-  },
-  {
-    id: uuid('price-plan:l40s'),
-    name: 'L40S client rate',
-    description: 'Client billing for the L40S box',
-    currency: 'USD',
-    is_default: false,
-    usd_per_gpu_minute: 0.021,
-    usd_per_1k_input_tokens: 0.0002,
-    usd_per_1k_output_tokens: 0.0006,
-    usd_per_1k_cached_tokens: 0.00005,
-    created_at: daysAgo(14),
-    updated_at: daysAgo(2),
-  },
-  {
-    id: uuid('price-plan:cloud-passthrough'),
-    name: 'Cloud pass-through',
-    description: 'AWS on-demand g6e price plus 10 %',
-    currency: 'USD',
-    is_default: false,
-    usd_per_gpu_minute: 0.0412,
-    usd_per_1k_input_tokens: 0,
-    usd_per_1k_output_tokens: 0,
-    usd_per_1k_cached_tokens: 0,
-    created_at: daysAgo(10),
-    updated_at: daysAgo(10),
-  },
-];
 
 const CREDENTIALS: Credential[] = [
   { id: uuid('cred:aws-gpu-prod'), name: 'aws-gpu-prod', type: 'cloud_account', provider: 'aws', status: 'active', masked_value: 'AKIA••••••••7Q2D', description: 'IAM user for GPU instances (ap-south-1)', usage_count: 41, created_at: daysAgo(12), updated_at: daysAgo(3) },
@@ -108,7 +65,7 @@ const extraCluster: Cluster = {
   region: 'ap-south-1',
   status: 'disabled',
   credential_id: uuid('cred:aws-gpu-prod'),
-  price_plan_id: uuid('price-plan:cloud-passthrough'),
+  price_plan_id: null,
   config: { vpc: 'vpc-0a1b2c3d4e5f', subnet: 'subnet-0f9e8d7c6b5a', instance_types: ['g6e.xlarge', 'g6e.2xlarge'], ssh_key_credential_id: uuid('cred:ssh-lab') },
   egress_allowlist: ['huggingface.co', 'cdn-lfs.huggingface.co'],
   labels: { env: 'burst', cost_center: 'clients' },
@@ -206,8 +163,8 @@ function seedCommands(): AgentCommand[] {
 
 /**
  * The fixture records are shared by identity (not cloned): the topology,
- * observability and billing mocks read the same objects, so a drain, a new
- * deployment or a price-plan change shows up on every screen. Removal
+ * observability and automation mocks read the same objects, so a drain or a
+ * new deployment shows up on every screen. Removal
  * mutates the arrays in place for the same reason.
  */
 export const fleetStore = {
@@ -221,7 +178,6 @@ export const fleetStore = {
   certificates: seedCertificates(),
   commands: seedCommands(),
   credentials: CREDENTIALS,
-  pricePlans: PRICE_PLANS,
   /** Filled by handlers/models.ts (cache items reference model versions). */
   cacheItems: [] as CacheItem[],
   /**
@@ -1053,7 +1009,7 @@ registerMockHandlers('fleet', [
   },
 ]);
 
-// Read-only pickers for resources other mocks own (vault, price plans)
+// Read-only pickers for resources other mocks own (vault)
 // — fallbacks, so the owning handlers win.
 registerMockHandlers(
   'fleet-pickers',
@@ -1068,13 +1024,11 @@ registerMockHandlers(
         return paginate(list, req.query, 200);
       },
     },
-    { method: 'GET', path: '/price-plans', handle: (req) => paginate(fleetStore.pricePlans, req.query, 200) },
   ]),
 );
 
 /**
- * Cluster / node updates (rename, labels, price-plan attach from the billing
- * screens). The billing mocks read the same fixture objects.
+ * Cluster / node updates (rename, labels).
  */
 const OWNED_PATCHES: MockHandler[] = [
   {

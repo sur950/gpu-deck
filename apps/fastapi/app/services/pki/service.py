@@ -11,13 +11,20 @@ PKI service: internal certificate authority for the fleet.
 - materialise the hub TLS files for uvicorn and the built-in client identities
   (control plane, API layer) from the vault into ``PKI_CA_DIR``, so a fresh
   stack needs no manual certificate steps
+- key pins for the node security policy (protocol.md §13): service certificates are
+  re-issued for the **same key** (renewal never changes a pin), the next key is generated
+  ahead and pinned by every agent (``next_key_pem``), and ``rotate_service_key`` promotes it
+  while the previous key stays pinned for ``SERVICE_KEY_ROTATION_GRACE_HOURS``
+- sign the per-node security policy with the CA key (``sign_policy``)
 """
 
 from __future__ import annotations
 
+import base64
+import json
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -79,7 +86,9 @@ class PkiService:
         self.session = session
 
     @staticmethod
-    async def as_dependency(request: Request, db: AsyncSession = Depends(get_db)) -> "PkiService":
+    async def as_dependency(
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
+    ) -> "PkiService":
         return PkiService.from_session(db)
 
     @staticmethod
@@ -312,10 +321,17 @@ class PkiService:
     async def ensure_service_keypair(
         self, secret_name: str, kind: str, sans: List[str]
     ) -> Dict[str, str]:
-        """Key + cert of a built-in service (hub / control plane / API layer) from the vault."""
+        """
+        Key + cert of a built-in service (hub / control plane / API layer) from the vault.
+
+        A certificate that is expired, misses a SAN or the serverAuth EKU is re-issued for the
+        **same key**, so agents' key pins stay valid. Only a revoked certificate moves to the
+        pre-published next key (which agents already pin). ``next_key_pem`` is created on
+        first use.
+        """
         raw = await self.store.get_secret(secret_name)
-        if raw and await self._usable_keypair(raw, sans):
-            return loads_secret(raw)
+        if raw and await self._usable_keypair(raw, sans, kind):
+            return await self._with_next_key(secret_name, kind, loads_secret(raw))
         if self.session is not None:
             # Several replicas may start together: one issues, the others reuse its pair.
             await self.session.execute(
@@ -323,13 +339,45 @@ class PkiService:
                 {"k": f"gpudeck:pki:{secret_name}"},
             )
             raw = await self.store.get_secret(secret_name)
-            if raw and await self._usable_keypair(raw, sans):
-                return loads_secret(raw)
-        issued = await self.issue_service_certificate(kind, sans=sans)
-        data = {
-            "key_pem": issued["private_key_pem"],
+            if raw and await self._usable_keypair(raw, sans, kind):
+                return await self._with_next_key(secret_name, kind, loads_secret(raw))
+        old = loads_secret(raw) if raw else {}
+        key_pem = await self._reusable_key(old)
+        previous: Dict[str, Any] = {
+            k: old[k] for k in ("previous_spki", "rotated_at") if old.get(k) is not None
+        }
+        next_key_pem = old.get("next_key_pem")
+        if key_pem is None and old.get("key_pem") and next_key_pem:
+            # The current key's certificate was revoked: move to the key agents already pin.
+            key_pem, next_key_pem = next_key_pem, None
+            previous = {
+                "previous_spki": cax.spki_sha256_of_key(
+                    cax.key_from_pem(old["key_pem"]).public_key()
+                ),
+                "rotated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        data = await self._issue_for_key(kind, sans, key_pem)
+        data["next_key_pem"] = next_key_pem or cax.key_to_pem(
+            cax.generate_private_key("ecdsa_p256")
+        )
+        data.update(previous)
+        await self._put_service_secret(secret_name, kind, data)
+        return data
+
+    async def _issue_for_key(
+        self, kind: str, sans: List[str], key_pem: Optional[str]
+    ) -> Dict[str, Any]:
+        csr_pem = None
+        if key_pem:
+            key = cax.key_from_pem(key_pem)
+            csr_pem = cax.build_csr(key, cax.SERVICE_DEFAULT_CN[kind], cax.SERVICE_ORG)
+        issued = await self.issue_service_certificate(kind, sans=sans, csr_pem=csr_pem)
+        return {
+            "key_pem": key_pem or issued["private_key_pem"],
             "cert_pem": issued["certificate_pem"],
         }
+
+    async def _put_service_secret(self, secret_name: str, kind: str, data: Dict[str, Any]) -> None:
         await self.store.put_secret(
             secret_name,
             dumps_secret(data),
@@ -337,10 +385,38 @@ class PkiService:
             f"{kind}_tls",
             f"{kind} TLS key + certificate (managed by the PKI service)",
         )
+
+    async def _with_next_key(
+        self, secret_name: str, kind: str, data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Pre-publish the next key (pinned by agents before it is ever used)."""
+        if data.get("next_key_pem"):
+            return data
+        data["next_key_pem"] = cax.key_to_pem(cax.generate_private_key("ecdsa_p256"))
+        await self._put_service_secret(secret_name, kind, data)
         return data
 
-    async def _usable_keypair(self, raw: str, sans: List[str]) -> bool:
-        """Stored pair is unexpired, from the current CA, covers ``sans`` and is not revoked."""
+    async def _reusable_key(self, data: Dict[str, Any]) -> Optional[str]:
+        """The stored key, unless its certificate was revoked (then it must not be used)."""
+        if not data.get("key_pem") or not data.get("cert_pem"):
+            return None
+        try:
+            cert = cax.cert_from_pem(data["cert_pem"])
+            key = cax.key_from_pem(data["key_pem"])
+        except Exception:  # noqa: BLE001 - unreadable material: issue a new key
+            return None
+        if cax.spki_sha256(cert) != cax.spki_sha256_of_key(key.public_key()):
+            return None
+        row = await self.cert_repo.get_by_fingerprint(cax.fingerprint_sha256(cert))
+        if row is not None and row.revoked_at is not None:
+            return None
+        return data["key_pem"]
+
+    async def _usable_keypair(self, raw: str, sans: List[str], kind: str = "") -> bool:
+        """
+        Stored pair is unexpired, from the current CA, covers ``sans``, is not revoked and (API
+        layer: it is also the tunnel server identity) carries serverAuth.
+        """
         data = loads_secret(raw)
         cert = cax.cert_from_pem(data["cert_pem"])
         row = await self.cert_repo.get_by_fingerprint(cax.fingerprint_sha256(cert))
@@ -348,7 +424,115 @@ class PkiService:
         ca = await self.ensure_ca()
         same_ca = cert.issuer == ca.cert.subject
         covers = set(s.strip() for s in sans if s.strip()) <= set(cax.cert_sans(cert))
-        return still_valid and same_ca and covers and (row is None or row.revoked_at is None)
+        server_ok = kind != "api_layer" or cax.has_server_auth(cert)
+        return (
+            still_valid
+            and same_ca
+            and covers
+            and server_ok
+            and (row is None or row.revoked_at is None)
+        )
+
+    async def rotate_service_key(
+        self, secret_name: str, kind: str, sans: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Planned key rotation of a built-in service: the pre-published next key (already pinned
+        by every agent that got a policy since it was created) becomes current, a new next key
+        is generated, and the previous key stays pinned for ``SERVICE_KEY_ROTATION_GRACE_HOURS``
+        so replicas still running with it keep working until they restart.
+        """
+        raw = await self.store.get_secret(secret_name)
+        if not raw:
+            raise ResourceNotFoundError(resource_type="Service key")
+        old = loads_secret(raw)
+        old_cert = cax.cert_from_pem(old["cert_pem"])
+        nxt = old.get("next_key_pem") or cax.key_to_pem(cax.generate_private_key("ecdsa_p256"))
+        if sans is None:
+            sans = [s for s in cax.cert_sans(old_cert) if "://" not in s]
+        data = await self._issue_for_key(kind, sans, nxt)
+        data["next_key_pem"] = cax.key_to_pem(cax.generate_private_key("ecdsa_p256"))
+        data["previous_spki"] = cax.spki_sha256(old_cert)
+        data["rotated_at"] = datetime.now(timezone.utc).isoformat()
+        await self._put_service_secret(secret_name, kind, data)
+        await self.events.audit(
+            "pki.service_key_rotated",
+            resource_type="certificate",
+            resource_name=secret_name,
+            before_state={"spki_sha256": data["previous_spki"]},
+            after_state={
+                "spki_sha256": cax.spki_sha256(cax.cert_from_pem(data["cert_pem"])),
+                "kind": kind,
+            },
+        )
+        return data
+
+    def _pins_from(self, data: Dict[str, Any]) -> List[str]:
+        pins: List[str] = []
+        try:
+            pins.append(cax.spki_sha256(cax.cert_from_pem(data["cert_pem"])))
+            if data.get("next_key_pem"):
+                pins.append(
+                    cax.spki_sha256_of_key(cax.key_from_pem(data["next_key_pem"]).public_key())
+                )
+        except Exception as exc:  # noqa: BLE001 - unreadable material pins nothing
+            logger.warning(f"PKI: unreadable service key material: {exc}")
+        rotated = data.get("rotated_at")
+        if data.get("previous_spki") and rotated:
+            try:
+                at = datetime.fromisoformat(str(rotated))
+                grace = timedelta(hours=settings.SERVICE_KEY_ROTATION_GRACE_HOURS)
+                if datetime.now(timezone.utc) - at < grace:
+                    pins.append(str(data["previous_spki"]))
+            except ValueError:
+                pass
+        return pins
+
+    @staticmethod
+    def _file_pins(path: Optional[str]) -> List[str]:
+        if not path or not os.path.exists(path):
+            return []
+        try:
+            return [cax.spki_sha256(cax.cert_from_pem(Path(path).read_text()))]
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"PKI: cannot pin {path}: {exc}")
+            return []
+
+    @staticmethod
+    def _extra_pins(value: str) -> List[str]:
+        out = []
+        for p in (value or "").split(","):
+            p = p.strip().lower().replace(":", "")
+            if len(p) == 64 and all(c in "0123456789abcdef" for c in p):
+                out.append(p)
+        return out
+
+    async def hub_pins(self) -> List[str]:
+        """Agent-hub key pins: the configured certificate file or the vault key (+ next, +
+        previous during a rotation grace period), plus ``AGENT_HUB_EXTRA_SPKI_PINS``."""
+        pins = self._file_pins(settings.AGENT_HUB_TLS_CERT_FILE)
+        if not pins:
+            raw = await self.store.get_secret(HUB_TLS_SECRET_NAME)
+            pins = self._pins_from(loads_secret(raw)) if raw else []
+        return _dedupe(pins + self._extra_pins(settings.AGENT_HUB_EXTRA_SPKI_PINS))
+
+    async def api_layer_pins(self) -> List[str]:
+        """API-layer key pins (the only client the direct proxy and the only server the tunnel
+        accept). The vault pair is created here when no API layer has started yet."""
+        data = await self.ensure_service_keypair(API_LAYER_TLS_SECRET_NAME, "api_layer", [])
+        pins = self._file_pins(settings.API_LAYER_CLIENT_CERT_PATH) + self._pins_from(data)
+        return _dedupe(pins + self._extra_pins(settings.API_LAYER_EXTRA_SPKI_PINS))
+
+    async def sign_policy(self, doc: Dict[str, Any]) -> Dict[str, str]:
+        """Sign a node security policy document (``common.json#/$defs/SignedPolicy``)."""
+        ca = await self.ensure_ca()
+        body = json.dumps(doc, separators=(",", ":"), sort_keys=True, default=str).encode()
+        signature, algorithm = cax.sign_detached(ca.key, body)
+        return {
+            "policy": base64.b64encode(body).decode(),
+            "signature": base64.b64encode(signature).decode(),
+            "algorithm": algorithm,
+        }
 
     async def materialize_hub_tls(self) -> Dict[str, str]:
         """
@@ -433,6 +617,14 @@ class PkiService:
             "keyfile": str(key_path),
             "ca_certs": str(ca_path),
         }
+
+
+def _dedupe(values: List[str]) -> List[str]:
+    out: List[str] = []
+    for v in values:
+        if v and v not in out:
+            out.append(v)
+    return out
 
 
 def _write_private(path: Path, content: str, mode: int) -> None:

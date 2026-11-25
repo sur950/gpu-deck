@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Play, Power, Receipt, RefreshCw, Square, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Play, Power, RefreshCw, Square, Trash2 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -211,7 +211,7 @@ export function CloudDetail() {
         <div className="space-y-6">
           <Card className="rounded-md shadow-premium">
             <CardHeader>
-              <CardTitle>Cost</CardTitle>
+              <CardTitle>List price</CardTitle>
               <CardDescription>{vm.price_source ? `List price from ${vm.price_source}.` : 'The provider publishes no list price for this type.'}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -219,18 +219,6 @@ export function CloudDetail() {
                 <span className="font-mono text-2xl font-semibold tabular-nums">{formatHourly(vm.price_per_hour_usd)}</span>
                 <span className="text-xs text-muted-foreground">{monthly ? `≈ $${Math.round(monthly).toLocaleString()} / month` : ''}</span>
               </div>
-              {vm.price_plan_suggestion && (
-                <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3 text-xs">
-                  <p className="font-medium">Price plan suggestion</p>
-                  <p className="text-muted-foreground">
-                    <span className="text-foreground">{vm.price_plan_suggestion.name}</span> · ${vm.price_plan_suggestion.usd_per_gpu_minute?.toFixed(5) ?? '—'} per GPU-minute
-                  </p>
-                  <Button size="xs" variant="outline" disabled={!vm.node_id || action.isPending} onClick={() => action.mutate({ id: vm.id, action: 'apply-price-plan' })} title={vm.node_id ? undefined : 'Available once the node joined'}>
-                    <Receipt className="size-3" />
-                    Bill the node at this price
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
 

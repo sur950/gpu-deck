@@ -300,7 +300,9 @@ class AuditService:
         self.repo = repo
 
     @staticmethod
-    async def as_dependency(request: Request, db: AsyncSession = Depends(get_db)) -> "AuditService":
+    async def as_dependency(
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
+    ) -> "AuditService":
         return AuditService(AuditLogRepository(db))
 
     async def write_now(self, event_type: str, **kwargs: Any) -> uuid.UUID:

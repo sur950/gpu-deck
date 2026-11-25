@@ -26,6 +26,7 @@
  *   wizardModel, wizardName       model radio (regex source) and deployment name in the wizard
  *   cloudCluster, cloudRegion, cloudInstanceType   selections on the cloud provisioning form
  *   setup(h), teardown(h)         run before / after all screens, h = { psql, redis, env }
+ *   extraShots                    more screens ({ name, path, title, mode? }), e.g. a real node's GPU page
  *   before / after                { <screen name>: (h) => void } around single screens
  */
 import { execFileSync } from 'node:child_process';
@@ -118,8 +119,6 @@ const SHOTS = [
   },
   { name: 'layouts', path: '/layouts', title: 'Layouts' },
   { name: 'swaps', path: '/swaps', title: 'Swaps' },
-  { name: 'metering', path: '/metering', title: 'Metering' },
-  { name: 'billing', path: '/billing', title: 'Billing' },
   { name: 'credentials', path: '/credentials', title: 'Credentials' },
   { name: 'ssh-instances', path: '/gpu-instances', title: 'SSH GPU instances' },
   { name: 'cloud', path: '/cloud', title: 'Cloud VMs' },
@@ -146,8 +145,8 @@ const SHOTS = [
     mode: 'light',
     title: 'Deployments',
   },
-  { name: 'light-billing', path: '/billing', mode: 'light', title: 'Billing' },
 ];
+SHOTS.push(...(config.extraShots ?? []));
 
 // ---------------------------------------------------------------- page hooks
 /** Path resolver: the first detail link (<prefix>/<uuid>) on the list page. */
@@ -450,7 +449,9 @@ async function main() {
   const hook = (fn) => (!skipSetup && fn ? fn(helpers) : undefined);
   mkdirSync(TMP, { recursive: true });
   mkdirSync(SRC, { recursive: true });
-  const browser = await chromium.launch();
+  // SHOT_BROWSER_CHANNEL=chrome uses an installed Chrome instead of Playwright's bundled Chromium.
+  const channel = process.env.SHOT_BROWSER_CHANNEL;
+  const browser = await chromium.launch(channel ? { channel } : {});
   const started = new Date();
   let worst = 0;
   try {

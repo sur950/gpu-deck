@@ -33,6 +33,8 @@ from app.services.serving.errors import (
     upstream_status_to_error,
 )
 from app.services.serving.inflight import get_inflight_tracker
+from app.services.serving.latency import get_latency_tracker
+from app.services.serving.latency import rtt_ms as latency_rtt_ms
 from app.services.serving.routing import RouteTarget, get_routing_table
 from app.services.serving.sse import (
     ENGINE_UPSTREAM_NAMES,
@@ -40,6 +42,11 @@ from app.services.serving.sse import (
     iter_ndjson_lines,
     iter_sse_frames,
     rewrite_model_bytes,
+)
+from app.services.serving.timing import (
+    PROXY_TIMING_HEADER,
+    apply_proxy_timing,
+    parse_proxy_timing,
 )
 from app.services.serving.upstream import (
     get_upstream_client,
@@ -159,12 +166,20 @@ class ProxyEngine:
         endpoint = endpoint or ctx.endpoint
         if not self.table.loaded:
             raise ServingError(503, "model_not_ready", "routing table not loaded", retry_after=2)
+        started = time.perf_counter()
         try:
-            return self.table.resolve(model, endpoint, self.inflight.counts)
+            target = self.table.resolve(model, endpoint, self.inflight.counts)
+            ctx.timing["route_ms"] = _ms_since(started)
+            return target
         except ServingError as err:
+            ctx.timing["route_ms"] = _ms_since(started)
             if err.code != "model_not_ready":
                 raise
-            return await self._wait_for_instance(ctx, model, endpoint, err)
+            waited = time.perf_counter()
+            try:
+                return await self._wait_for_instance(ctx, model, endpoint, err)
+            finally:
+                ctx.timing["queue_ms"] = ctx.timing.get("queue_ms", 0.0) + _ms_since(waited)
 
     async def _wait_for_instance(
         self, ctx: ServingContext, model: str, endpoint: str, err: ServingError
@@ -214,12 +229,20 @@ class ProxyEngine:
             raise ServingError.invalid_request("model: field required", "model")
         ctx.model = requested
         target = await self.resolve(ctx, requested, endpoint)
+        get_latency_tracker().count_request(
+            target.instance.deployment_id or target.model.deployment_id
+        )
         tried: set = set()
         attempts = 0
         max_retries = target.model.max_retries if target.model.failover else 0
         last_error: Optional[ServingError] = None
+        first_attempt = time.perf_counter()
         while True:
             attempts += 1
+            if attempts > 1:
+                # Failed attempts that were retried elsewhere count as waiting in the API layer.
+                ctx.timing["queue_ms"] = ctx.timing.get("queue_ms", 0.0) + _ms_since(first_attempt)
+                first_attempt = time.perf_counter()
             tried.add(target.instance.instance_id)
             ctx.target = target
             try:
@@ -322,13 +345,21 @@ class ProxyEngine:
             data = json.dumps(body, ensure_ascii=False).encode()
             req_headers.setdefault("Content-Type", "application/json")
         client = get_upstream_client(self.table.ca_bundle_pem, url)
+        marks: Dict[str, float] = {}
         request = client.build_request(
-            method, url, content=data, headers=req_headers, timeout=timeouts(stream)
+            method,
+            url,
+            content=data,
+            headers=req_headers,
+            timeout=timeouts(stream),
+            extensions={"trace": _timing_trace(marks)},
         )
         ctx.concurrency_at_start = self.inflight.acquire(inst.instance_id)
         prom.inflight_gauge.inc()
         try:
+            sent = time.perf_counter()
             response = await client.send(request, stream=True)
+            _record_upstream_timing(ctx, inst.node_id, marks, sent, response)
         except (
             httpx.ConnectError,
             httpx.ConnectTimeout,
@@ -355,6 +386,57 @@ class ProxyEngine:
     def _release(self, instance_id: str) -> None:
         self.inflight.release(instance_id)
         prom.inflight_gauge.dec()
+
+
+def _ms_since(started: float) -> float:
+    return round((time.perf_counter() - started) * 1000.0, 3)
+
+
+def _timing_trace(marks: Dict[str, float]) -> Callable[[str, Dict[str, Any]], Any]:
+    """httpcore ``trace`` callback: connection setup and request/response header times."""
+
+    async def trace(event: str, info: Dict[str, Any]) -> None:
+        now = time.perf_counter()
+        if event == "connection.connect_tcp.started":
+            marks.setdefault("connect_started", now)
+        elif event in ("connection.connect_tcp.complete", "connection.start_tls.complete"):
+            marks["connect_done"] = now
+        elif event.endswith("send_request_headers.started"):
+            marks.setdefault("sent", now)
+        elif event.endswith("receive_response_headers.complete"):
+            marks["received"] = now
+
+    return trace
+
+
+def _record_upstream_timing(
+    ctx: ServingContext,
+    node_id: str,
+    marks: Dict[str, float],
+    sent: float,
+    response: httpx.Response,
+) -> None:
+    """Connect / upstream / rtt / engine / net of the attempt that answered (never raises)."""
+    try:
+        now = time.perf_counter()
+        connect = 0.0
+        if "connect_started" in marks and "connect_done" in marks:
+            connect = max(0.0, marks["connect_done"] - marks["connect_started"]) * 1000.0
+        if "sent" in marks and "received" in marks:
+            upstream = max(0.0, marks["received"] - marks["sent"]) * 1000.0
+        else:
+            upstream = max(0.0, (now - sent) * 1000.0 - connect)
+        ctx.timing["connect_ms"] = round(connect, 3)
+        ctx.timing["upstream_ms"] = round(upstream, 3)
+        rtt = latency_rtt_ms(node_id)
+        if rtt is not None:
+            ctx.timing["rtt_ms"] = round(rtt, 3)
+        reported = response.headers.get(PROXY_TIMING_HEADER)
+        if reported is not None:
+            del response.headers[PROXY_TIMING_HEADER]
+            apply_proxy_timing(ctx.timing, parse_proxy_timing(reported))
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(f"upstream timing not recorded: {exc}")
 
 
 _ROUTER_CHILD_GONE = b"model is not loaded"

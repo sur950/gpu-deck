@@ -148,6 +148,9 @@ pub struct JoinResponse {
     pub hub_ws_url: String,
     #[serde(default)]
     pub intervals: Intervals,
+    /// Signed node security policy (added 2026-11-24; absent from older hubs).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub security: Option<SignedPolicy>,
 }
 
 /// Admin envelope error shape (`{success:false, error:{code,message}}`) returned by `/join`.

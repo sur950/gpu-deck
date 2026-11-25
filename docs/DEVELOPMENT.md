@@ -45,7 +45,7 @@ Docker with the compose plugin (OrbStack, Docker Desktop, Colima or Docker Engin
 | Redis (Docker) | ACL user `gpu-deck`, keys `gpu-deck:*` only, db 0 | 56379 |
 | Caddy (Docker, optional) | `https://gpu-deck.localhost:58443` to 3180, `gpu-deck-api.localhost` to 8181, `gpu-deck-admin.localhost` to 8180 | 58443 |
 
-Ports 8443 (agent hub) and 9443 (node-agent proxy) are mTLS. Generated dev credentials live in the gitignored `infra/docker/.env` and are copied into `apps/fastapi/.env` by `bootstrap`; integration tests that create scratch databases use `TEST_PG_ADMIN_URL` (the container superuser) from the same file. Leave no processes running when you finish: `bootstrap.dev.sh stop`.
+Ports 8443 (agent hub), 8444 (API-layer tunnel listener agents dial in serving mode `tunnel`) and 9443 (node-agent proxy, direct mode) are mTLS. Generated dev credentials live in the gitignored `infra/docker/.env` and are copied into `apps/fastapi/.env` by `bootstrap`; integration tests that create scratch databases use `TEST_PG_ADMIN_URL` (the container superuser) from the same file. Leave no processes running when you finish: `bootstrap.dev.sh stop`.
 
 You need no model downloads to work on GPU Deck. Tests use fixtures and small local models only.
 
@@ -65,7 +65,7 @@ Rules:
 
 - **Routes.** `router = APIRouter()` with no prefix. Decorator order is `@router.<method>`, then `@rate_limit`, then `@handle_exceptions`. Signature: `request: Request, ..., admin=Depends(get_current_admin), service: XService = Depends(XService.as_dependency)`. Return `success_response(data, meta)`; list endpoints use `paginated_meta(total, page, page_size)`.
 - **Envelope and errors.** `{success, data, error, meta}`. Raise subclasses of `app/core/exceptions.py` with an `error_code`. Serving routes do not use `@handle_exceptions`; their errors come out in the OpenAI, Anthropic or Ollama shape depending on the path prefix.
-- **Sessions and transactions.** `get_db` commits once per request. Call `repo.release_connection()` before slow I/O. Celery and the scheduler use `NullPool`.
+- **Sessions and transactions.** `get_db` commits once per request, before the response is sent: declare it as `Depends(get_db, scope="function")` (a unit test enforces it). Call `repo.release_connection()` before slow I/O. Celery and the scheduler use `NullPool`.
 - **Redis keys.** Every key, stream and channel is `gpu-deck:<domain>:<event-or-key>` (`settings.REDIS_KEY_PREFIX`). Build names with `settings.redis_key(...)`, `CacheService`, or the pre-wired Celery, APScheduler and slowapi configuration. The development Redis ACL rejects any key outside `gpu-deck:*`.
 - **Off the hot path.** Writes for usage, audit and metering go through `enqueue_*` helpers that `apply_async(queue=...)` and never raise. Tasks are synchronous Celery entry points that run an async `_impl` on a fresh loop with `BaseTaskWithRetry`.
 - **Modules.** Docstring first, then `logger = get_logger(__name__)`. black, isort and flake8 at 100 columns; mypy with `--ignore-missing-imports`. Never log secrets.
@@ -181,6 +181,15 @@ scripts/serve_site.sh          # builds the docs, then serves http://localhost:8
 
 Opening `website/index.html` straight from disk does not work: folder links such as `docs/architecture/` need a web server, and `404.html` uses the `/gpu-deck/` base path. Check the build without serving with `python scripts/build_docs.py --check`.
 
+### Writing docs that read well on GitHub and on the site
+
+Everything below renders natively on GitHub and is styled by the docs site:
+
+- **Callouts**: GitHub alerts, `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`, each on its own line at the start of a quote.
+- **Summary cards**: an HTML comment `<!-- cards -->` on the line before a bullet list whose items read `**Title**: text`. GitHub hides the comment and shows the list; the site shows cards (a title starting with Verified, Partial or Awaiting gets that status colour).
+- **Screenshots**: `![alt text](../screenshots/<name>.svg)` on a line of its own, then an `*italic*` line as the caption. Always write alt text that says what the screen shows.
+- **Diagrams**: the brand diagrams in `docs/diagrams/` (`<name>-light.svg` and `<name>-dark.svg`, built by `assets/brand/doc_art.py`, see [BRAND.md](BRAND.md#documentation-diagrams)) go in a `<picture>` with the dark file as `<source media="(prefers-color-scheme: dark)">`, the light one as the `<img>` with alt text and `width="880"` (no `height`: GitHub would distort a scaled image). The site follows its own theme switch and adds the height from the SVG, lazy loading and async decoding. Mermaid blocks still work for detailed sequences (`--render-diagrams`).
+
 ## Screenshots
 
 Every product screenshot is captured as a **vector SVG**, so text, colours and shapes can be changed later without re-shooting. The tooling lives in `docs/screenshots/` (its own `package.json` and lockfile, outside the pnpm workspace):
@@ -195,7 +204,7 @@ Re-capture against a running dev stack that has some data in it (clusters, nodes
 ```bash
 ./infra/scripts/bootstrap.dev.sh bootstrap
 (cd docs/screenshots && pnpm install --ignore-workspace)
-node docs/screenshots/capture.mjs                # all screens, or: capture.mjs overview billing
+node docs/screenshots/capture.mjs                # all screens, or: capture.mjs overview nodes
 node docs/screenshots/desktop.mjs                # desktop connect screen (dark + light) as SVG
 ```
 

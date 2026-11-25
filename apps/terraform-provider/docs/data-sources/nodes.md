@@ -49,7 +49,6 @@ output "mac_nodes" {
   - `memory_total_bytes` (Number) System memory.
   - `name` (String) Node name.
   - `os` (String) Operating system.
-  - `price_plan_id` (String) Node price plan override.
   - `proxy_address` (String) Agent proxy address.
   - `proxy_port` (Number) Agent proxy port.
   - `status` (String) Node status.

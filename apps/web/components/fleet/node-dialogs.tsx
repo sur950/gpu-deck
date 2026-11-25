@@ -6,15 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormDialog, Field } from '@/components/shared/form-dialog';
 import { KeyValueEditor, recordToRows, rowsToRecord, type KeyValueRow } from '@/components/shared/key-value-editor';
-import { useDrainNode, usePricePlans, useRemoveNode, useRevokeNodeCertificate, useUpdateNode } from '@/hooks/api/fleet';
+import { useDrainNode, useRemoveNode, useRevokeNodeCertificate, useUpdateNode } from '@/hooks/api/fleet';
 import { formatBytes } from '@/utils/format';
 import type { Node, NodeCertificate } from '@/types/fleet';
 
 const GiB = 1024 ** 3;
-const NONE = '__none__';
 
 // ─── Drain ──────────────────────────────────────────────────────────────────
 
@@ -64,10 +62,8 @@ export function DrainNodeDialog({ node, open, onOpenChange }: { node: Node | nul
 
 export function EditNodeDialog({ node, open, onOpenChange }: { node: Node; open: boolean; onOpenChange: (open: boolean) => void }) {
   const update = useUpdateNode();
-  const plans = usePricePlans();
   const [name, setName] = useState(node.name);
   const [labels, setLabels] = useState<KeyValueRow[]>(() => recordToRows(node.labels));
-  const [plan, setPlan] = useState(node.price_plan_id ?? '');
   const [proxyAddress, setProxyAddress] = useState(node.proxy_address ?? '');
   const [proxyPort, setProxyPort] = useState(String(node.proxy_port ?? 9443));
   const [cacheLimit, setCacheLimit] = useState(node.cache_limit_bytes ? String(Math.round(node.cache_limit_bytes / GiB)) : '');
@@ -91,7 +87,6 @@ export function EditNodeDialog({ node, open, onOpenChange }: { node: Node; open:
             body: {
               name,
               labels: rowsToRecord(labels),
-              price_plan_id: plan || null,
               proxy_address: proxyAddress.trim() || null,
               proxy_port: Number(proxyPort),
               cache_limit_bytes: cacheLimit ? Math.round(Number(cacheLimit) * GiB) : null,
@@ -104,21 +99,6 @@ export function EditNodeDialog({ node, open, onOpenChange }: { node: Node; open:
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Name" hint={nameValid ? 'Unique within the cluster.' : 'Lowercase letters, digits, dots and dashes.'} htmlFor="node-name">
           <Input id="node-name" value={name} onChange={(e) => setName(e.target.value)} className="font-mono text-sm" aria-invalid={!nameValid} />
-        </Field>
-        <Field label="Price plan" hint="Overrides the cluster's plan for GPU-minute billing.">
-          <Select value={plan || NONE} onValueChange={(v) => setPlan(v === NONE ? '' : String(v))}>
-            <SelectTrigger className="w-full">
-              <SelectValue>{(v: unknown) => (plans.data ?? []).find((p) => p.id === v)?.name ?? 'Inherit from cluster'}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE}>Inherit from cluster</SelectItem>
-              {(plans.data ?? []).map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name} · ${p.usd_per_gpu_minute}/GPU-min
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </Field>
         <Field label="Proxy address" hint="Where the API layer reaches this node's mTLS proxy." htmlFor="node-proxy">
           <Input id="node-proxy" value={proxyAddress} onChange={(e) => setProxyAddress(e.target.value)} placeholder="10.0.4.12" className="font-mono text-sm" />

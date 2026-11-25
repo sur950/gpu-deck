@@ -14,17 +14,24 @@
   <meta name="theme-color" content="#F4F3F0" media="(prefers-color-scheme: light)">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="GPU Deck">
+  <meta property="og:locale" content="en_US">
   <meta property="og:title" content="Page not found · GPU Deck">
   <meta property="og:description" content="This page does not exist.">
   <meta property="og:url" content="https://sur950.github.io/gpu-deck/">
   <meta property="og:image" content="https://sur950.github.io/gpu-deck/assets/brand/og-image.png">
+  <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1280">
   <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="GPU Deck logo and tagline next to a fleet panel of GPUs across three nodes">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" href="/gpu-deck/favicon.ico" sizes="48x48">
-  <link rel="icon" href="/gpu-deck/favicon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/gpu-deck/apple-touch-icon.png">
-  <link rel="manifest" href="/gpu-deck/site.webmanifest">
+  <meta name="twitter:title" content="Page not found · GPU Deck">
+  <meta name="twitter:description" content="This page does not exist.">
+  <meta name="twitter:image" content="https://sur950.github.io/gpu-deck/assets/brand/og-image.png">
+  <meta name="twitter:image:alt" content="GPU Deck logo and tagline next to a fleet panel of GPUs across three nodes">
+  <link rel="icon" href="/gpu-deck/favicon.ico?v=3014c255a2" sizes="48x48">
+  <link rel="icon" href="/gpu-deck/favicon.svg?v=3014c255a2" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/gpu-deck/apple-touch-icon.png?v=3014c255a2">
+  <link rel="manifest" href="/gpu-deck/site.webmanifest?v=3014c255a2">
   <script>(function(){var d=document.documentElement;d.classList.add("js");try{var t=localStorage.getItem("gpudeck-theme");if(t==="light"||t==="dark")d.setAttribute("data-theme",t);if(localStorage.getItem("gpudeck-star-banner")==="dismissed")d.classList.add("banner-off")}catch(e){}})();</script>
   <link rel="preload" href="/gpu-deck/assets/fonts/figtree-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/gpu-deck/assets/css/site.css">
@@ -75,6 +82,7 @@
       <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.4-7.5-10A4.2 4.2 0 0 1 12 7.4 4.2 4.2 0 0 1 19.5 10c0 5.6-7.5 10-7.5 10Z"/></symbol>
       <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 18.5V7a2.5 2.5 0 0 1 2.5-2.5h9A2.5 2.5 0 0 1 19 7v6.5a2.5 2.5 0 0 1-2.5 2.5H8.5Z"/></symbol>
       <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+      <symbol id="i-half" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path fill="currentColor" stroke="none" d="M12 4a8 8 0 0 0 0 16Z"/></symbol>
       <symbol id="i-ha" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="m8.3 10.8 7.4-3.6M8.3 13.2l7.4 3.6"/></symbol>
       <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
       <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8v.01"/></symbol>
@@ -91,6 +99,7 @@
       <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3.5h7l4.5 4.5v12.5H7Z"/><path d="M14 3.5V8h4.5M10 13h5.5M10 16.5h5.5"/></symbol>
       <symbol id="i-hash" viewBox="0 0 24 24"><path d="M5 9h15M4 15h15M10 4 8 20M16 4l-2 16"/></symbol>
       <symbol id="i-enter" viewBox="0 0 24 24"><path d="M19.5 5v6a3 3 0 0 1-3 3H5m4-4-4 4 4 4"/></symbol>
+      <symbol id="i-braces" viewBox="0 0 24 24"><path d="M9 4.5c-1.9 0-2.8.9-2.8 2.8v2.2c0 1.3-.8 2.2-2.2 2.5 1.4.3 2.2 1.2 2.2 2.5v2.2c0 1.9.9 2.8 2.8 2.8M15 4.5c1.9 0 2.8.9 2.8 2.8v2.2c0 1.3.8 2.2 2.2 2.5-1.4.3-2.2 1.2-2.2 2.5v2.2c0 1.9-.9 2.8-2.8 2.8"/></symbol>
     </defs>
   </svg>
   <header class="site-header" id="top">
@@ -103,8 +112,8 @@
         <ul>
           <li><a href="/gpu-deck/#architecture">How it runs</a></li>
           <li><a href="/gpu-deck/#features">Features</a></li>
+          <li><a href="/gpu-deck/#ecosystem">Ecosystem</a></li>
           <li><a href="/gpu-deck/#hardware">Hardware</a></li>
-          <li><a href="/gpu-deck/#screens">Screens</a></li>
           <li><a href="/gpu-deck/docs/" data-nav="docs">Docs</a></li>
           <li><a href="/gpu-deck/docs/changelog/">Changelog</a></li>
         </ul>
@@ -138,7 +147,6 @@
       <div class="cta-row">
         <a class="btn btn-primary" href="/gpu-deck/">Go to the home page</a>
         <a class="btn btn-secondary" href="/gpu-deck/docs/">Browse the docs</a>
-        <button type="button" class="btn btn-ghost" data-search-open aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Search</button>
       </div>
     </div>
   </main>

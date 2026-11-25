@@ -450,7 +450,9 @@ class AlertService:
         self.deliveries = AlertDeliveryRepository(session)
 
     @staticmethod
-    async def as_dependency(request: Request, db: AsyncSession = Depends(get_db)) -> "AlertService":
+    async def as_dependency(
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
+    ) -> "AlertService":
         return AlertService(db)
 
     # ------------------------------------------------------------------ channels

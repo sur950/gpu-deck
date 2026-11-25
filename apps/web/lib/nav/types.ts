@@ -7,7 +7,6 @@ export type NavGroupId =
   | 'models'
   | 'automation'
   | 'observability'
-  | 'usage'
   | 'security';
 
 /** A ⌘K command that jumps somewhere, e.g. "Create deployment". */

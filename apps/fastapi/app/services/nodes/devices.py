@@ -56,7 +56,7 @@ class DeviceService:
 
     @staticmethod
     async def as_dependency(
-        request: Request, db: AsyncSession = Depends(get_db)
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
     ) -> "DeviceService":
         return DeviceService(db)
 

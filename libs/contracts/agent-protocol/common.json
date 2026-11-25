@@ -557,13 +557,87 @@
       "additionalProperties": false
     },
 
+    "SignedPolicy": {
+      "type": "object",
+      "description": "A node security policy (security_policy.json) signed with the internal CA key (added 2026-11-24, protocol.md §13). The agent verifies the signature with the CA certificate it pinned at join (never with a key carried in the message), checks node_id and that serial is not lower than the policy it holds (no rollback), and only then applies the pins, tunnel endpoints and source allow-lists. Carried in config_push.security and in the join response (security).",
+      "required": ["policy", "signature", "algorithm"],
+      "properties": {
+        "policy": { "type": "string", "maxLength": 65536, "description": "Standard base64 of the UTF-8 JSON policy document; the signature covers exactly these decoded bytes." },
+        "signature": { "type": "string", "maxLength": 2048, "description": "Standard base64 of the signature (ECDSA: ASN.1 DER)." },
+        "algorithm": { "type": "string", "enum": ["ecdsa-p256-sha256", "ecdsa-p384-sha384", "ed25519", "rsa-pkcs1-sha256"], "description": "Must match the CA key type: the agent picks the algorithm from the pinned CA key and refuses a mismatch." }
+      },
+      "additionalProperties": false
+    },
+
+    "ReleaseManifest": {
+      "type": "object",
+      "description": "Agent release manifest (protocol.md §14): one per release version, signed with the release signing key (ed25519) by the release workflow. Per target it names the archive the release publishes and the agent binary inside it. Agents trust a binary only when its sha256 matches binary_sha256 of a manifest whose signature verifies with a pinned release key.",
+      "required": ["schema", "product", "version", "artifacts"],
+      "properties": {
+        "schema": { "type": "integer", "const": 1 },
+        "product": { "type": "string", "const": "gpudeck-agent" },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$" },
+        "protocol_version": { "type": "integer", "minimum": 1, "default": 1 },
+        "created_at": { "$ref": "#/$defs/timestamp" },
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "required": ["target", "binary_sha256", "binary_size_bytes"],
+            "properties": {
+              "target": { "type": "string", "pattern": "^[A-Za-z0-9_.-]{1,64}$", "description": "Rust target triple, e.g. x86_64-unknown-linux-gnu." },
+              "file": { "type": ["string", "null"], "maxLength": 255, "description": "Release archive (gpudeck-agent-<version>-<target>.tar.gz)." },
+              "size_bytes": { "type": ["integer", "null"], "minimum": 0 },
+              "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "sha256 of the archive." },
+              "binary_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "sha256 of the gpudeck-agent binary inside the archive (what nodes stage)." },
+              "binary_size_bytes": { "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "SignedReleaseManifest": {
+      "type": "object",
+      "description": "A ReleaseManifest as published (gpudeck-agent-<version>-manifest.json) plus its detached signature (.sig). The agent verifies the signature over exactly the decoded manifest bytes with a release key pinned on the node (security policy release.public_keys, or agent.toml release_public_keys) before staging and again before the swap.",
+      "required": ["manifest", "signature", "algorithm"],
+      "properties": {
+        "manifest": { "type": "string", "maxLength": 262144, "description": "Standard base64 of the manifest file bytes." },
+        "signature": { "type": "string", "maxLength": 256, "description": "Standard base64 of the 64-byte ed25519 signature." },
+        "algorithm": { "type": "string", "const": "ed25519" }
+      },
+      "additionalProperties": false
+    },
+
+    "AgentUpdateStatus": {
+      "type": "object",
+      "description": "Self-update state of the agent (protocol.md §14), in hello.agent_update and inventory.agent_update; sent only to a hub listing the agent_updates feature.",
+      "required": ["mode"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["helper", "self", "managed", "unsupported"], "description": "helper: a root-owned update helper (systemd path unit / launchd daemon) swaps the root-owned binary; self: the binary is owned by the agent user, the agent swaps it itself; managed: the platform owns the binary (Kubernetes DaemonSet, Helm), never self-updates; unsupported: update manually (reason says why)." },
+        "reason": { "type": ["string", "null"], "maxLength": 512 },
+        "target": { "type": ["string", "null"], "maxLength": 64, "description": "This build's target triple." },
+        "state": { "type": "string", "enum": ["idle", "staging", "staged", "applying"], "default": "idle" },
+        "staged_version": { "type": ["string", "null"], "maxLength": 64 },
+        "staged_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "staged_at": { "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }] },
+        "previous_version": { "type": ["string", "null"], "maxLength": 64, "description": "Version of the binary kept for rollback, when known." },
+        "release_keys": { "type": "integer", "minimum": 0, "default": 0, "description": "Release signing keys pinned on the node." }
+      },
+      "additionalProperties": false
+    },
+
     "ErrorInfo": {
       "type": "object",
       "required": ["code", "message"],
       "properties": {
         "code": {
           "type": "string",
-          "description": "Stable machine code. Known: invalid_args, unsupported_engine, artifact_download_failed, artifact_checksum_mismatch, model_download_failed, model_checksum_mismatch, pickle_blocked, insufficient_vram, insufficient_disk, port_in_use, engine_start_failed, engine_crashed, health_timeout, drain_timeout, instance_not_found, engine_process_not_found, cache_item_not_found, egress_blocked, timeout, cancelled, internal; since 2026-11-17: path_not_found, permission_denied, no_container_runtime, image_pull_failed, ssh_instance_not_found, distributed_unsupported."
+          "description": "Stable machine code. Known: invalid_args, unsupported_engine, artifact_download_failed, artifact_checksum_mismatch, model_download_failed, model_checksum_mismatch, pickle_blocked, insufficient_vram, insufficient_disk, port_in_use, engine_start_failed, engine_crashed, health_timeout, drain_timeout, instance_not_found, engine_process_not_found, cache_item_not_found, egress_blocked, timeout, cancelled, internal; since 2026-11-17: path_not_found, permission_denied, no_container_runtime, image_pull_failed, ssh_instance_not_found, distributed_unsupported; agent updates (§14): update_unsupported, signature_invalid, not_staged, update_in_progress, rolled_back."
         },
         "message": { "type": "string", "maxLength": 2048 },
         "retryable": { "type": "boolean", "default": false },

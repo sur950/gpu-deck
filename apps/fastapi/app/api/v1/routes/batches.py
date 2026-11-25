@@ -1,5 +1,5 @@
 """
-Admin view of Anthropic message batches (admin.yaml: Metering tag).
+Admin view of Anthropic message batches (admin.yaml: Batches tag).
 
 GET  /batches                     list (api_key_id, status filters)
 GET  /batches/{batch_id}          get (uuid or msgbatch_ id)
@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = get_logger(__name__)
 
 router = APIRouter()
-TAGS = ["Metering"]
+TAGS = ["Batches"]
 
 
 def _dump(batch) -> dict:
@@ -47,7 +47,7 @@ async def list_batches(
     api_key_id: Optional[uuid.UUID] = Query(None),
     status: Optional[BatchStatus] = Query(None),
     admin=Depends(get_current_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     rows, total = await BatchRepository(db).list_admin(
         page, page_size, api_key_id, status.value if status else None
@@ -63,7 +63,7 @@ async def get_batch(
     request: Request,
     batch_id: str,
     admin=Depends(get_current_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     return success_response(data=_dump(await _get(db, batch_id)))
 
@@ -74,7 +74,7 @@ async def cancel_batch(
     request: Request,
     batch_id: str,
     admin=Depends(get_current_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     batch = await BatchService(db).cancel(await _get(db, batch_id))
     audit.record(

@@ -10,7 +10,7 @@
 | `api-layer` | `uvicorn app.api_layer_main:app` | 8181 | `/v1` (OpenAI), `/anthropic/v1` (Anthropic), `/api` (Ollama), API-key auth, `/health`, `/metrics` |
 | `agent-hub` | `python -m app.agent_hub_main` | 8443 | Node join (`/agent/v1/join`), agent WebSocket (`/agent/v1/ws`, mTLS), CA and agent downloads |
 | `worker` | `celery -A app.workers.celery_app worker --beat` | — | Celery tasks (usage writes, audit, rollups) + beat |
-| `scheduler` | `python -m app.workers.scheduler` | — | APScheduler jobs (rules, schedules, billing) with a Redis job store |
+| `scheduler` | `python -m app.workers.scheduler` | — | APScheduler jobs (rules, schedules, rollups) with a Redis job store |
 
 Dependencies for development (Docker, `infra/docker/docker-compose.deps.yml`): Postgres 17 on `127.0.0.1:55432`, Redis 7.4 on `127.0.0.1:56379`. Optional HTTPS proxy (`bootstrap.dev.sh caddy`): `https://gpu-deck.localhost:58443` → web 3180, `https://gpu-deck-api.localhost:58443` → 8181, `https://gpu-deck-admin.localhost:58443` → 8180.
 

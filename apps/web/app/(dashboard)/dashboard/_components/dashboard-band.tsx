@@ -86,7 +86,7 @@ export function DashboardBand({ counts, connectedNodes, liveStatus, range, onRan
         </div>
       }
       title={`${greeting()}${firstName ? `, ${firstName}` : ''}`}
-      description="GPU load, model sessions, rule actions and spend across every cluster this control plane manages."
+      description="GPU load, model sessions and rule actions across every cluster this control plane manages."
       actions={
         <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
           {range && onRangeChange && <RangePills value={range} onChange={onRangeChange} presets={DASHBOARD_RANGES} />}

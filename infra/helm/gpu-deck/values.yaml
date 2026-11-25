@@ -296,7 +296,17 @@ nodeAgent:
   # start; revoke it when the rollout is done, issue a new one before adding nodes.
   joinTokenSecret: ""
   joinTokenKey: GPUDECK_AGENT_JOIN_TOKEN
+  # Required: sha256 of the control plane's CA (the join dialog shows it). Agents refuse to join
+  # without it (GPUDECK_AGENT_INSECURE_SKIP_CA_PIN=1 in vendorEnv overrides, trusted networks).
   caFingerprint: ""
+  # direct: in-cluster GPU nodes are reached by the API layer pods over the cluster network on
+  # proxyPort (mTLS, the API layer's key pinned, private source ranges only). tunnel: the agent
+  # dials the API layer instead (no listener on the node); it needs every API-layer worker to be
+  # reachable individually (config.AGENT_TUNNEL_PUBLIC_URLS), which this chart does not set up.
+  servingMode: direct
+  # The pod has no NET_ADMIN unless the egress lock is on; NetworkPolicies and the agent's own
+  # source allow-list protect the proxy port.
+  firewall: "off"
   labels: {}                 # node labels reported to GPU Deck (k=v)
   nodeSelector:
     gpudeck.sur950.github.io/gpu-node: "true"

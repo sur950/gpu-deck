@@ -228,10 +228,13 @@ fn hello_is_valid() {
             port: 9443,
             address: None,
             cert_fingerprint_sha256: Some("a".repeat(64)),
+            mode: Some(ServingMode::Direct),
+            bind: Some("10.0.0.5".into()),
         },
         config_version: 0,
         labels: BTreeMap::from([("zone".to_string(), "office".to_string())]),
         observed_engines: vec![observed_engine()],
+        agent_update: Some(update_status()),
     };
     assert_valid("hello.json", &serde_json::to_value(&hello).unwrap());
     assert_valid("envelope.json", &envelope(Message::Hello(hello)));
@@ -340,6 +343,7 @@ fn inventory_is_valid() {
             uptime_seconds: Some(1),
         }),
         config_version: Some(3),
+        agent_update: Some(update_status()),
     };
     assert_valid("inventory.json", &serde_json::to_value(&inv).unwrap());
     assert_valid("envelope.json", &envelope(Message::Inventory(inv)));
@@ -1051,6 +1055,7 @@ fn v1_1_results_and_state_validate() {
         observed_engines: vec![],
         system: None,
         config_version: None,
+        agent_update: None,
     };
     assert_valid("inventory.json", &serde_json::to_value(&inv).unwrap());
     let mut ev = Event::info(EventKind::SshInstanceStateChanged, "running");
@@ -1109,4 +1114,200 @@ fn protocol_examples_validate_and_parse() {
         n += 1;
     }
     assert!(n >= 12, "expected the 1.1 sample documents, found {n}");
+}
+
+#[test]
+fn security_policy_and_secure_transport_frames_validate() {
+    let node = uuid();
+    let policy = SecurityPolicy {
+        v: 1,
+        node_id: node,
+        serial: 1_764_000_000_000,
+        issued_at: now(),
+        hub: Some(IdentityPins {
+            spki_sha256: vec!["a".repeat(64), "b".repeat(64)],
+            subjects: vec![],
+        }),
+        api_layer: Some(IdentityPins {
+            spki_sha256: vec!["c".repeat(64)],
+            subjects: vec!["CN=api-layer,O=gpudeck-services".into()],
+        }),
+        tunnel: Some(TunnelPolicy {
+            endpoints: vec!["cp.example.com:8444".into(), "[2001:db8::1]:8444".into()],
+            connections: Some(2),
+            idle_timeout_seconds: Some(60),
+        }),
+        direct: Some(DirectPolicy {
+            allowed_source_cidrs: vec!["10.0.0.0/8".into()],
+            handshakes_per_minute: Some(120),
+            handshake_burst: Some(30),
+            max_pending_handshakes: Some(64),
+        }),
+        ssh: Some(SshPolicy {
+            default_allowed_cidrs: vec![],
+        }),
+        ingress_report: Some(IngressReportPolicy {
+            interval_seconds: Some(60),
+            burst_threshold: Some(20),
+        }),
+        release: Some(ReleasePolicy {
+            public_keys: vec![format!("{}=", "A".repeat(43))],
+        }),
+    };
+    assert_valid(
+        "security_policy.json",
+        &serde_json::to_value(&policy).unwrap(),
+    );
+    let signed = SignedPolicy {
+        policy: "eyJ2IjoxfQ==".into(),
+        signature: "MEUCIQ==".into(),
+        algorithm: "ecdsa-p256-sha256".into(),
+    };
+    assert_def_valid(
+        "common.json",
+        "SignedPolicy",
+        &serde_json::to_value(&signed).unwrap(),
+    );
+    let cp: ConfigPush = serde_json::from_value(json!({
+        "config_version": 3, "full": false,
+        "security": serde_json::to_value(&signed).unwrap(),
+    }))
+    .unwrap();
+    assert_eq!(cp.security.as_ref(), Some(&signed));
+    assert_valid("config_push.json", &serde_json::to_value(&cp).unwrap());
+    // Tunnel mode hello omits bind; no mode at all for a hub without secure_transport.
+    let proxy = ProxyInfo {
+        port: 9443,
+        address: None,
+        cert_fingerprint_sha256: None,
+        mode: Some(ServingMode::Tunnel),
+        bind: None,
+    };
+    let v = serde_json::to_value(&proxy).unwrap();
+    assert_eq!(v["mode"], "tunnel");
+    assert!(v.get("bind").is_none());
+    let mut ev = Event::warning(EventKind::IngressRejected, "12 inbound attempts rejected");
+    let mut d = JsonObject::new();
+    d.insert("total".into(), 12.into());
+    ev.details = Some(d);
+    assert_valid("envelope.json", &envelope(Message::Event(ev)));
+    // A policy document with an unknown key is a contract violation.
+    let mut bad = serde_json::to_value(&policy).unwrap();
+    bad["extra"] = json!(1);
+    assert!(validator("security_policy.json").validate(&bad).is_err());
+}
+
+fn update_status() -> AgentUpdateStatus {
+    AgentUpdateStatus {
+        mode: AgentUpdateMode::Helper,
+        reason: None,
+        target: Some("x86_64-unknown-linux-gnu".into()),
+        state: AgentUpdateState::Staged,
+        staged_version: Some("1.1.0".into()),
+        staged_sha256: Some("d".repeat(64)),
+        staged_at: Some(now()),
+        previous_version: Some("0.9.0".into()),
+        release_keys: 1,
+    }
+}
+
+/// Agent updates (protocol.md §14): commands, status, event and the release manifest.
+#[test]
+fn agent_update_frames_validate() {
+    use base64::Engine as _;
+    let b64 = base64::engine::general_purpose::STANDARD;
+    let manifest = ReleaseManifest {
+        schema: 1,
+        product: "gpudeck-agent".into(),
+        version: "1.1.0".into(),
+        protocol_version: 1,
+        created_at: Some(now()),
+        artifacts: vec![ReleaseArtifact {
+            target: "x86_64-unknown-linux-gnu".into(),
+            file: Some("gpudeck-agent-1.1.0-x86_64-unknown-linux-gnu.tar.gz".into()),
+            size_bytes: Some(10),
+            sha256: Some("a".repeat(64)),
+            binary_sha256: "b".repeat(64),
+            binary_size_bytes: 20,
+        }],
+    };
+    assert_def_valid(
+        "common.json",
+        "ReleaseManifest",
+        &serde_json::to_value(&manifest).unwrap(),
+    );
+    let signed = SignedReleaseManifest {
+        manifest: b64.encode(serde_json::to_vec(&manifest).unwrap()),
+        signature: b64.encode([7u8; 64]),
+        algorithm: "ed25519".into(),
+    };
+    for kind in [
+        CommandKind::StageUpdate(StageUpdateArgs {
+            version: "1.1.0".into(),
+            target: "x86_64-unknown-linux-gnu".into(),
+            manifest: signed.clone(),
+            download_token: "t".repeat(32),
+            allow_downgrade: false,
+        }),
+        CommandKind::ApplyUpdate(ApplyUpdateArgs {
+            version: "1.1.0".into(),
+            health_timeout_seconds: 120,
+            run_id: Some(uuid()),
+        }),
+    ] {
+        let v = serde_json::to_value(Command::new(kind.clone())).unwrap();
+        assert_valid("command.json", &v);
+        let back: Command = serde_json::from_value(v).unwrap();
+        assert_eq!(back.kind, kind);
+        assert_valid("envelope.json", &envelope(Message::Command(back)));
+    }
+    // The download token and the manifest body never reach the logs.
+    let stage = CommandKind::StageUpdate(StageUpdateArgs {
+        version: "1.1.0".into(),
+        target: "x".into(),
+        manifest: signed,
+        download_token: "secret-token-value-123".into(),
+        allow_downgrade: false,
+    });
+    let logged = serde_json::to_string(&stage.redacted()).unwrap();
+    assert!(!logged.contains("secret-token-value-123"));
+    assert_def_valid(
+        "common.json",
+        "AgentUpdateStatus",
+        &serde_json::to_value(update_status()).unwrap(),
+    );
+    let mut ev = Event::info(EventKind::AgentUpdate, "agent update staged");
+    let mut d = JsonObject::new();
+    d.insert("phase".into(), "staged".into());
+    d.insert("version".into(), "1.1.0".into());
+    ev.details = Some(d);
+    assert_valid("event.json", &serde_json::to_value(&ev).unwrap());
+    // An apply with a too-short health timeout is a schema error.
+    let mut bad = serde_json::to_value(Command::new(CommandKind::ApplyUpdate(ApplyUpdateArgs {
+        version: "1.1.0".into(),
+        health_timeout_seconds: 5,
+        run_id: None,
+    })))
+    .unwrap();
+    assert!(!validator("command.json").is_valid(&bad));
+    bad["args"]["health_timeout_seconds"] = json!(120);
+    bad["args"]["version"] = json!("latest");
+    assert!(!validator("command.json").is_valid(&bad));
+}
+
+/// N-1: frames of an agent that predates agent updates still validate, and a hello without
+/// `agent_update` parses with `None`.
+#[test]
+fn hello_without_agent_update_parses() {
+    let raw = json!({
+        "agent_version": "1.0.0", "protocol_version": 1, "os": "linux", "arch": "x86_64",
+        "hostname": "n1", "started_at": "2026-11-16T10:20:30.123Z",
+        "capabilities": {"engines": [], "runtimes": ["native"]},
+        "cache": {"dir": "/x", "limit_bytes": 0, "used_bytes": 0},
+        "proxy": {"port": 9443}
+    });
+    assert_valid("hello.json", &raw);
+    let h: Hello = serde_json::from_value(raw).unwrap();
+    assert!(h.agent_update.is_none());
+    assert!(!h.capabilities.commands.contains(&CommandName::StageUpdate));
 }

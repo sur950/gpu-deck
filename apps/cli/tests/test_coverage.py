@@ -125,8 +125,7 @@ def test_tree_has_expected_groups():
         "rules dry-run",
         "layouts apply",
         "cache prefetch",
-        "metering usage summary",
-        "billing reports export",
+        "batches list",
         "metrics prometheus",
         "logs stream",
         "live events",
@@ -135,7 +134,7 @@ def test_tree_has_expected_groups():
         "pki issue",
     ):
         assert path in tree, path
-    assert len(tree) >= 250
+    assert len(tree) >= 240
 
 
 def test_every_command_help_renders(capsys):

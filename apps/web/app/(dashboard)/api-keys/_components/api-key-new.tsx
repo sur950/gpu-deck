@@ -73,7 +73,7 @@ export function ApiKeyNew() {
 
   return (
     <PageContainer className="max-w-3xl">
-      <PageHeader title="New API key" description="One key per client makes usage, cost and revocation per client." />
+      <PageHeader title="New API key" description="One key per client keeps traffic and revocation per client." />
       <Card className="gap-0 rounded-xl py-0">
         <CardHeader className="border-b border-border px-5 py-4">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">

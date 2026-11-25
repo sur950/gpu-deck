@@ -2456,6 +2456,38 @@ impl Agent {
             insts.len(),
             self.paths.root.display()
         );
+        // Self-check: an engine left running that listens on a network interface is not taken
+        // over; it is stopped and relaunched (bind flags forced to loopback).
+        let addrs = crate::system::ip_addresses();
+        let mut procs_ok = vec![];
+        for p in procs {
+            match supervisor::exposed_on_network(p.port, &addrs).await {
+                Some(addr) if p.port != 0 => {
+                    warn!(engine_process = %p.args.engine_process_id, %addr, "security self-check: engine reachable on a network interface; stopping and relaunching it on loopback");
+                    out.procs.push(p);
+                }
+                _ => procs_ok.push(p),
+            }
+        }
+        let mut insts_ok = vec![];
+        for i in insts {
+            let own = i.args.engine_process_id.is_none() || i.overflow;
+            let worker = i
+                .args
+                .launch
+                .distributed
+                .as_ref()
+                .is_some_and(|d| d.rank > 0);
+            if own && !worker && i.port != 0 {
+                if let Some(addr) = supervisor::exposed_on_network(i.port, &addrs).await {
+                    warn!(instance = %i.args.instance_id, %addr, "security self-check: engine reachable on a network interface; stopping and relaunching it on loopback");
+                    out.insts.push(i);
+                    continue;
+                }
+            }
+            insts_ok.push(i);
+        }
+        let (procs, insts) = (procs_ok, insts_ok);
         for p in procs {
             if self.adopt_engine_process(&p).await {
                 info!(engine_process = %p.args.engine_process_id, pid = ?p.pid, port = p.port, "re-adopted running engine process");

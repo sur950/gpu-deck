@@ -74,4 +74,3 @@ export const stopCloudNode = (id: string, body: CloudNodeAction) => apiPost<Clou
 export const startCloudNode = (id: string) => apiPost<CloudNode>(`/cloud/nodes/${id}/start`);
 export const terminateCloudNode = (id: string, body: CloudNodeAction) => apiPost<CloudNode>(`/cloud/nodes/${id}/terminate`, body);
 export const refreshCloudNode = (id: string) => apiPost<CloudNode>(`/cloud/nodes/${id}/refresh`);
-export const applyCloudPricePlan = (id: string) => apiPost<CloudNode>(`/cloud/nodes/${id}/apply-price-plan`);

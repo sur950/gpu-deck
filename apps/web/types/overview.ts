@@ -116,8 +116,6 @@ export interface AlertSummary {
 export interface Overview {
   counts: OverviewCounts;
   live: OverviewLive;
-  costTodayUsd: number;
-  costMonthUsd: number;
   recentAlerts: AlertSummary[];
   recentSwaps: SwapSummary[];
   recentRuleRuns: RuleRunSummary[];

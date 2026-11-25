@@ -1,15 +1,12 @@
 /**
- * Shapes the live backend sends that the fixtures did not: node
- * engine objects, ISO `day` buckets, empty usage group keys, negative derived
- * counters, agent version gates and partial PATCH bodies.
+ * Shapes the live backend sends that the fixtures did not: node engine
+ * objects, negative derived counters, agent version gates and partial PATCH
+ * bodies.
  */
 import { describe, expect, it } from 'vitest';
 import { clampSeries } from '@/components/charts/series-utils';
-import { bucketStartMs } from '@/components/usage/usage-shared';
-import { mapSummaryRow } from '@/hooks/api/usage-api';
 import { isTerminalCommand, nodeEngines, versionAtLeast } from '@/types/fleet';
 import type { DeploymentUpdate, ModelUpdate } from '@/types/models';
-import type { components } from '@/lib/api/generated/admin';
 
 describe('nodeEngines', () => {
   it('reads agent 1.1 engine objects and legacy plain names', () => {
@@ -46,25 +43,6 @@ describe('versionAtLeast / isTerminalCommand', () => {
     expect(isTerminalCommand('timed_out')).toBe(true);
     expect(isTerminalCommand('running')).toBe(false);
     expect(isTerminalCommand('sent')).toBe(false);
-  });
-});
-
-describe('usage buckets and groups', () => {
-  it('parses ISO and bare-date day buckets as UTC', () => {
-    expect(bucketStartMs('2026-11-18T00:00:00Z')).toBe(Date.UTC(2026, 10, 18));
-    expect(bucketStartMs('2026-11-18')).toBe(Date.UTC(2026, 10, 18));
-    expect(Number.isNaN(bucketStartMs(undefined))).toBe(true);
-  });
-
-  it('names the empty group the API uses for unrouted requests', () => {
-    const totals = { request_count: 3 } as components['schemas']['UsageSummaryRow']['totals'];
-    const row = mapSummaryRow({ group: { model: '' }, labels: { model: '' }, totals });
-    expect(row.group.model).toBe('unrouted');
-    expect(row.labels.model).toBe('Unrouted (no model)');
-    const idle = mapSummaryRow({ group: { api_key: '' }, labels: { api_key: 'unallocated' }, totals });
-    expect(idle.group.api_key).toBe('unallocated');
-    const named = mapSummaryRow({ group: { node: 'n1' }, labels: {}, totals });
-    expect(named.labels.node).toBe('n1');
   });
 });
 

@@ -33,8 +33,9 @@ CLOSE_HUB_RESTARTING = 1012
 PROTOCOL_VERSION = 1
 
 # Optional protocol features this hub accepts (hello_ack.features): agents send the matching
-# fields (observed engines, GPU processes) only when listed.
-HUB_FEATURES = ["observed_engines", "gpu_processes"]
+# fields (observed engines, GPU processes, serving mode + ingress_rejected events, agent update
+# status + agent_update events) only when listed.
+HUB_FEATURES = ["observed_engines", "gpu_processes", "secure_transport", "agent_updates"]
 
 
 def _contract_dir() -> Path:

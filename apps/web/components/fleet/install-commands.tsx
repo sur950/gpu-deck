@@ -20,6 +20,27 @@ export interface InstallContext {
   version: string | null;
   /** The token enrols several machines (`max_uses` > 1). */
   multiUse?: boolean;
+  /**
+   * `tunnel` (default): the agent dials out to the API layer, the GPU machine opens no inbound
+   * port. `direct`: the API layer dials the agent's mTLS proxy on :9443 (private networks).
+   */
+  servingMode?: ServingMode;
+  /** Apply the host firewall for the agent's ports (default on; the operator's SSH ports stay open). */
+  firewall?: boolean;
+}
+
+export type ServingMode = 'tunnel' | 'direct';
+
+/** The hub's one-line installer with the serving mode / firewall choices as install.sh query parameters. */
+export function withInstallOptions(command: string, mode: ServingMode = 'tunnel', firewall = true): string {
+  const params = [...(mode === 'direct' ? ['mode=direct'] : []), ...(firewall ? [] : ['firewall=0'])];
+  if (!params.length) return command;
+  return command.replace(/install\.sh(\?[^\s'"]*)?/, (_m, q: string | undefined) => `install.sh${q ? `${q}&` : '?'}${params.join('&')}`);
+}
+
+/** `gpudeck-agent join` flags for the serving mode / firewall choices. */
+export function joinOptionFlags(mode: ServingMode = 'tunnel', firewall = true): string[] {
+  return [...(mode === 'direct' ? ['--serving-mode direct'] : []), ...(firewall ? [] : ['--no-firewall'])];
 }
 
 /** Download + sha256-verify the agent build for `target` from the hub with the join token. */
@@ -47,7 +68,23 @@ function joinFlags(ctx: InstallContext, indent = '  '): string {
   const parts = [`--hub ${ctx.hubUrl}`, `--token ${ctx.token}`];
   if (ctx.nodeName) parts.push(`--name ${ctx.nodeName}`);
   if (ctx.caFingerprint) parts.push(`--ca-fingerprint ${ctx.caFingerprint}`);
+  parts.push(...joinOptionFlags(ctx.servingMode, ctx.firewall ?? true));
   return parts.map((p) => `${indent}${p}`).join(' \\\n');
+}
+
+/** Host firewall step: agent ports closed to everyone but the API layer; sshd ports stay open. */
+function firewallStep(ctx: InstallContext, sudo: string): { title: string; code: string }[] {
+  if (ctx.firewall === false) return [];
+  return [
+    {
+      title: '· Host firewall for the agent ports (your SSH ports stay open), then check it',
+      code: [
+        `${sudo}${BIN} firewall apply   # nftables on Linux, a pf anchor on macOS`,
+        `${sudo}${BIN} firewall status`,
+        `${sudo}${BIN} security audit   # flags anything of GPU Deck's reachable from the network`,
+      ].join('\n'),
+    },
+  ];
 }
 
 export function linuxSteps(ctx: InstallContext): { title: string; code: string }[] {
@@ -67,6 +104,7 @@ export function linuxSteps(ctx: InstallContext): { title: string; code: string }
       title: `2 · Join with the ${ctx.multiUse ? 'enrolment' : 'one-time'} token`,
       code: `sudo -u gpudeck ${BIN} join \\\n${joinFlags(ctx)}`,
     },
+    ...firewallStep(ctx, 'sudo '),
     {
       title: '3 · Run it as a systemd service',
       code: [
@@ -93,6 +131,9 @@ export function linuxSteps(ctx: InstallContext): { title: string; code: string }
         'StateDirectoryMode=0700',
         '# writable /tmp for engines that survives agent restarts (PrivateTmp is wiped on restart)',
         'BindPaths=/var/lib/gpudeck/tmp:/tmp',
+        ...(ctx.firewall === false
+          ? []
+          : ['# the agent keeps the host firewall current (CAP_NET_ADMIN only)', 'AmbientCapabilities=CAP_NET_ADMIN', 'CapabilityBoundingSet=CAP_NET_ADMIN']),
         '',
         '[Install]',
         'WantedBy=multi-user.target',
@@ -120,6 +161,7 @@ export function macosSteps(ctx: InstallContext): { title: string; code: string }
       title: `2 · Join with the ${ctx.multiUse ? 'enrolment' : 'one-time'} token`,
       code: `${BIN} join \\\n${joinFlags(ctx)}`,
     },
+    ...firewallStep(ctx, 'sudo '),
     {
       title:
         '3 · Run it as a LaunchAgent (your login session, so Metal and MLX get the GPU)',
@@ -212,7 +254,7 @@ export function kubernetesSteps(
         '    spec:',
         `      nodeSelector: { kubernetes.io/hostname: "${node}" }`,
         '      runtimeClassName: nvidia',
-        '      hostNetwork: true   # agent proxy listens on :9443 for the API layer',
+        '      hostNetwork: true   # in-cluster: direct mode, the API layer pods dial :9443 (pinned key, private sources only)',
         '      containers:',
         '        - name: agent',
         '          image: ghcr.io/sur950/gpu-deck-agent:1.0.0',
@@ -230,6 +272,10 @@ export function kubernetesSteps(
           : []),
         '            - name: NVIDIA_VISIBLE_DEVICES',
         '              value: all',
+        '            - name: GPUDECK_AGENT_SERVING_MODE',
+        '              value: direct',
+        '            - name: GPUDECK_AGENT_FIREWALL',
+        '              value: "off"   # no NET_ADMIN in the pod; NetworkPolicies + the agent allow-list apply',
         ...labelLines,
         '          securityContext: { runAsNonRoot: true, runAsUser: 10001, readOnlyRootFilesystem: true, allowPrivilegeEscalation: false }',
         '          volumeMounts:',

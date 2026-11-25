@@ -331,6 +331,7 @@ async def world(env, monkeypatch):
 
 def admin_app():
     from app.api.v1.routes import cloud_nodes, cloud_providers
+    from app.api.v1.routes_v2 import cloud_price_plans  # v2, mounted here only
     from app.core.rate_limiter import limiter
     from app.middlewares.session_verification import get_current_admin
     from fastapi import FastAPI
@@ -339,6 +340,7 @@ def admin_app():
     app.state.limiter = limiter
     app.include_router(cloud_providers.router, prefix=API)
     app.include_router(cloud_nodes.router, prefix=API)
+    app.include_router(cloud_price_plans.router, prefix=API)
     app.dependency_overrides[get_current_admin] = lambda: SimpleNamespace(id=None)
     return app
 

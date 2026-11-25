@@ -83,6 +83,16 @@ def error_response(
     }
 
 
+INTERNAL_ERROR_MESSAGE = "An unexpected error occurred. Please try again later."
+
+
+def _debug_details(exc: BaseException) -> Optional[Dict[str, str]]:
+    """``{"exception_type": "<ClassName>"}`` in DEBUG, else None (never the message)."""
+    if not settings.DEBUG:
+        return None
+    return {"exception_type": str(exc.__class__.__qualname__)}
+
+
 def handle_exceptions(func: Callable) -> Callable:
     """
     Decorator to handle exceptions in async API routes.
@@ -90,7 +100,8 @@ def handle_exceptions(func: Callable) -> Callable:
     - Starlette Response objects (StreamingResponse etc.) pass through unchanged
     - a dict with a "success" key is returned as-is; anything else is wrapped
     - BaseAPIException -> its status + error_code; StarletteHTTPException -> HTTP_ERROR
-    - anything else -> 500 INTERNAL_ERROR (message hidden unless DEBUG), logged with stack
+    - anything else -> 500 INTERNAL_ERROR with a fixed message (the exception text is only
+      logged, with its stack; DEBUG adds the exception type name to ``details``)
     """
 
     @wraps(func)
@@ -122,14 +133,12 @@ def handle_exceptions(func: Callable) -> Callable:
             logger.exception(f"Unhandled exception in {func.__name__}: {e}")
             return JSONResponse(
                 status_code=500,
+                # The exception text never reaches the client (it can carry SQL, paths or
+                # secrets); it is in the server log above. DEBUG adds only the type name.
                 content=error_response(
                     code="INTERNAL_ERROR",
-                    message=(
-                        str(e)
-                        if settings.DEBUG
-                        else "An unexpected error occurred. Please try again later."
-                    ),
-                    details=({"exception_type": type(e).__name__} if settings.DEBUG else None),
+                    message=INTERNAL_ERROR_MESSAGE,
+                    details=_debug_details(e),
                 ),
             )
 

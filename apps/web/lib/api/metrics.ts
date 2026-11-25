@@ -26,7 +26,7 @@ type Schemas = components['schemas'];
 
 // ─── Mapping ──────────────────────────────────────────────────────────────────
 
-function mapSeries(row: Schemas['TimeSeries']): MetricSeries {
+export function mapSeries(row: Schemas['TimeSeries']): MetricSeries {
   return {
     metric: row.metric,
     unit: row.unit,

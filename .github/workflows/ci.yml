@@ -496,14 +496,21 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-          cache-dependency-path: scripts/requirements-docs.txt
+          cache-dependency-path: |
+            scripts/requirements-docs.txt
+            scripts/requirements-art.txt
       - name: Install the site tools (pinned)
         run: |
           python -m venv "$RUNNER_TEMP/site-venv"
-          "$RUNNER_TEMP/site-venv/bin/pip" install --quiet --requirement scripts/requirements-docs.txt
+          "$RUNNER_TEMP/site-venv/bin/pip" install --quiet --requirement scripts/requirements-docs.txt \
+            --requirement scripts/requirements-art.txt
           echo "$RUNNER_TEMP/site-venv/bin" >> "$GITHUB_PATH"
       - name: Screenshots (display SVGs from docs/screenshots)
         run: website/sync-screenshots.sh
+      - name: README and docs diagrams are up to date
+        run: |
+          python assets/brand/readme_art.py --check
+          python assets/brand/doc_art.py --check
       - name: Build the docs in check mode (links, anchors, assets, diagrams, NAV, CSP hash)
         run: python scripts/build_docs.py --check
 

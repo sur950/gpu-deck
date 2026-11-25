@@ -5,7 +5,9 @@ Internal CA primitives: pure ``cryptography`` helpers with no I/O.
 - sign node CSRs (``CN=<node_id>``, ``O=gpudeck-nodes``, SAN
   ``URI:gpudeck://node/<id>``) and service CSRs (``O=gpudeck-services``)
 - generate key pairs / CSRs for service certs issued server-side
-- parse certificates, fingerprints, serials, and build an X.509 CRL
+- parse certificates, fingerprints, key pins (SubjectPublicKeyInfo sha256), serials, and
+  build an X.509 CRL
+- sign detached documents with the CA key (the node security policy, protocol.md §13)
 
 ``PkiService`` wraps these with the vault and the ``node_certificates`` table.
 """
@@ -22,7 +24,7 @@ from typing import Iterable, List, Optional, Sequence, Tuple, Union
 from app.core.logger import get_logger
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
+from cryptography.hazmat.primitives.asymmetric import ec, ed25519, padding, rsa
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
 logger = get_logger(__name__)
@@ -93,6 +95,47 @@ def csr_from_pem(pem: str) -> x509.CertificateSigningRequest:
 
 def fingerprint_sha256(cert: x509.Certificate) -> str:
     return cert.fingerprint(hashes.SHA256()).hex()
+
+
+def spki_sha256_of_key(public_key) -> str:
+    """sha256 hex of a public key's DER SubjectPublicKeyInfo (what agents pin)."""
+    der = public_key.public_bytes(
+        serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    return hashlib.sha256(der).hexdigest()
+
+
+def spki_sha256(cert: x509.Certificate) -> str:
+    """Key pin of a certificate: survives re-issuing a certificate for the same key."""
+    return spki_sha256_of_key(cert.public_key())
+
+
+def sign_detached(key: PrivateKey, data: bytes) -> Tuple[bytes, str]:
+    """
+    Sign ``data`` with a CA key. Returns ``(signature, algorithm)`` where the algorithm name is
+    what the agent derives from the CA key type (``common.json#/$defs/SignedPolicy``):
+    P-256 → ``ecdsa-p256-sha256``, P-384 → ``ecdsa-p384-sha384`` (DER signatures), Ed25519,
+    RSA → PKCS#1 v1.5 with SHA-256.
+    """
+    if isinstance(key, ec.EllipticCurvePrivateKey):
+        if isinstance(key.curve, ec.SECP384R1):
+            return key.sign(data, ec.ECDSA(hashes.SHA384())), "ecdsa-p384-sha384"
+        if isinstance(key.curve, ec.SECP256R1):
+            return key.sign(data, ec.ECDSA(hashes.SHA256())), "ecdsa-p256-sha256"
+        raise ValueError(f"unsupported CA curve {key.curve.name}")
+    if isinstance(key, ed25519.Ed25519PrivateKey):
+        return key.sign(data), "ed25519"
+    if isinstance(key, rsa.RSAPrivateKey):
+        return key.sign(data, padding.PKCS1v15(), hashes.SHA256()), "rsa-pkcs1-sha256"
+    raise ValueError("unsupported CA key type")
+
+
+def has_server_auth(cert: x509.Certificate) -> bool:
+    try:
+        eku = cert.extensions.get_extension_for_class(x509.ExtendedKeyUsage).value
+    except x509.ExtensionNotFound:
+        return False
+    return ExtendedKeyUsageOID.SERVER_AUTH in eku
 
 
 def serial_hex(cert: x509.Certificate) -> str:
@@ -299,7 +342,9 @@ def sign_service_csr(
 ) -> x509.Certificate:
     csr = csr_from_pem(csr_pem)
     cn = common_name or SERVICE_DEFAULT_CN[kind]
-    server_auth = kind == "agent_hub"
+    # The API layer's key is also the server identity of the outbound tunnel listener the
+    # agents dial (protocol.md §13), so its certificate carries serverAuth as well.
+    server_auth = kind in ("agent_hub", "api_layer")
     return sign_csr(
         ca_key,
         ca_cert,

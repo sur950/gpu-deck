@@ -16,7 +16,7 @@ export function ClusterCreate() {
 
   return (
     <PageContainer className="max-w-5xl">
-      <PageHeader title="New cluster" description="Group GPU machines that share a network, a credential and a price plan." />
+      <PageHeader title="New cluster" description="Group GPU machines that share a network and a credential." />
       <ClusterForm
         presetType={type}
         isPending={create.isPending}

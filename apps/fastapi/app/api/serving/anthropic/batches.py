@@ -29,7 +29,7 @@ def _base_url(request: Request) -> str:
 
 
 @router.post("/messages/batches", summary="Create a message batch")
-async def create_batch(request: Request, db: AsyncSession = Depends(get_db)):
+async def create_batch(request: Request, db: AsyncSession = Depends(get_db, scope="function")):
     async def handler(ctx, body):
         ctx.metered = True
         service = BatchService(db)
@@ -53,7 +53,7 @@ async def list_batches(
     limit: int = Query(20, ge=1, le=1000),
     before_id: Optional[str] = Query(None),
     after_id: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     async def handler(ctx, _):
         ctx.metered = True
@@ -73,7 +73,9 @@ async def list_batches(
 
 
 @router.get("/messages/batches/{batch_id}", summary="Retrieve a message batch")
-async def get_batch(request: Request, batch_id: str, db: AsyncSession = Depends(get_db)):
+async def get_batch(
+    request: Request, batch_id: str, db: AsyncSession = Depends(get_db, scope="function")
+):
     async def handler(ctx, _):
         ctx.metered = True
         batch = await BatchService(db).get_for_key(batch_id, ctx.api_key.id)
@@ -86,7 +88,9 @@ async def get_batch(request: Request, batch_id: str, db: AsyncSession = Depends(
 
 
 @router.get("/messages/batches/{batch_id}/results", summary="Stream batch results (JSONL)")
-async def batch_results(request: Request, batch_id: str, db: AsyncSession = Depends(get_db)):
+async def batch_results(
+    request: Request, batch_id: str, db: AsyncSession = Depends(get_db, scope="function")
+):
     async def handler(ctx, _):
         ctx.metered = True
         service = BatchService(db)
@@ -100,7 +104,9 @@ async def batch_results(request: Request, batch_id: str, db: AsyncSession = Depe
 
 
 @router.post("/messages/batches/{batch_id}/cancel", summary="Cancel a message batch")
-async def cancel_batch(request: Request, batch_id: str, db: AsyncSession = Depends(get_db)):
+async def cancel_batch(
+    request: Request, batch_id: str, db: AsyncSession = Depends(get_db, scope="function")
+):
     async def handler(ctx, _):
         ctx.metered = True
         service = BatchService(db)
@@ -114,7 +120,9 @@ async def cancel_batch(request: Request, batch_id: str, db: AsyncSession = Depen
 
 
 @router.delete("/messages/batches/{batch_id}", summary="Delete an ended message batch")
-async def delete_batch(request: Request, batch_id: str, db: AsyncSession = Depends(get_db)):
+async def delete_batch(
+    request: Request, batch_id: str, db: AsyncSession = Depends(get_db, scope="function")
+):
     async def handler(ctx, _):
         ctx.metered = True
         service = BatchService(db)

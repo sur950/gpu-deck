@@ -93,7 +93,7 @@ class BenchmarkService:
 
     @staticmethod
     async def as_dependency(
-        request: Request, db: AsyncSession = Depends(get_db)
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
     ) -> "BenchmarkService":
         return BenchmarkService.for_session(db)
 

@@ -45,8 +45,6 @@ tags:
   description: Allow/block lists for the admin UI/API and the serving API layer
 - name: Vault
   description: Encrypted secrets (cloud keys, HF/ModelScope tokens, SMTP/Slack/webhook secrets)
-- name: Price Plans
-  description: USD prices per GPU minute / per 1k tokens, attached to clusters or nodes
 - name: Clusters
   description: 'Groups of GPU machines: bare metal, VMs, Kubernetes, cloud'
 - name: Nodes
@@ -77,14 +75,10 @@ tags:
   description: Time-series queries over GPU, inference and session metrics (names in libs/contracts/metrics.md)
 - name: Logs
   description: Engine, agent, rule, swap and control-plane logs
-- name: Traces
-  description: Request traces (OpenTelemetry index)
 - name: Benchmarks
   description: Load tests with target SLOs, concurrency sweeps and auto-tune
-- name: Metering
-  description: Usage per API key / model / node / deployment
-- name: Billing
-  description: Cost reports from usage × price plans
+- name: Batches
+  description: Anthropic message batches submitted through the serving API
 - name: PKI
   description: 'Internal CA: CA certificate, service certificates, CRL'
 - name: Health
@@ -94,9 +88,11 @@ tags:
 - name: Live
   description: Server-sent events and WebSocket for live dashboards
 - name: GPU Instances
-  description: 'SSH GPU instances on demand: a container with sshd and whole GPUs or a GPU slice, started by the node agent; TTL / idle auto-stop, billed as GPU minutes'
+  description: 'SSH GPU instances on demand: a container with sshd and whole GPUs or a GPU slice, started by the node agent; TTL / idle auto-stop'
 - name: Agent Downloads
   description: Node-agent builds and the install script used by the join flow (join token or admin session)
+- name: Agent updates
+  description: 'Node agent self-update: pre-staged signed releases, the Update button, rolling updates per cluster, automatic updates in a maintenance window'
 - name: Cloud
   description: 'Cloud GPU VMs on AWS, Azure, GCP and DigitalOcean: catalog, provisioning, lifecycle'
 paths:
@@ -2060,267 +2056,6 @@ paths:
                     type:
                     - object
                     - 'null'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-  /price-plans:
-    get:
-      operationId: listPricePlans
-      tags:
-      - Price Plans
-      summary: List plans
-      parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/page_size'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/sort'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/PricePlan'
-                  error:
-                    type: 'null'
-                  meta:
-                    $ref: '#/components/schemas/ListMeta'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-    post:
-      operationId: createPricePlan
-      tags:
-      - Price Plans
-      summary: Create a plan
-      parameters:
-      - $ref: '#/components/parameters/CsrfHeader'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PricePlanCreate'
-      responses:
-        '201':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    $ref: '#/components/schemas/PricePlan'
-                  error:
-                    type: 'null'
-                  meta:
-                    type:
-                    - object
-                    - 'null'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-  /price-plans/{plan_id}:
-    get:
-      operationId: getPricePlan
-      tags:
-      - Price Plans
-      summary: Get a plan
-      parameters:
-      - name: plan_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: Resource id
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    $ref: '#/components/schemas/PricePlan'
-                  error:
-                    type: 'null'
-                  meta:
-                    type:
-                    - object
-                    - 'null'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-    patch:
-      operationId: updatePricePlan
-      tags:
-      - Price Plans
-      summary: Update a plan (affects future usage events only)
-      parameters:
-      - $ref: '#/components/parameters/CsrfHeader'
-      - name: plan_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: Resource id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PricePlanUpdate'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    $ref: '#/components/schemas/PricePlan'
-                  error:
-                    type: 'null'
-                  meta:
-                    type:
-                    - object
-                    - 'null'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-    delete:
-      operationId: deletePricePlan
-      tags:
-      - Price Plans
-      summary: Soft-delete (detaches from clusters/nodes)
-      parameters:
-      - $ref: '#/components/parameters/CsrfHeader'
-      - name: plan_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: Resource id
-      responses:
-        '204':
-          description: No content
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -10473,6 +10208,220 @@ paths:
           $ref: '#/components/responses/Error500'
         '503':
           $ref: '#/components/responses/Error503'
+  /metrics/latency/live:
+    get:
+      operationId: getLiveLatency
+      tags:
+      - Metrics
+      summary: Current network round trips per node, from the agent hub and every API layer
+      description: |-
+        Smoothed round-trip time (EWMA, jitter, min / max / p50 / p95 of the recent probes) of every connected node:
+        `hub` = agent hub -> agent (WebSocket ping / pong), `api_layers` = each API layer -> node over the serving path it uses
+        (agent tunnel or direct mTLS proxy), probed every `SERVING_RTT_PROBE_SECONDS`. Each API layer reports its own `API_LAYER_ID`
+        and `API_LAYER_REGION`. Values older than a few probe intervals are left out.
+      parameters:
+      - name: node_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Only this node
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/LatencyLive'
+                  error:
+                    type: 'null'
+                  meta:
+                    type:
+                    - object
+                    - 'null'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '500':
+          $ref: '#/components/responses/Error500'
+  /metrics/latency:
+    get:
+      operationId: queryLatencyHistory
+      tags:
+      - Metrics
+      summary: Network round-trip history per node, source and API layer
+      description: |-
+        Per-minute RTT history (`node_latency_samples`, kept `LATENCY_RETENTION_DAYS`): series `rtt_ms` and `jitter_ms` labelled
+        `node_id`, `node`, `source` (`hub` | `api_layer`), `api_layer_id`, `region`, `mode` (`tunnel` | `direct`), plus p50 / p95 /
+        min / max / avg per series over the range.
+      parameters:
+      - $ref: '#/components/parameters/from'
+      - $ref: '#/components/parameters/to'
+      - name: step
+        in: query
+        required: false
+        schema:
+          type: string
+          default: 1m
+        description: Bucket size (at least 1m)
+      - name: node_id
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+        description: Nodes (repeatable; default all)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/LatencyHistory'
+                  error:
+                    type: 'null'
+                  meta:
+                    type:
+                    - object
+                    - 'null'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '500':
+          $ref: '#/components/responses/Error500'
+  /metrics/request-timing:
+    get:
+      operationId: queryRequestTiming
+      tags:
+      - Metrics
+      summary: Where serving request time went (routing, queue, connect, network, engine, first token)
+      description: |-
+        Averages and percentiles of the timing breakdown the API layer stores with every request (`usage_events.metadata.timing`,
+        serving.md §10): `route_ms`, `queue_ms`, `connect_ms`, `rtt_ms`, `net_ms`, `engine_ms`, `upstream_ms`, `ttft_ms`, `total_ms`,
+        `node_queue_ms`, plus the parts of the time to first byte that add up per request: `part_api_ms` (route + queue + connect),
+        `part_network_ms`, `part_engine_ms`, `part_node_ms` (node time outside the engine), `part_unsplit_ms` (node + network of
+        agents that report no timing) and `part_first_token_ms` (first byte after the response headers). One series per field, a
+        summary and a breakdown per API-layer region.
+      parameters:
+      - $ref: '#/components/parameters/from'
+      - $ref: '#/components/parameters/to'
+      - name: step
+        in: query
+        required: false
+        schema:
+          type: string
+          default: 5m
+        description: Bucket size (at least 1m)
+      - name: deployment_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Scope
+      - name: node_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Scope
+      - name: model_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Scope
+      - name: api_key_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Scope
+      - name: region
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 64
+        description: API-layer region (API_LAYER_REGION)
+      - name: stream
+        in: query
+        required: false
+        schema:
+          type: boolean
+        description: Only streaming (true) or non-streaming (false) requests
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/RequestTiming'
+                  error:
+                    type: 'null'
+                  meta:
+                    type:
+                    - object
+                    - 'null'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '500':
+          $ref: '#/components/responses/Error500'
   /metrics/catalog:
     get:
       operationId: listMetricNames
@@ -10784,186 +10733,6 @@ paths:
             text/plain:
               schema:
                 type: string
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-  /traces:
-    get:
-      operationId: listTraces
-      tags:
-      - Traces
-      summary: Search root spans
-      parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/page_size'
-      - $ref: '#/components/parameters/from'
-      - $ref: '#/components/parameters/to'
-      - name: service
-        in: query
-        required: false
-        schema:
-          type: string
-        description: Filter
-      - name: api_key_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: model_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: deployment_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: instance_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: node_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: format
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/usage_format'
-        description: Filter
-      - name: status_code
-        in: query
-        required: false
-        schema:
-          type: integer
-        description: Filter
-      - name: error
-        in: query
-        required: false
-        schema:
-          type: boolean
-        description: Only errors
-      - name: min_duration_ms
-        in: query
-        required: false
-        schema:
-          type: number
-        description: Filter
-      - name: request_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/TraceSpan'
-                  error:
-                    type: 'null'
-                  meta:
-                    $ref: '#/components/schemas/ListMeta'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-  /traces/{trace_id}:
-    get:
-      operationId: getTrace
-      tags:
-      - Traces
-      summary: All spans of a trace
-      parameters:
-      - name: trace_id
-        in: path
-        required: true
-        schema:
-          type: string
-        description: 32-hex trace id
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    $ref: '#/components/schemas/Trace'
-                  error:
-                    type: 'null'
-                  meta:
-                    type:
-                    - object
-                    - 'null'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -11650,339 +11419,11 @@ paths:
           $ref: '#/components/responses/Error500'
         '503':
           $ref: '#/components/responses/Error503'
-  /usage:
-    get:
-      operationId: listUsageEvents
-      tags:
-      - Metering
-      summary: Raw usage events (drill-down)
-      parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/page_size'
-      - $ref: '#/components/parameters/sort'
-      - $ref: '#/components/parameters/from'
-      - $ref: '#/components/parameters/to'
-      - name: api_key_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: model_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: node_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: deployment_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: cluster_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: format
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/usage_format'
-        description: Filter
-      - name: status
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/usage_status'
-        description: Filter
-      - name: request_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: endpoint
-        in: query
-        required: false
-        schema:
-          type: string
-        description: Filter
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/UsageEvent'
-                  error:
-                    type: 'null'
-                  meta:
-                    $ref: '#/components/schemas/ListMeta'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-  /usage/summary:
-    get:
-      operationId: getUsageSummary
-      tags:
-      - Metering
-      summary: Totals grouped by key/model/node/deployment/cluster/format
-      parameters:
-      - $ref: '#/components/parameters/from'
-      - $ref: '#/components/parameters/to'
-      - name: api_key_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: model_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: node_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: deployment_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: cluster_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: format
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/usage_format'
-        description: Filter
-      - name: status
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/usage_status'
-        description: Filter
-      - name: group_by
-        in: query
-        required: false
-        schema:
-          type: array
-          items:
-            type: string
-            enum:
-            - api_key
-            - model
-            - node
-            - deployment
-            - cluster
-            - format
-            - endpoint
-            - day
-            - hour
-        description: Group keys (repeatable); default api_key
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    $ref: '#/components/schemas/UsageSummary'
-                  error:
-                    type: 'null'
-                  meta:
-                    type:
-                    - object
-                    - 'null'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-  /usage/export:
-    get:
-      operationId: exportUsageCsv
-      tags:
-      - Metering
-      summary: CSV export of events or summary
-      parameters:
-      - $ref: '#/components/parameters/from'
-      - $ref: '#/components/parameters/to'
-      - name: api_key_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: model_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: node_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: deployment_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: cluster_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Filter
-      - name: format
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/usage_format'
-        description: Filter
-      - name: status
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/usage_status'
-        description: Filter
-      - name: mode
-        in: query
-        required: false
-        schema:
-          type: string
-          enum:
-          - events
-          - summary
-        description: events (raw) or summary
-      - name: group_by
-        in: query
-        required: false
-        schema:
-          type: array
-          items:
-            type: string
-        description: For summary
-      responses:
-        '200':
-          description: CSV attachment
-          content:
-            text/csv:
-              schema:
-                type: string
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
   /batches:
     get:
       operationId: listBatches
       tags:
-      - Metering
+      - Batches
       summary: Anthropic message batches (admin view)
       parameters:
       - $ref: '#/components/parameters/page'
@@ -12046,7 +11487,7 @@ paths:
     get:
       operationId: getBatch
       tags:
-      - Metering
+      - Batches
       summary: Get a batch
       parameters:
       - name: batch_id
@@ -12102,7 +11543,7 @@ paths:
     post:
       operationId: cancelBatch
       tags:
-      - Metering
+      - Batches
       summary: Cancel a batch
       parameters:
       - $ref: '#/components/parameters/CsrfHeader'
@@ -12137,377 +11578,6 @@ paths:
                     type:
                     - object
                     - 'null'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-  /billing/reports:
-    get:
-      operationId: listBillingReports
-      tags:
-      - Billing
-      summary: List reports
-      parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/page_size'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/sort'
-      - name: status
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/billing_report_status'
-        description: Filter
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/BillingReport'
-                  error:
-                    type: 'null'
-                  meta:
-                    $ref: '#/components/schemas/ListMeta'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-    post:
-      operationId: createBillingReport
-      tags:
-      - Billing
-      summary: Generate a report (async)
-      parameters:
-      - $ref: '#/components/parameters/CsrfHeader'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BillingReportCreate'
-      responses:
-        '202':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    $ref: '#/components/schemas/BillingReport'
-                  error:
-                    type: 'null'
-                  meta:
-                    type:
-                    - object
-                    - 'null'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-  /billing/estimate:
-    get:
-      operationId: getBillingEstimate
-      tags:
-      - Billing
-      summary: Live cost for the current (or given) period
-      parameters:
-      - name: period_start
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date-time
-        description: 'Default: first of the month UTC'
-      - name: period_end
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date-time
-        description: 'Default: first of next month'
-      - name: cluster_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-        description: Scope
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    $ref: '#/components/schemas/BillingEstimate'
-                  error:
-                    type: 'null'
-                  meta:
-                    type:
-                    - object
-                    - 'null'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-  /billing/reports/{report_id}:
-    get:
-      operationId: getBillingReport
-      tags:
-      - Billing
-      summary: Get a report with line items
-      parameters:
-      - name: report_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: Resource id
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    $ref: '#/components/schemas/BillingReport'
-                  error:
-                    type: 'null'
-                  meta:
-                    type:
-                    - object
-                    - 'null'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-    delete:
-      operationId: deleteBillingReport
-      tags:
-      - Billing
-      summary: Delete a report
-      parameters:
-      - $ref: '#/components/parameters/CsrfHeader'
-      - name: report_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: Resource id
-      responses:
-        '204':
-          description: No content
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-  /billing/reports/{report_id}/regenerate:
-    post:
-      operationId: regenerateBillingReport
-      tags:
-      - Billing
-      summary: Regenerate with current prices
-      parameters:
-      - $ref: '#/components/parameters/CsrfHeader'
-      - name: report_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: Resource id
-      responses:
-        '202':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    $ref: '#/components/schemas/BillingReport'
-                  error:
-                    type: 'null'
-                  meta:
-                    type:
-                    - object
-                    - 'null'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
-  /billing/reports/{report_id}/export:
-    get:
-      operationId: exportBillingReportCsv
-      tags:
-      - Billing
-      summary: CSV export
-      parameters:
-      - name: report_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: Resource id
-      responses:
-        '200':
-          description: CSV attachment
-          content:
-            text/csv:
-              schema:
-                type: string
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -13109,6 +12179,729 @@ paths:
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
+  /agent-updates:
+    get:
+      operationId: getAgentUpdateOverview
+      tags:
+      - Agent updates
+      summary: Agent update overview
+      description: 'Target version (newest signed release, or AGENT_UPDATE_TARGET_VERSION), release keys, pre-staging and how many nodes are up to date, staged, updating or need a manual update (agent protocol §14).'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/AgentUpdateOverview'
+                  error:
+                    type: 'null'
+                  meta:
+                    type:
+                    - object
+                    - 'null'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /agent-updates/runs:
+    get:
+      operationId: listAgentUpdateRuns
+      tags:
+      - Agent updates
+      summary: List agent update runs
+      parameters:
+      - $ref: '#/components/parameters/page'
+      - $ref: '#/components/parameters/page_size'
+      - name: node_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Filter
+      - name: cluster_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Filter
+      - name: rollout_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Filter
+      - name: state
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/agent_update_state'
+        description: Filter
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AgentUpdateRun'
+                  error:
+                    type: 'null'
+                  meta:
+                    $ref: '#/components/schemas/ListMeta'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /agent-updates/runs/{run_id}:
+    get:
+      operationId: getAgentUpdateRun
+      tags:
+      - Agent updates
+      summary: Get an agent update run
+      description: 'Steps with timestamps: staged, swapping, restarting, readopting, health_check, then succeeded or rolled_back / failed.'
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Resource id
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/AgentUpdateRun'
+                  error:
+                    type: 'null'
+                  meta:
+                    type:
+                    - object
+                    - 'null'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /agent-updates/rollouts:
+    get:
+      operationId: listAgentRollouts
+      tags:
+      - Agent updates
+      summary: List rolling agent updates
+      parameters:
+      - $ref: '#/components/parameters/page'
+      - $ref: '#/components/parameters/page_size'
+      - name: cluster_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Filter
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AgentRollout'
+                  error:
+                    type: 'null'
+                  meta:
+                    $ref: '#/components/schemas/ListMeta'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /agent-updates/rollouts/{rollout_id}:
+    get:
+      operationId: getAgentRollout
+      tags:
+      - Agent updates
+      summary: Get a rolling agent update
+      parameters:
+      - name: rollout_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Resource id
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/AgentRollout'
+                  error:
+                    type: 'null'
+                  meta:
+                    type:
+                    - object
+                    - 'null'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /agent-updates/rollouts/{rollout_id}/cancel:
+    post:
+      operationId: cancelAgentRollout
+      tags:
+      - Agent updates
+      summary: Cancel a rolling agent update
+      description: Stops starting further nodes; a node already swapping finishes (it cannot be stopped halfway).
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      - name: rollout_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Resource id
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/AgentRollout'
+                  error:
+                    type: 'null'
+                  meta:
+                    type:
+                    - object
+                    - 'null'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /nodes/{node_id}/agent-update:
+    get:
+      operationId: getNodeAgentUpdate
+      tags:
+      - Agent updates
+      summary: Agent update status of a node
+      parameters:
+      - name: node_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Resource id
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/NodeAgentUpdate'
+                  error:
+                    type: 'null'
+                  meta:
+                    type:
+                    - object
+                    - 'null'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '503':
+          $ref: '#/components/responses/Error503'
+    post:
+      operationId: updateNodeAgent
+      tags:
+      - Agent updates
+      summary: Update the agent of a node
+      description: 'The Update button: stage the target version unless the node pre-staged it, then swap, restart, re-adopt the running engines and health check; the node rolls back to the previous binary on its own when the new agent does not come up. 409 AGENT_UPDATE_UNSUPPORTED (agent predates self-update: update manually), AGENT_UPDATE_MANAGED (Kubernetes / Helm), AGENT_UPDATES_DISABLED (no release key or signed release), AGENT_UPDATE_IN_PROGRESS, AGENT_ROLLOUT_RUNNING, NODE_NOT_CONNECTED.'
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      - name: node_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Resource id
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentUpdateRequest'
+      responses:
+        '202':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/AgentUpdateRun'
+                  error:
+                    type: 'null'
+                  meta:
+                    type:
+                    - object
+                    - 'null'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /nodes/{node_id}/agent-update/stage:
+    post:
+      operationId: stageNodeAgentUpdate
+      tags:
+      - Agent updates
+      summary: Stage an agent update on a node
+      description: Download and verify the target version on the node now (pre-staging does this in the background when AGENT_UPDATE_PRESTAGE is on). Nothing is swapped.
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      - name: node_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Resource id
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentUpdateRequest'
+      responses:
+        '202':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/AgentStage'
+                  error:
+                    type: 'null'
+                  meta:
+                    type:
+                    - object
+                    - 'null'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /clusters/{cluster_id}/agent-update:
+    get:
+      operationId: getClusterAgentUpdate
+      tags:
+      - Agent updates
+      summary: Agent updates of a cluster
+      description: Policy (manual or automatic in a maintenance window), the running or last rolling update and node counts.
+      parameters:
+      - name: cluster_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Resource id
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/ClusterAgentUpdate'
+                  error:
+                    type: 'null'
+                  meta:
+                    type:
+                    - object
+                    - 'null'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '503':
+          $ref: '#/components/responses/Error503'
+    post:
+      operationId: startClusterAgentRollout
+      tags:
+      - Agent updates
+      summary: Rolling agent update of a cluster
+      description: One node at a time in name order, stopping at the first node that rolls back or fails. Offline nodes, Kubernetes (Helm) nodes, agents that predate self-update and nodes already on the version are skipped with a reason.
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      - name: cluster_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Resource id
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRolloutRequest'
+      responses:
+        '202':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/AgentRollout'
+                  error:
+                    type: 'null'
+                  meta:
+                    type:
+                    - object
+                    - 'null'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /clusters/{cluster_id}/agent-update/policy:
+    put:
+      operationId: setClusterAgentUpdatePolicy
+      tags:
+      - Agent updates
+      summary: Set a cluster's agent update policy
+      description: Stored in clusters.config.agent_updates (also settable with the cluster config).
+      parameters:
+      - $ref: '#/components/parameters/CsrfHeader'
+      - name: cluster_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Resource id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentUpdatePolicy'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                - error
+                - meta
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/AgentUpdatePolicy'
+                  error:
+                    type: 'null'
+                  meta:
+                    type:
+                    - object
+                    - 'null'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '503':
+          $ref: '#/components/responses/Error503'
   /agent/downloads:
     get:
       operationId: listAgentDownloads
@@ -14894,72 +14687,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-  /cloud/nodes/{cloud_node_id}/apply-price-plan:
-    post:
-      operationId: applyCloudNodePricePlan
-      tags:
-      - Cloud
-      summary: Attach a price plan from the provider list price
-      description: Creates (or reuses) the price plan named price_plan_suggestion.name with usd_per_gpu_minute = list price / 60 / gpu_count and sets it on the node (nodes.price_plan_id). 409 when the provider has no price or the VM has not joined yet.
-      parameters:
-      - name: cloud_node_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: cloud_instances.id
-      - $ref: '#/components/parameters/CsrfHeader'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - success
-                - data
-                - error
-                - meta
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    $ref: '#/components/schemas/CloudNode'
-                  error:
-                    type: 'null'
-                  meta:
-                    type:
-                    - object
-                    - 'null'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '422':
-          $ref: '#/components/responses/Error422'
-        '429':
-          $ref: '#/components/responses/Error429'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '502':
-          $ref: '#/components/responses/Error502'
-        '503':
-          $ref: '#/components/responses/Error503'
-        '424':
-          description: Cloud provider rejected the credential (CLOUD_AUTH_FAILED)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
 components:
   securitySchemes:
     cookieAuth:
@@ -15449,20 +15176,6 @@ components:
       - openai
       - anthropic
       - ollama
-    usage_status:
-      type: string
-      enum:
-      - success
-      - error
-      - timeout
-      - cancelled
-    billing_report_status:
-      type: string
-      enum:
-      - pending
-      - generating
-      - ready
-      - failed
     benchmark_run_status:
       type: string
       enum:
@@ -16582,120 +16295,6 @@ components:
           type: string
           description: blocked_by_rule | not_in_allowlist | allowed_by_rule | no_rules | env_allowlist
       additionalProperties: false
-    PricePlan:
-      type: object
-      required:
-      - id
-      - name
-      - currency
-      - usd_per_gpu_minute
-      - usd_per_1k_input_tokens
-      - usd_per_1k_output_tokens
-      - usd_per_1k_cached_tokens
-      - is_default
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-          maxLength: 255
-        description:
-          type:
-          - string
-          - 'null'
-          maxLength: 2048
-        currency:
-          type: string
-          maxLength: 3
-        usd_per_gpu_minute:
-          type: number
-          minimum: 0
-        usd_per_1k_input_tokens:
-          type: number
-          minimum: 0
-        usd_per_1k_output_tokens:
-          type: number
-          minimum: 0
-        usd_per_1k_cached_tokens:
-          type: number
-          minimum: 0
-        is_default:
-          type: boolean
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-      additionalProperties: false
-    PricePlanCreate:
-      type: object
-      required:
-      - name
-      properties:
-        name:
-          type: string
-          maxLength: 255
-          minLength: 1
-        description:
-          type:
-          - string
-          - 'null'
-          maxLength: 2048
-        usd_per_gpu_minute:
-          type: number
-          minimum: 0
-          default: 0
-        usd_per_1k_input_tokens:
-          type: number
-          minimum: 0
-          default: 0
-        usd_per_1k_output_tokens:
-          type: number
-          minimum: 0
-          default: 0
-        usd_per_1k_cached_tokens:
-          type: number
-          minimum: 0
-          default: 0
-        is_default:
-          type: boolean
-          default: false
-      additionalProperties: false
-    PricePlanUpdate:
-      type: object
-      description: Partial update; every field optional.
-      properties:
-        name:
-          type: string
-          maxLength: 255
-          minLength: 1
-        description:
-          type:
-          - string
-          - 'null'
-          maxLength: 2048
-        usd_per_gpu_minute:
-          type: number
-          minimum: 0
-          default: 0
-        usd_per_1k_input_tokens:
-          type: number
-          minimum: 0
-          default: 0
-        usd_per_1k_output_tokens:
-          type: number
-          minimum: 0
-          default: 0
-        usd_per_1k_cached_tokens:
-          type: number
-          minimum: 0
-          default: 0
-        is_default:
-          type: boolean
-          default: false
-      additionalProperties: false
     ClusterCounts:
       type: object
       properties:
@@ -17061,12 +16660,509 @@ components:
         detached:
           type: boolean
           description: Agent gone (offline / removed, or heartbeat stale); shown red
+        agent_update:
+          oneOf:
+          - $ref: '#/components/schemas/NodeAgentUpdate'
+          - type: 'null'
+          description: Agent self-update status (agent protocol §14)
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+      additionalProperties: false
+    agent_update_state:
+      type: string
+      enum:
+      - pending
+      - staging
+      - staged
+      - swapping
+      - restarting
+      - readopting
+      - health_check
+      - succeeded
+      - rolled_back
+      - failed
+      - cancelled
+    AgentUpdateStep:
+      type: object
+      required:
+      - phase
+      properties:
+        phase:
+          type: string
+        at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        message:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+    AgentUpdateRun:
+      type: object
+      description: One agent update of one node (agent protocol §14).
+      required:
+      - id
+      - node_id
+      - to_version
+      - state
+      - trigger
+      - steps
+      - started_at
+      - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        node_id:
+          type: string
+          format: uuid
+        node_name:
+          type:
+          - string
+          - 'null'
+        cluster_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        rollout_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        from_version:
+          type:
+          - string
+          - 'null'
+        to_version:
+          type: string
+        state:
+          $ref: '#/components/schemas/agent_update_state'
+        trigger:
+          type: string
+          enum:
+          - manual
+          - auto
+          - rollout
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentUpdateStep'
+        error_code:
+          type:
+          - string
+          - 'null'
+          description: rolled_back, timeout, stage_timeout, signature_invalid, update_unsupported, ...
+        error_message:
+          type:
+          - string
+          - 'null'
+        health_timeout_seconds:
+          type: integer
+        deadline_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        created_by:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+      additionalProperties: false
+    NodeAgentUpdate:
+      type: object
+      description: 'Update status of a node. mode: helper (root-owned update helper), self (the agent owns its binary), managed (Kubernetes DaemonSet: Managed by Helm, never self-updates), unsupported (cannot replace its binary: reason), manual (agent predates self-update: update manually, see instructions).'
+      required:
+      - status
+      - mode
+      - update_available
+      - can_update
+      properties:
+        current_version:
+          type:
+          - string
+          - 'null'
+        target_version:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          enum:
+          - disabled
+          - up_to_date
+          - update_available
+          - staging
+          - staged
+          - updating
+          - managed
+          - manual
+          - unsupported
+        mode:
+          type: string
+          enum:
+          - helper
+          - self
+          - managed
+          - unsupported
+          - manual
+        reason:
+          type:
+          - string
+          - 'null'
+        update_available:
+          type: boolean
+        can_update:
+          type: boolean
+        state:
+          type:
+          - string
+          - 'null'
+          description: 'Reported by the agent: idle | staging | staged | applying'
+        staged_version:
+          type:
+          - string
+          - 'null'
+        staged_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        previous_version:
+          type:
+          - string
+          - 'null'
+        instructions:
+          type:
+          - string
+          - 'null'
+        active_run:
+          oneOf:
+          - $ref: '#/components/schemas/AgentUpdateRun'
+          - type: 'null'
+        last_run:
+          oneOf:
+          - $ref: '#/components/schemas/AgentUpdateRun'
+          - type: 'null'
+      additionalProperties: false
+    AgentUpdateWindow:
+      type: object
+      required:
+      - days
+      - start
+      - end
+      properties:
+        days:
+          type: array
+          minItems: 1
+          maxItems: 7
+          items:
+            type: string
+            enum:
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+            - sun
+        start:
+          type: string
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          description: HH:MM (24 h) in timezone
+        end:
+          type: string
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          description: HH:MM; earlier than start = the window ends the next day
+        timezone:
+          type: string
+          default: UTC
+          maxLength: 64
+          description: IANA time zone
+      additionalProperties: false
+    AgentUpdatePolicy:
+      type: object
+      description: 'clusters.config.agent_updates. manual (default): an admin clicks Update or starts a rolling update. auto: the scheduler starts a rolling update inside the maintenance window once nodes have the target version staged.'
+      properties:
+        mode:
+          type: string
+          enum:
+          - manual
+          - auto
+          default: manual
+        window:
+          oneOf:
+          - $ref: '#/components/schemas/AgentUpdateWindow'
+          - type: 'null'
+      additionalProperties: false
+    AgentRollout:
+      type: object
+      description: A rolling agent update of a cluster.
+      required:
+      - id
+      - cluster_id
+      - target_version
+      - trigger
+      - state
+      - node_ids
+      - completed_count
+      - skipped
+      - started_at
+      - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        cluster_id:
+          type: string
+          format: uuid
+        target_version:
+          type: string
+        trigger:
+          type: string
+          enum:
+          - manual
+          - auto
+        state:
+          type: string
+          enum:
+          - running
+          - succeeded
+          - failed
+          - cancelled
+        node_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        current_node_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        completed_count:
+          type: integer
+        skipped:
+          type: array
+          items:
+            type: object
+            required:
+            - node_id
+            - reason
+            properties:
+              node_id:
+                type: string
+                format: uuid
+              node_name:
+                type:
+                - string
+                - 'null'
+              reason:
+                type: string
+            additionalProperties: false
+        failed_node_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        message:
+          type:
+          - string
+          - 'null'
+        created_by:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+      additionalProperties: false
+    AgentUpdateCounts:
+      type: object
+      required:
+      - total
+      - up_to_date
+      - update_available
+      - staged
+      - updating
+      - manual
+      - managed
+      - unsupported
+      - offline
+      properties:
+        total:
+          type: integer
+        up_to_date:
+          type: integer
+        update_available:
+          type: integer
+        staged:
+          type: integer
+        updating:
+          type: integer
+        manual:
+          type: integer
+        managed:
+          type: integer
+        unsupported:
+          type: integer
+        offline:
+          type: integer
+      additionalProperties: false
+    ClusterAgentUpdate:
+      type: object
+      required:
+      - cluster_id
+      - policy
+      - in_window
+      - counts
+      properties:
+        cluster_id:
+          type: string
+          format: uuid
+        policy:
+          $ref: '#/components/schemas/AgentUpdatePolicy'
+        in_window:
+          type: boolean
+        next_window_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        target_version:
+          type:
+          - string
+          - 'null'
+        rollout:
+          oneOf:
+          - $ref: '#/components/schemas/AgentRollout'
+          - type: 'null'
+        counts:
+          $ref: '#/components/schemas/AgentUpdateCounts'
+      additionalProperties: false
+    AgentUpdateOverview:
+      type: object
+      required:
+      - enabled
+      - release_keys
+      - counts
+      properties:
+        enabled:
+          type: boolean
+        reason:
+          type:
+          - string
+          - 'null'
+        target_version:
+          type:
+          - string
+          - 'null'
+        release_keys:
+          type: integer
+          description: Keys in AGENT_RELEASE_PUBLIC_KEYS
+        prestage:
+          type: boolean
+        health_timeout_seconds:
+          type: integer
+        targets:
+          type: array
+          items:
+            type: string
+          description: Build targets of the target release
+        source:
+          type:
+          - string
+          - 'null'
+          description: local (AGENT_DIST_DIR), cache or release (AGENT_RELEASE_URL)
+        available_versions:
+          type: array
+          items:
+            type: string
+        counts:
+          $ref: '#/components/schemas/AgentUpdateCounts'
+      additionalProperties: false
+    AgentUpdateRequest:
+      type: object
+      properties:
+        version:
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$
+          description: 'Default: the target version'
+        health_timeout_seconds:
+          type:
+          - integer
+          - 'null'
+          minimum: 30
+          maximum: 900
+      additionalProperties: false
+    AgentRolloutRequest:
+      type: object
+      properties:
+        version:
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$
+          description: 'Default: the target version'
+      additionalProperties: false
+    AgentStage:
+      type: object
+      required:
+      - node_id
+      - version
+      - state
+      properties:
+        node_id:
+          type: string
+          format: uuid
+        version:
+          type: string
+        command_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        state:
+          type: string
       additionalProperties: false
     NodeUpdate:
       type: object
@@ -20709,6 +20805,267 @@ components:
           items:
             $ref: '#/components/schemas/TimeSeries'
       additionalProperties: false
+    LatencyStats:
+      type: object
+      description: Round-trip statistics of one path (milliseconds)
+      properties:
+        rtt_ms:
+          type:
+          - number
+          - 'null'
+          description: Smoothed RTT (EWMA, SERVING_RTT_EWMA_ALPHA)
+        jitter_ms:
+          type:
+          - number
+          - 'null'
+          description: Smoothed absolute difference between consecutive samples
+        last_ms:
+          type:
+          - number
+          - 'null'
+        min_ms:
+          type:
+          - number
+          - 'null'
+        max_ms:
+          type:
+          - number
+          - 'null'
+        p50_ms:
+          type:
+          - number
+          - 'null'
+        p95_ms:
+          type:
+          - number
+          - 'null'
+        samples:
+          type: integer
+        failures:
+          type: integer
+          description: Probes that got no answer
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    ApiLayerLatency:
+      allOf:
+      - $ref: '#/components/schemas/LatencyStats'
+      - type: object
+        required:
+        - api_layer_id
+        properties:
+          api_layer_id:
+            type: string
+          region:
+            type:
+            - string
+            - 'null'
+          mode:
+            type:
+            - string
+            - 'null'
+            enum:
+            - tunnel
+            - direct
+            - null
+            description: Serving path the API layer uses to reach the node
+    NodeLatency:
+      type: object
+      required:
+      - node_id
+      - api_layers
+      properties:
+        node_id:
+          type: string
+          format: uuid
+        node_name:
+          type:
+          - string
+          - 'null'
+        status:
+          type:
+          - string
+          - 'null'
+        hub:
+          oneOf:
+          - $ref: '#/components/schemas/LatencyStats'
+          - type: 'null'
+          description: Agent hub -> agent (WebSocket ping / pong)
+        api_layers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiLayerLatency'
+          description: Nearest first
+        best_rtt_ms:
+          type:
+          - number
+          - 'null'
+          description: Lowest RTT from any API layer
+    LatencyLive:
+      type: object
+      required:
+      - generated_at
+      - api_layers
+      - nodes
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        api_layers:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            properties:
+              id:
+                type: string
+              region:
+                type:
+                - string
+                - 'null'
+              seen_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+              probe_seconds:
+                type:
+                - number
+                - 'null'
+              nodes:
+                type:
+                - integer
+                - 'null'
+                description: Nodes this API layer measured in its last round
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/NodeLatency'
+    LatencySummary:
+      type: object
+      required:
+      - node_id
+      - source
+      properties:
+        node_id:
+          type: string
+          format: uuid
+        node_name:
+          type:
+          - string
+          - 'null'
+        source:
+          type: string
+          enum:
+          - hub
+          - api_layer
+        api_layer_id:
+          type:
+          - string
+          - 'null'
+        region:
+          type:
+          - string
+          - 'null'
+        mode:
+          type:
+          - string
+          - 'null'
+        points:
+          type: integer
+        p50_ms:
+          type:
+          - number
+          - 'null'
+        p95_ms:
+          type:
+          - number
+          - 'null'
+        min_ms:
+          type:
+          - number
+          - 'null'
+        max_ms:
+          type:
+          - number
+          - 'null'
+        avg_ms:
+          type:
+          - number
+          - 'null'
+        jitter_ms:
+          type:
+          - number
+          - 'null'
+        last_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    LatencyHistory:
+      type: object
+      required:
+      - from
+      - to
+      - step
+      - series
+      - summaries
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        step:
+          type: string
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeSeries'
+        summaries:
+          type: array
+          items:
+            $ref: '#/components/schemas/LatencySummary'
+    RequestTiming:
+      type: object
+      required:
+      - from
+      - to
+      - step
+      - series
+      - summary
+      - regions
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        step:
+          type: string
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeSeries'
+          description: One series per timing field (average per bucket, ms) plus `requests`
+        summary:
+          type: object
+          additionalProperties:
+            type:
+            - number
+            - 'null'
+          description: '`requests`, the average of every timing field and `<phase>_p50_ms` / `<phase>_p95_ms` for ttft, total, upstream, net, rtt and engine'
+        regions:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: '`region`, `requests` and the averages per API-layer region'
     SessionSample:
       type: object
       required:
@@ -20994,111 +21351,6 @@ components:
         has_more:
           type: boolean
       additionalProperties: false
-    TraceSpan:
-      type: object
-      required:
-      - ts
-      - trace_id
-      - span_id
-      - name
-      - service
-      - error
-      properties:
-        ts:
-          type: string
-          format: date-time
-        trace_id:
-          type: string
-        span_id:
-          type: string
-        parent_span_id:
-          type:
-          - string
-          - 'null'
-        name:
-          type: string
-        service:
-          type: string
-        request_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        api_key_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        model_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        deployment_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        instance_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        node_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        format:
-          oneOf:
-          - $ref: '#/components/schemas/usage_format'
-          - type: 'null'
-        endpoint:
-          type:
-          - string
-          - 'null'
-        status_code:
-          type:
-          - integer
-          - 'null'
-        duration_ms:
-          type:
-          - number
-          - 'null'
-        error:
-          type: boolean
-        attributes:
-          type:
-          - object
-          - 'null'
-          additionalProperties: true
-      additionalProperties: false
-    Trace:
-      type: object
-      required:
-      - trace_id
-      - spans
-      properties:
-        trace_id:
-          type: string
-        root:
-          oneOf:
-          - $ref: '#/components/schemas/TraceSpan'
-          - type: 'null'
-        spans:
-          type: array
-          items:
-            $ref: '#/components/schemas/TraceSpan'
-        duration_ms:
-          type:
-          - number
-          - 'null'
-        otlp_url:
-          type:
-          - string
-          - 'null'
-          description: Deep link into the external tracing UI when OTEL_UI_URL is set
-      additionalProperties: false
     BenchmarkCreate:
       type: object
       required:
@@ -21330,358 +21582,6 @@ components:
           type: boolean
           description: Sets traffic_config.max_concurrent_per_instance to best_concurrency
           default: true
-      additionalProperties: false
-    UsageEvent:
-      type: object
-      required:
-      - id
-      - ts
-      - request_id
-      - model_name
-      - format
-      - endpoint
-      - status
-      - input_tokens
-      - output_tokens
-      - cached_tokens
-      - gpu_seconds
-      - cost_usd
-      properties:
-        id:
-          type: integer
-        ts:
-          type: string
-          format: date-time
-        request_id:
-          type: string
-          format: uuid
-        api_key_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        api_key_name:
-          type:
-          - string
-          - 'null'
-        model_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        model_name:
-          type: string
-        deployment_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        instance_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        node_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        node_name:
-          type:
-          - string
-          - 'null'
-        cluster_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        format:
-          $ref: '#/components/schemas/usage_format'
-        endpoint:
-          type: string
-        stream:
-          type: boolean
-        request_count:
-          type: integer
-        input_tokens:
-          type: integer
-        output_tokens:
-          type: integer
-        cached_tokens:
-          type: integer
-        reasoning_tokens:
-          type: integer
-        media_units:
-          type: number
-        latency_ms:
-          type:
-          - integer
-          - 'null'
-        ttft_ms:
-          type:
-          - integer
-          - 'null'
-        gpu_seconds:
-          type: number
-        gpu_count:
-          type: integer
-        status:
-          $ref: '#/components/schemas/usage_status'
-        http_status:
-          type:
-          - integer
-          - 'null'
-        error_code:
-          type:
-          - string
-          - 'null'
-        price_plan_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        cost_usd:
-          type: number
-        ip_address:
-          type:
-          - string
-          - 'null'
-        metadata:
-          type:
-          - object
-          - 'null'
-          additionalProperties: true
-      additionalProperties: false
-    UsageTotals:
-      type: object
-      required:
-      - request_count
-      - input_tokens
-      - output_tokens
-      - cached_tokens
-      - gpu_seconds
-      - cost_usd
-      properties:
-        request_count:
-          type: integer
-        success_count:
-          type: integer
-        error_count:
-          type: integer
-        input_tokens:
-          type: integer
-        output_tokens:
-          type: integer
-        cached_tokens:
-          type: integer
-        reasoning_tokens:
-          type: integer
-        media_units:
-          type: number
-        gpu_seconds:
-          type: number
-        gpu_minutes:
-          type: number
-        latency_ms_avg:
-          type:
-          - number
-          - 'null'
-        ttft_ms_avg:
-          type:
-          - number
-          - 'null'
-        cost_usd:
-          type: number
-      additionalProperties: false
-    UsageSummaryRow:
-      type: object
-      required:
-      - group
-      - labels
-      - totals
-      properties:
-        group:
-          type: object
-          additionalProperties:
-            type: string
-          description: group_by key -> id
-        labels:
-          type: object
-          additionalProperties:
-            type: string
-          description: group_by key -> display name
-        totals:
-          $ref: '#/components/schemas/UsageTotals'
-      additionalProperties: false
-    UsageSummary:
-      type: object
-      required:
-      - from
-      - to
-      - group_by
-      - rows
-      - totals
-      properties:
-        from:
-          type: string
-          format: date-time
-        to:
-          type: string
-          format: date-time
-        group_by:
-          type: array
-          items:
-            type: string
-        rows:
-          type: array
-          items:
-            $ref: '#/components/schemas/UsageSummaryRow'
-        totals:
-          $ref: '#/components/schemas/UsageTotals'
-      additionalProperties: false
-    BillingReportCreate:
-      type: object
-      required:
-      - name
-      - period_start
-      - period_end
-      properties:
-        name:
-          type: string
-          maxLength: 255
-          minLength: 1
-        period_start:
-          type: string
-          format: date-time
-        period_end:
-          type: string
-          format: date-time
-        group_by:
-          type: array
-          items:
-            type: string
-            enum:
-            - api_key
-            - model
-            - node
-            - cluster
-            - deployment
-          description: Default [api_key, model]
-        filters:
-          type: object
-          additionalProperties: true
-          description: '{api_key_ids[], model_ids[], node_ids[], cluster_ids[]}'
-      additionalProperties: false
-    BillingLineItem:
-      type: object
-      required:
-      - group
-      - totals
-      properties:
-        group:
-          type: object
-          additionalProperties:
-            type: string
-        labels:
-          type: object
-          additionalProperties:
-            type: string
-        price_plan_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-        price_plan_name:
-          type:
-          - string
-          - 'null'
-        totals:
-          $ref: '#/components/schemas/UsageTotals'
-        cost_breakdown:
-          type: object
-          properties:
-            gpu_time_usd:
-              type: number
-            input_tokens_usd:
-              type: number
-            output_tokens_usd:
-              type: number
-            cached_tokens_usd:
-              type: number
-      additionalProperties: false
-    BillingReport:
-      allOf:
-      - $ref: '#/components/schemas/BillingReportCreate'
-      - type: object
-        required:
-        - id
-        - status
-        - created_at
-        properties:
-          id:
-            type: string
-            format: uuid
-          status:
-            $ref: '#/components/schemas/billing_report_status'
-          currency:
-            type: string
-            maxLength: 3
-          totals:
-            $ref: '#/components/schemas/UsageTotals'
-          line_items:
-            type: array
-            items:
-              $ref: '#/components/schemas/BillingLineItem'
-          generated_at:
-            type:
-            - string
-            - 'null'
-            format: date-time
-          error_message:
-            type:
-            - string
-            - 'null'
-          created_at:
-            type: string
-            format: date-time
-          updated_at:
-            type: string
-            format: date-time
-    BillingEstimate:
-      type: object
-      required:
-      - period_start
-      - period_end
-      - as_of
-      - totals
-      - projected_cost_usd
-      properties:
-        period_start:
-          type: string
-          format: date-time
-        period_end:
-          type: string
-          format: date-time
-        as_of:
-          type: string
-          format: date-time
-        totals:
-          $ref: '#/components/schemas/UsageTotals'
-        projected_cost_usd:
-          type: number
-          description: Linear projection to period_end
-        by_api_key:
-          type: array
-          items:
-            $ref: '#/components/schemas/UsageSummaryRow'
-        by_model:
-          type: array
-          items:
-            $ref: '#/components/schemas/UsageSummaryRow'
-        by_node:
-          type: array
-          items:
-            $ref: '#/components/schemas/UsageSummaryRow'
       additionalProperties: false
     Batch:
       type: object

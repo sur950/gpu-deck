@@ -224,17 +224,19 @@ run_infra() {
 }
 
 run_website() {
-  step "Website: screenshots (SVG), docs build in check mode"
+  step "Website: screenshots (SVG), README and docs diagrams, docs build in check mode"
   need python3
   local venv="$CACHE/site-venv"
   [[ -x "$venv/bin/python" ]] || python3 -m venv "$venv"
-  "$venv/bin/pip" install -q -r scripts/requirements-docs.txt
+  "$venv/bin/pip" install -q -r scripts/requirements-docs.txt -r scripts/requirements-art.txt
   (
     export PATH="$venv/bin:$PATH"
     # website/assets/screenshots/ is git-ignored, so the clean copy starts without it: generate
     # it as pages.yml does, then check it matches docs/screenshots/.
     website/sync-screenshots.sh
     website/sync-screenshots.sh --check
+    python assets/brand/readme_art.py --check
+    python assets/brand/doc_art.py --check
     python scripts/build_docs.py --check
   )
 }

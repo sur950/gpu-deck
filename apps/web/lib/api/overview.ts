@@ -114,8 +114,6 @@ export function mapOverview(row: Schemas['Overview']): Overview {
       alertsOpen: c.alerts_open ?? 0,
     },
     live: mapOverviewLive(row.live),
-    costTodayUsd: row.cost_today_usd ?? 0,
-    costMonthUsd: row.cost_month_usd ?? 0,
     recentAlerts: (row.recent_alerts ?? []).map(mapAlert),
     recentSwaps: (row.recent_swaps ?? []).map(mapSwap),
     recentRuleRuns: (row.recent_rule_runs ?? []).map(mapRuleRun),

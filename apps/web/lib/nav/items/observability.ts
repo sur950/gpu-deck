@@ -1,7 +1,7 @@
-import { Activity, AlertOctagon, ChartColumn, Hourglass, Layers, Radio, ScrollText, TriangleAlert, Waypoints } from 'lucide-react';
+import { Activity, ChartColumn, Layers, Radio, ScrollText, TriangleAlert } from 'lucide-react';
 import type { NavEntry } from '@/lib/nav/types';
 
-/** Nav entry: observability dashboards, logs, traces. */
+/** Nav entry: observability dashboards and logs. */
 export const observabilityNav: NavEntry[] = [
   {
     id: 'observability-inference',
@@ -37,21 +37,6 @@ export const observabilityNav: NavEntry[] = [
     actions: [
       { label: 'Tail logs live', href: '/observability/logs?mode=live', icon: Radio, keywords: ['tail', 'follow', 'stream'] },
       { label: 'Show warnings and errors', href: '/observability/logs?mode=history&level=warn&range=24h', icon: TriangleAlert, keywords: ['errors', 'warnings'] },
-    ],
-  },
-  {
-    id: 'observability-traces',
-    title: 'Traces',
-    href: '/observability/traces',
-    icon: Waypoints,
-    group: 'observability',
-    order: 40,
-    description: 'Request traces through the API layer, agent proxy and engine (OpenTelemetry).',
-    keywords: ['trace', 'otel', 'opentelemetry', 'span'],
-    detailLabel: 'Trace details',
-    actions: [
-      { label: 'Find failed requests', href: '/observability/traces?status=errors', icon: AlertOctagon, keywords: ['errors', '5xx', '502'] },
-      { label: 'Find slow requests', href: '/observability/traces?min=5000', icon: Hourglass, keywords: ['slow', 'latency'] },
     ],
   },
 ];

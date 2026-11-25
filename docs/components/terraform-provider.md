@@ -7,7 +7,7 @@ copyright 2026 Suresh Konakanchi. Source and issues: <https://github.com/sur950/
 
 | Resources | Data sources |
 | --- | --- |
-| `gpudeck_cluster`, `gpudeck_price_plan`, `gpudeck_join_token`, `gpudeck_model`, `gpudeck_deployment`, `gpudeck_layout`, `gpudeck_rule`, `gpudeck_alert_channel`, `gpudeck_api_key`, `gpudeck_ip_rule` | `gpudeck_nodes`, `gpudeck_devices`, `gpudeck_engines` |
+| `gpudeck_cluster`, `gpudeck_join_token`, `gpudeck_model`, `gpudeck_deployment`, `gpudeck_layout`, `gpudeck_rule`, `gpudeck_alert_channel`, `gpudeck_api_key`, `gpudeck_ip_rule` | `gpudeck_nodes`, `gpudeck_devices`, `gpudeck_engines` |
 
 Reference docs: [apps/terraform-provider/docs](../../apps/terraform-provider/docs/index.md) (the Terraform Registry layout, generated from the provider schemas). Examples: [examples/](../../apps/terraform-provider/examples/) (`examples/complete` is a
 whole office fleet: cluster, join token, models, deployments, day/night layouts with schedule

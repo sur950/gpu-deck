@@ -7,6 +7,8 @@ PKI developer CLI::
     python -m app.services.pki.cli issue --kind control_plane --out certs/control-plane
     python -m app.services.pki.cli issue --kind agent_hub --san hub.local --out certs/hub
     python -m app.services.pki.cli crl
+    python -m app.services.pki.cli pins                     # key pins agents receive
+    python -m app.services.pki.cli rotate-key --service api-layer   # or agent-hub
 
 Uses the same vault-backed CA as the running control plane (creates it on
 first use), so dev certs issued here are trusted by the hub and the node
@@ -83,6 +85,42 @@ async def _cmd_crl(args: argparse.Namespace) -> int:
     return 0
 
 
+_SERVICES = {
+    "agent-hub": ("agent-hub-tls", "agent_hub"),
+    "api-layer": ("api-layer-tls", "api_layer"),
+}
+
+
+async def _cmd_pins(args: argparse.Namespace) -> int:
+    async with get_session_maker()() as session:
+        service = PkiService.from_session(session)
+        hub = await service.hub_pins()
+        api = await service.api_layer_pins()
+        await session.commit()
+    print("agent hub (SPKI sha256, current / next / previous):")
+    for p in hub:
+        print(f"  {p}")
+    print("API layer:")
+    for p in api:
+        print(f"  {p}")
+    return 0
+
+
+async def _cmd_rotate_key(args: argparse.Namespace) -> int:
+    secret, kind = _SERVICES[args.service]
+    async with get_session_maker()() as session:
+        service = PkiService.from_session(session)
+        data = await service.rotate_service_key(secret, kind)
+        await session.commit()
+    from app.services.agent_hub.service import AgentHub
+
+    await AgentHub.push_config(None, full=False, sections=["security"])
+    print(f"{args.service}: next key promoted (previous key {data['previous_spki'][:16]}… stays")
+    print("pinned for SERVICE_KEY_ROTATION_GRACE_HOURS); agents received the new policy.")
+    print(f"Restart the {args.service} process(es) to serve with the new key.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m app.services.pki.cli", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -99,6 +137,13 @@ def build_parser() -> argparse.ArgumentParser:
     crl = sub.add_parser("crl", help="print the current revocation list")
     crl.add_argument("--out", help="write the X.509 CRL PEM here")
     crl.set_defaults(func=_cmd_crl)
+    pins = sub.add_parser("pins", help="show the hub / API-layer key pins agents receive")
+    pins.set_defaults(func=_cmd_pins)
+    rot = sub.add_parser(
+        "rotate-key", help="promote the pre-published next key of the hub or the API layer"
+    )
+    rot.add_argument("--service", required=True, choices=sorted(_SERVICES))
+    rot.set_defaults(func=_cmd_rotate_key)
     return parser
 
 

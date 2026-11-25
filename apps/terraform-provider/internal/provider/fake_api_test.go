@@ -64,7 +64,7 @@ provider "gpudeck" {
 
 // collections served with plain CRUD (path prefix -> store key).
 var fakeCollections = []string{
-	"nodes/join-tokens", "alert-channels", "price-plans", "clusters", "models", "deployments",
+	"nodes/join-tokens", "alert-channels", "clusters", "models", "deployments",
 	"layouts", "rules", "api-keys", "ip-rules",
 }
 
@@ -406,8 +406,6 @@ func fakeDefaults(coll string) map[string]any {
 	switch coll {
 	case "clusters":
 		return map[string]any{"status": "active", "labels": map[string]any{}, "egress_allowlist": []any{}, "config": map[string]any{}, "description": nil, "region": nil}
-	case "price-plans":
-		return map[string]any{"currency": "USD", "usd_per_gpu_minute": 0, "usd_per_1k_input_tokens": 0, "usd_per_1k_output_tokens": 0, "usd_per_1k_cached_tokens": 0, "is_default": false}
 	case "models":
 		return map[string]any{"priority": "normal", "trust_remote_code": false, "allow_pickle": false, "aliases": []any{}, "tags": []any{}, "metadata": map[string]any{}, "default_launch_flags": map[string]any{}, "version_count": 1, "deployment_count": 0}
 	case "deployments":

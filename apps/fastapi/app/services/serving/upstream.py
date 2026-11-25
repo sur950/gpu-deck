@@ -19,7 +19,7 @@ handshake — about two extra round trips before the request is even sent. So:
   connections when a node first appears in the routing table, and kept warm by a
   ``GET /_health`` every ``SERVING_UPSTREAM_KEEPWARM_SECONDS`` (which also drops a
   connection a middlebox silently killed before a client request finds it);
-- pools of nodes that left the routing table are closed.
+- pools of nodes that left the routing table (or disconnected) are closed.
 
 HTTP/2: the clients offer ALPN ``h2`` + ``http/1.1`` (``SERVING_UPSTREAM_HTTP2``, needs the
 ``h2`` package). The node-agent proxy negotiates ``h2``, so one TLS connection per node
@@ -118,15 +118,24 @@ async def _drop_stale_h2(pool) -> None:
 
 
 def _client(verify: ssl.SSLContext | bool, limits: httpx.Limits) -> httpx.AsyncClient:
-    """A client towards node proxies: HTTP/1.1 always, HTTP/2 when enabled (ALPN)."""
+    """
+    A client towards node proxies: HTTP/1.1 always, HTTP/2 when enabled (ALPN). ``tunnel://``
+    URLs (nodes in serving mode tunnel, protocol.md §13) go over the agents' outbound tunnels.
+    """
+    from app.services.serving.tunnel import TunnelTransport
+
     transport = _NodeProxyTransport(verify=verify, limits=limits, http1=True, http2=http2_enabled())
-    return httpx.AsyncClient(transport=transport, follow_redirects=False)
+    return httpx.AsyncClient(
+        transport=transport, mounts={"tunnel://": TunnelTransport()}, follow_redirects=False
+    )
 
 
 def origin_of(url: Optional[str]) -> str:
     """``scheme://host:port`` of a URL (the pool key); ``-`` when unknown."""
     if not url:
         return _DEFAULT_ORIGIN
+    if url.startswith("tunnel://"):
+        return "tunnel://" + url[len("tunnel://") :].split("/", 1)[0]
     parts = urlsplit(url)
     if not parts.scheme or not parts.hostname:
         return _DEFAULT_ORIGIN
@@ -170,7 +179,12 @@ class UpstreamPools:
         key = origin_of(url)
         client = self.clients.get(key)
         if client is None or client.is_closed:
-            client = self._make(ca_bundle_pem)
+            from app.services.serving.tunnel import tunnel_client, tunnel_node
+
+            if tunnel_node(url) is not None and _transport_factory is None:
+                client = tunnel_client()
+            else:
+                client = self._make(ca_bundle_pem)
             self.clients[key] = client
         return client
 
@@ -382,7 +396,12 @@ class PoolWarmer:
         if not settings.SERVING_UPSTREAM_PREWARM or self._stop.is_set():
             return
         current = routed_origins(table)
-        gone = [o for o in _pools.clients if o not in current and o != _DEFAULT_ORIGIN]
+        # Connected nodes without an instance keep their pool too: the RTT prober
+        # (app.services.serving.latency) measures them over it, warm.
+        from app.services.serving.latency import probe_targets
+
+        keep = set(current) | {origin_of(url) for url in probe_targets(table).values()}
+        gone = [o for o in _pools.clients if o not in keep and o != _DEFAULT_ORIGIN]
         if gone:
             _pools.discard(gone)
         self.warmed &= set(current)

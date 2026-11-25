@@ -208,11 +208,15 @@ async def test_csrf_skips_safe_methods_exempt_paths_and_bearer_clients(session_c
 # ---------------------------------------------------------------------------
 
 
-def test_env_secret_fingerprint_is_hmac_not_bare_sha256():
+def test_env_secret_fingerprint_is_peppered_scrypt_not_bare_sha256():
     fp = seed_module.env_secret_fingerprint("pw-123456789", "k" * 40)
-    assert len(fp) == 64
+    assert fp.startswith("scrypt:") and len(fp) <= 64  # admin_users.env_secret_hash VARCHAR(64)
     assert fp != hashlib.sha256(b"pw-123456789").hexdigest()
+    assert fp == seed_module.env_secret_fingerprint("pw-123456789", "k" * 40)  # deterministic
     assert fp != seed_module.env_secret_fingerprint("pw-123456789", "j" * 40)
+    assert fp != seed_module.env_secret_fingerprint("pw-123456780", "k" * 40)
+    assert not seed_module.is_legacy_fingerprint(fp)
+    assert seed_module.is_legacy_fingerprint("ab" * 32)
 
 
 class _FakeAdminRepo:
@@ -229,6 +233,10 @@ class _FakeAdminRepo:
         _FakeAdminRepo.admin = SimpleNamespace(**fields)
         _FakeAdminRepo.calls.append(("create", fields))
         return _FakeAdminRepo.admin
+
+    async def set_env_secret_hash(self, admin_id, env_secret_hash):
+        _FakeAdminRepo.calls.append(("set_env_secret_hash", env_secret_hash))
+        _FakeAdminRepo.admin.env_secret_hash = env_secret_hash
 
     async def apply_env_seed(self, admin_id, **fields):
         _FakeAdminRepo.calls.append(("apply_env_seed", fields))
@@ -304,3 +312,25 @@ async def test_seed_syncs_username_without_touching_password(fake_seed, monkeypa
     assert admin.username == "root"
     assert admin.password_hash == before
     assert fake_seed == []
+
+
+@pytest.mark.asyncio
+async def test_seed_upgrades_legacy_fingerprint_without_touching_password(fake_seed, monkeypatch):
+    """1.0.x rows hold a 64-hex HMAC: rewritten to scrypt, UI password and sessions kept."""
+    await seed_module.seed_if_empty(_FakeSession())
+    admin = _FakeAdminRepo.admin
+    admin.id = uuid.uuid4()
+    ui_hash = PasswordHasher.hash("changed-in-the-ui-1")
+    admin.password_hash = ui_hash
+    admin.env_secret_hash = "0f" * 32  # legacy HMAC-SHA256 hex
+
+    assert await seed_module.seed_if_empty(_FakeSession()) == "fingerprint_upgraded"
+    assert admin.password_hash == ui_hash
+    assert admin.env_secret_hash == seed_module.env_secret_fingerprint("first-password-123")
+    assert fake_seed == []  # no session revoked
+    assert await seed_module.seed_if_empty(_FakeSession()) == "unchanged"
+
+    # A later .env change is applied as usual.
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "second-password-456")
+    assert await seed_module.seed_if_empty(_FakeSession()) == "password_rotated"
+    assert PasswordHasher.verify("second-password-456", admin.password_hash)

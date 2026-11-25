@@ -74,7 +74,7 @@ class ModelCacheService:
 
     @staticmethod
     async def as_dependency(
-        request: Request, db: AsyncSession = Depends(get_db)
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
     ) -> "ModelCacheService":
         return ModelCacheService.for_session(db)
 

@@ -42,7 +42,14 @@ pytestmark = [
 ]
 
 UP_SQL = Path(__file__).resolve().parents[2] / "app/db/postgres/alembic/migrations/001_init/up.sql"
-METERING_ROUTES = ("metering", "billing", "price_plans", "batches")
+# Metering, billing and price plans are v2 (app/api/v1/routes_v2, not mounted in the v1 admin
+# API); this module mounts them on its own app so the dormant code keeps working.
+METERING_ROUTES = (
+    "app.api.v1.routes_v2.metering",
+    "app.api.v1.routes_v2.billing",
+    "app.api.v1.routes_v2.price_plans",
+    "app.api.v1.routes.batches",
+)
 API = settings.API_V1_PREFIX
 KEY_ID = "00000000-0000-4000-8000-000000000001"
 
@@ -70,7 +77,7 @@ def build_admin_app():
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)
     for name in METERING_ROUTES:
-        module = importlib.import_module(f"app.api.v1.routes.{name}")
+        module = importlib.import_module(name)
         app.include_router(module.router, prefix=API)
 
     class Admin:

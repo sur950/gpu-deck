@@ -28,7 +28,7 @@ import { useUrlState } from '@/hooks/use-url-state';
 import { useDebounce } from '@/hooks/use-debounce';
 import { cn } from '@/lib/utils';
 import { StateDiff } from '@/components/security/state-diff';
-import { useRangeFromUrl } from '@/components/usage/usage-shared';
+import { useRangeFromUrl } from '@/hooks/use-range-from-url';
 
 const DEFAULTS = { search: '', actor: '', category: '', outcome: '', preset: 'last_30d', from: '', to: '', page: 1, pageSize: 50 };
 
@@ -51,7 +51,6 @@ const CATEGORIES = [
   { value: 'deployment', label: 'Deployments' },
   { value: 'node', label: 'Nodes' },
   { value: 'ip_rule', label: 'IP rules' },
-  { value: 'price_plan', label: 'Price plans' },
   { value: 'alert_channel', label: 'Alert channels' },
   { value: 'credential,vault', label: 'Vault & credentials' },
   { value: 'pki', label: 'Certificates' },

@@ -75,6 +75,10 @@ impl StatePaths {
     pub fn hub_features_json(&self) -> PathBuf {
         self.root.join("hub_features.json")
     }
+    /// Signed node security policy (re-verified against `ca.pem` on every load).
+    pub fn security_policy(&self) -> PathBuf {
+        self.root.join("security_policy.json")
+    }
 
     /// Create the directory tree with owner-only permissions (independent of the umask the
     /// installer ran with: `join` under a 0000 umask left the subdirectories world-writable).

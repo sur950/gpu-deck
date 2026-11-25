@@ -259,7 +259,7 @@ export function GpuInstanceDetail() {
           <Card className="rounded-md shadow-premium">
             <CardHeader>
               <CardTitle>Usage</CardTitle>
-              <CardDescription>Metered into billing as GPU minutes.</CardDescription>
+              <CardDescription>GPU time and SSH sessions of this instance.</CardDescription>
             </CardHeader>
             <CardContent>
               <DetailList

@@ -20,7 +20,7 @@ describe('mock handlers', () => {
 
   it('prefers owning handlers over fallbacks and literal segments over params', () => {
     expect(matchMockHandler('GET', '/nodes/join-tokens')?.handler.path).toBe('/nodes/join-tokens');
-    expect(matchMockHandler('GET', '/price-plans')?.feature).toBe('usage');
+    expect(matchMockHandler('GET', '/vault')?.feature).toBe('vault');
     expect(matchMockHandler('PATCH', '/clusters/00000000-0000-0000-0000-000000000001')?.feature).toMatch(/^fleet/);
   });
 });

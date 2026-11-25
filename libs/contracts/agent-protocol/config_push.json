@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sur950.github.io/gpu-deck/schemas/agent-protocol/v1/config_push.json",
   "title": "config_push (hub -> agent)",
-  "description": "Desired agent configuration. Sent in full after hello_ack when versions differ, then as deltas (full=false, only changed sections present) whenever routing, egress rules, engine catalog, CRL or settings change. The agent applies atomically, persists to <state_dir>/config.json, and answers with an event config_applied (or config_rejected with details). config_version is monotonic per node; the agent ignores pushes with a version <= the one it holds unless full=true.",
+  "description": "Desired agent configuration. Sent in full after hello_ack when versions differ, then as deltas (full=false, only changed sections present) whenever routing, egress rules, engine catalog, CRL, settings or the signed security policy change. The agent applies atomically, persists to <state_dir>/config.json, and answers with an event config_applied (or config_rejected with details). config_version is monotonic per node; the agent ignores pushes with a version <= the one it holds unless full=true.",
   "type": "object",
   "required": ["config_version", "full"],
   "properties": {
@@ -53,6 +53,7 @@
     },
     "ca_bundle_pem": { "type": ["string", "null"], "description": "Updated CA bundle (CA rotation); the agent trusts both until the next rotation completes." },
     "settings": { "$ref": "#/$defs/Settings" },
+    "security": { "$ref": "common.json#/$defs/SignedPolicy", "description": "Signed node security policy (added 2026-11-24, protocol.md §13): pinned hub and API-layer key fingerprints (SPKI sha256), outbound tunnel endpoints, direct-mode source allow-list and rate limits, SSH-instance default source CIDRs. Present in every full push and in a delta when it changed; older agents ignore it." },
     "model_sources": {
       "type": "object",
       "description": "Mirror endpoints for offline sites (no tokens here; tokens travel inside load/prefetch commands).",

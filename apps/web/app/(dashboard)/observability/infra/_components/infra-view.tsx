@@ -15,6 +15,7 @@ import { combineSeries, filterSeries, maxValue, sumValues, toSpark } from '@/com
 import { EntityMetricChart } from '@/components/observability/entity-chart';
 import type { ChartEntity } from '@/components/observability/entity-chart';
 import { GpuCard, HOT_TEMP_C } from '@/components/observability/gpu-card';
+import { FleetLatencyCard } from '@/components/observability/fleet-latency-card';
 import { MetricsPageSkeleton } from '@/components/observability/page-skeletons';
 import { gpuLabel } from '@/components/observability/labels';
 import { NodeStatusBadge } from '@/components/fleet/node-status';
@@ -163,6 +164,8 @@ export function InfraView() {
           refreshing={refreshing}
         />
       </section>
+
+      <FleetLatencyCard nodeId={nodeId} />
 
       {nodeIds.map((id) => {
         const node = nodes.data?.find((n) => n.id === id);

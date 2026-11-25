@@ -41,6 +41,9 @@ ALERT_KINDS = {
     "egress_blocked": ("warning", "Egress blocked"),
     "cert_expiring": ("warning", "Node certificate expiring"),
     "config_rejected": ("warning", "Agent rejected configuration"),
+    # Only bursts (the agent marks an interval critical at NODE_INGRESS_ALERT_THRESHOLD); the
+    # per-interval warning is kept as a fleet event without an alert.
+    "ingress_rejected": ("critical", "Inbound connection attempts rejected on a node"),
 }
 STATE_KINDS = {
     "instance_state_changed",
@@ -305,6 +308,8 @@ class HubIngest:
             }
             if payload.get("config_version") is not None:
                 meta["config_applied_version"] = payload["config_version"]
+            if payload.get("agent_update") is not None:
+                meta["agent_update"] = payload["agent_update"]
             await nodes.merge_metadata(node_id, meta)
             await session.commit()
         summary = {
@@ -497,7 +502,10 @@ class HubIngest:
                     node_id=node_id,
                 )
             subject = payload.get("instance_id") or payload.get("device_id") or ""
-            if kind in ALERT_KINDS:
+            alert_worthy = kind in ALERT_KINDS and not (
+                kind == "ingress_rejected" and payload.get("severity") != "critical"
+            )
+            if alert_worthy:
                 severity, title = ALERT_KINDS[kind]
                 await events.alert(
                     severity if payload.get("severity") != "critical" else "critical",
@@ -522,6 +530,13 @@ class HubIngest:
             await session.commit()
         if kind in STATE_KINDS:
             self._routing_changed()
+        if kind == "agent_update":
+            try:
+                from app.services.agent_updates import orchestrator
+
+                await orchestrator.on_agent_event(node_id, payload)
+            except Exception as exc:  # noqa: BLE001 - the event row is stored either way
+                logger.warning(f"agent update event from node={node_id} failed: {exc}")
         if kind != "log":
             await _live_publish(
                 "instance" if payload.get("instance_id") else "node",

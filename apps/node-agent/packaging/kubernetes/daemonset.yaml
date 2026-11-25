@@ -1,6 +1,7 @@
 # GPU Deck node agent on Kubernetes GPU nodes. Non-interactive join: the agent joins on first
 # start with GPUDECK_AGENT_JOIN_TOKEN (Secret) and keeps its identity on the host path, so a pod
-# restart reuses the certificate. hostNetwork exposes the :9443 mTLS proxy on the node IP.
+# restart reuses the certificate. hostNetwork exposes the :9443 mTLS proxy on the node IP (direct
+# serving mode; the agent accepts only the API layer's pinned key from private source ranges).
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -29,6 +30,11 @@ data:
     state_dir = "/var/lib/gpudeck"
     proxy_port = 9443
     egress_lock = "none"
+    # In-cluster: the API layer reaches the node over the cluster network (agent protocol §13;
+    # only its pinned key and private source ranges are accepted). Outside a cluster the
+    # default is serving_mode = "tunnel" (no listener at all).
+    serving_mode = "direct"
+    firewall = "off"
     [labels]
     runtime = "kubernetes"
 ---

@@ -10,6 +10,5 @@ export const NAV_GROUPS: NavGroup[] = [
   { id: 'models', title: 'Models' },
   { id: 'automation', title: 'Automation' },
   { id: 'observability', title: 'Observability' },
-  { id: 'usage', title: 'Usage' },
   { id: 'security', title: 'Security' },
 ];

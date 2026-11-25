@@ -556,6 +556,28 @@ pub fn prometheus_text(agent: &Agent, b: &MetricsBatch) -> String {
         )],
     );
     gauge(
+        "gpudeck_agent_tunnel_connections",
+        "Open outbound serving tunnels to the API layer",
+        vec![(
+            base.clone(),
+            agent
+                .tunnels
+                .connected
+                .load(std::sync::atomic::Ordering::Relaxed) as f64,
+        )],
+    );
+    gauge(
+        "gpudeck_agent_ingress_rejected_total",
+        "Inbound connection attempts rejected (source, rate limit, TLS identity) since start",
+        vec![(
+            base.clone(),
+            agent
+                .ingress
+                .total
+                .load(std::sync::atomic::Ordering::Relaxed) as f64,
+        )],
+    );
+    gauge(
         "gpudeck_node_cache_used_bytes",
         "Model cache bytes",
         vec![(base.clone(), agent.cache.used_bytes() as f64)],

@@ -17,9 +17,10 @@
 # hosts in that file (e.g. an OTLP collector on the host) are rewritten to host.docker.internal by
 # scripts/container-env.sh.
 #
-# Processes (one image, gpu-deck-api): admin-api :8180, api-layer :8181, agent-hub :8443 (mTLS,
-# agents dial in), worker (Celery), beat (Celery beat, single), scheduler (APScheduler with
-# leader election). web :3180 is the Next.js standalone image.
+# Processes (one image, gpu-deck-api): admin-api :8180, api-layer :8181 (+ agent tunnels
+# :8444-8445, agents dial in), agent-hub :8443 (mTLS, agents dial in), worker (Celery), beat
+# (Celery beat, single), scheduler (APScheduler with leader election). web :3180 is the Next.js
+# standalone image.
 #
 # Hardening on every service: non-root user, read-only root filesystem with tmpfs for /tmp and
 # logs, all capabilities dropped, no-new-privileges. Admin UI/API bind to loopback by default
@@ -67,6 +68,9 @@ x-api-common: &api-common
     # Worker / scheduler Prometheus listeners must be reachable from the Prometheus container
     # (the dev .env binds them to loopback).
     METRICS_BIND_HOST: 0.0.0.0
+    # Outbound serving tunnels (agent protocol §13): every api-layer worker listens on its own
+    # port from 8444 up; the hub tells agents to dial all of them. Keep it equal to WORKERS.
+    AGENT_TUNNEL_LISTENERS: ${WORKERS:-2}
   entrypoint: ["/bin/sh", "/usr/local/bin/gpudeck-env"]
   user: "1000:1000"
   read_only: true
@@ -127,6 +131,9 @@ services:
     ports:
       # Your AI gateway calls this; restrict with GATEWAY_IP_ALLOWLIST / ip_rules.
       - "${GPUDECK_SERVING_BIND:-127.0.0.1}:${API_LAYER_PORT:-8181}:8181"
+      # Node agents dial out to these (serving mode tunnel: TLS 1.3, node certificates only);
+      # GPU machines need no inbound port. One port per worker (AGENT_TUNNEL_LISTENERS).
+      - "${GPUDECK_TUNNEL_BIND:-0.0.0.0}:${AGENT_TUNNEL_PORTS:-8444-8445}:${AGENT_TUNNEL_PORTS:-8444-8445}"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8181/health"]
       interval: 15s
@@ -147,6 +154,8 @@ services:
       TMPDIR: /tmp
       AGENT_HUB_HOST: 0.0.0.0
       AGENT_HUB_PORT: "8443"
+      # The hub tells agents to dial every api-layer worker's tunnel port (8444 up).
+      AGENT_TUNNEL_LISTENERS: ${WORKERS:-2}
     ports:
       # Node agents dial out to this port (mTLS); GPU machines need no inbound port.
       - "${GPUDECK_HUB_BIND:-0.0.0.0}:${AGENT_HUB_PORT:-8443}:8443"
@@ -193,7 +202,7 @@ services:
 
   scheduler:
     <<: *api-common
-    # APScheduler jobs (rules, schedules, billing); safe to run more than one (leader election).
+    # APScheduler jobs (rules, schedules, rollups); safe to run more than one (leader election).
     command: ["python", "-m", "app.workers.scheduler"]
     # Prometheus (observability profile) scrapes scheduler:9465/metrics on the compose network.
     expose: ["9465"]

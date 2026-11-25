@@ -24,9 +24,9 @@
       "additionalProperties": false
     },
     "config_version": { "type": "integer", "minimum": 0, "description": "Current config version on the hub; a config_push follows immediately when it differs from hello.config_version." },
-    "min_agent_version": { "type": ["string", "null"], "description": "Agents below this should self-update (informational; no auto-update in v1)." },
+    "min_agent_version": { "type": ["string", "null"], "description": "Informational. Updates are driven by the control plane with stage_update / apply_update (protocol.md §14); agents never update on their own." },
     "drain": { "type": "boolean", "default": false, "description": "True when the node is in draining/drained state: the agent must keep serving current instances but accept no load_model." },
-    "features": { "type": "array", "items": { "type": "string" }, "default": [], "description": "Optional protocol features this hub accepts (added 2026-11-23): observed_engines (hello/inventory.observed_engines, EngineSample.observed) and gpu_processes (GpuSample.processes). Agents send those fields only when the hub lists them, so a newer agent keeps working with an older hub; unknown names are ignored." }
+    "features": { "type": "array", "items": { "type": "string" }, "default": [], "description": "Optional protocol features this hub accepts (added 2026-11-23): observed_engines (hello/inventory.observed_engines, EngineSample.observed) and gpu_processes (GpuSample.processes). Agents send those fields only when the hub lists them, so a newer agent keeps working with an older hub; unknown names are ignored. Since 2026-11-24: secure_transport (hello.proxy.mode / bind, event kind ingress_rejected, config_push.security) and agent_updates (hello/inventory.agent_update, event kind agent_update, commands stage_update / apply_update, security policy release keys; protocol.md §14)." }
   },
   "additionalProperties": false
 }

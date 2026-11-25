@@ -71,6 +71,63 @@ class FleetSettings(DomainSettings):
         description="Client key for control-plane -> node proxy probes (empty = vault)",
     )
 
+    # Node security policy (protocol.md §13), signed per node with the CA key
+    AGENT_TUNNEL_PUBLIC_URLS: str = Field(
+        default="",
+        description="host:port list (comma separated) agents dial for the outbound serving "
+        "tunnel, one per API-layer worker; empty = the AGENT_HUB_PUBLIC_URL host on "
+        "AGENT_TUNNEL_PORT .. + AGENT_TUNNEL_LISTENERS - 1",
+    )
+    AGENT_TUNNEL_CONNECTIONS: int = Field(
+        default=2, ge=1, le=16, description="Tunnel connections each agent keeps per endpoint"
+    )
+    AGENT_TUNNEL_IDLE_TIMEOUT_SECONDS: int = Field(
+        default=60,
+        ge=10,
+        description="An agent redials a tunnel that received no request or keep-alive probe "
+        "for this long",
+    )
+    NODE_PROXY_ALLOWED_SOURCE_CIDRS: str = Field(
+        default="",
+        description="Direct mode: source CIDRs (the API layer's egress addresses) the node "
+        "proxy accepts; empty = private ranges only. Per cluster: clusters.config."
+        "node_security.proxy_allowed_source_cidrs",
+    )
+    SSH_INSTANCE_DEFAULT_ALLOWED_CIDRS: str = Field(
+        default="",
+        description="Source CIDRs of SSH instances started without their own; empty = such "
+        "instances accept nobody. Per cluster: clusters.config.node_security."
+        "ssh_default_allowed_cidrs",
+    )
+    NODE_INGRESS_REPORT_SECONDS: int = Field(
+        default=60,
+        ge=10,
+        description="Agents sum rejected inbound attempts per interval into one "
+        "ingress_rejected event",
+    )
+    NODE_INGRESS_ALERT_THRESHOLD: int = Field(
+        default=20,
+        ge=1,
+        description="Rejected inbound attempts per interval that make the event critical "
+        "(raises a node.ingress_rejected alert)",
+    )
+    AGENT_HUB_EXTRA_SPKI_PINS: str = Field(
+        default="",
+        description="Extra hub key pins (SubjectPublicKeyInfo sha256 hex, comma separated) to "
+        "pre-publish before replacing AGENT_HUB_TLS_CERT_FILE with a new key",
+    )
+    API_LAYER_EXTRA_SPKI_PINS: str = Field(
+        default="",
+        description="Extra API-layer key pins to pre-publish before replacing "
+        "API_LAYER_CLIENT_CERT_PATH with a new key",
+    )
+    SERVICE_KEY_ROTATION_GRACE_HOURS: int = Field(
+        default=24,
+        ge=1,
+        description="After a hub / API-layer key rotation the previous key stays pinned this "
+        "long (replicas restart onto the new key)",
+    )
+
     # Join
     JOIN_TOKEN_TTL_MINUTES: int = Field(default=15, description="Default join token TTL")
     JOIN_RATE_LIMIT: str = Field(default="10/minute", description="Rate limit on /agent/v1/join")
@@ -98,6 +155,37 @@ class FleetSettings(DomainSettings):
         ),
         description="Base egress allowlist pushed to every node (plus the hub and cluster extras)",
     )
+
+    def get_tunnel_endpoints(self) -> List[str]:
+        """``host:port`` of every API-layer tunnel listener agents should dial."""
+        from urllib.parse import urlparse
+
+        listed = [s.strip() for s in self.AGENT_TUNNEL_PUBLIC_URLS.split(",") if s.strip()]
+        out = []
+        for item in listed:
+            if "://" in item:
+                parsed = urlparse(item)
+                host, port = parsed.hostname, parsed.port
+            else:
+                parsed = urlparse(f"tcp://{item}")
+                host, port = parsed.hostname, parsed.port
+            if not host:
+                continue
+            port = port or int(getattr(self, "AGENT_TUNNEL_PORT", 8444))
+            out.append(f"[{host}]:{port}" if ":" in host else f"{host}:{port}")
+        if out:
+            return out
+        host = urlparse(self.AGENT_HUB_PUBLIC_URL).hostname
+        if not host:
+            return []
+        base = int(getattr(self, "AGENT_TUNNEL_PORT", 8444))
+        listeners = max(1, int(getattr(self, "AGENT_TUNNEL_LISTENERS", 1)))
+        h = f"[{host}]" if ":" in host else host
+        return [f"{h}:{base + i}" for i in range(listeners)]
+
+    @staticmethod
+    def split_cidrs(value: str) -> List[str]:
+        return [s.strip() for s in (value or "").split(",") if s.strip()]
 
     def get_hub_sans(self) -> List[str]:
         return [s.strip() for s in self.AGENT_HUB_TLS_SANS.split(",") if s.strip()]

@@ -10,10 +10,24 @@
   var REPO = "sur950/gpu-deck";
   var THEME_KEY = "gpudeck-theme";
   var BANNER_KEY = "gpudeck-star-banner";
-  var BASE = doc.body.getAttribute("data-root") || "";
+  var BASE = siteBase(doc.body.getAttribute("data-root"));
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   var systemLight = window.matchMedia("(prefers-color-scheme: light)");
   var isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+
+  // The site generator writes data-root as "", "../", "../../" ... or, on the 404 page, a
+  // root-relative path such as "/gpu-deck/". BASE is rebuilt from those pieces only, so a
+  // scheme ("javascript:"), a host ("//evil") or markup in the attribute can never reach a
+  // navigation or an href.
+  function siteBase(raw) {
+    var value = String(raw || "");
+    if (/^(?:\.\.\/)+$/.test(value)) return "../".repeat(value.length / 3);
+    if (!/^\/(?:[A-Za-z0-9._~-]+\/)*$/.test(value)) return "";
+    var parts = value.split("/").filter(Boolean);
+    return parts.reduce(function (acc, part) {
+      return /^[A-Za-z0-9_~-][A-Za-z0-9._~-]*$/.test(part) ? acc + encodeURIComponent(part) + "/" : acc;
+    }, "/");
+  }
 
   function $(sel, ctx) {
     return (ctx || doc).querySelector(sel);
@@ -52,11 +66,13 @@
     return systemLight.matches ? "light" : "dark";
   }
 
-  // <picture data-themed>: the light <source> follows the chosen theme, not only the OS.
+  // <picture data-themed>: each <source data-scheme="light|dark"> follows the chosen theme, not only
+  // the OS (the home page's screenshots, and the light / dark diagrams in the docs).
   function syncPictures() {
     var forced = root.getAttribute("data-theme");
-    $$("picture[data-themed] source[data-scheme='light']").forEach(function (s) {
-      var media = forced === "light" ? "all" : forced === "dark" ? "not all" : "(prefers-color-scheme: light)";
+    $$("picture[data-themed] source[data-scheme]").forEach(function (s) {
+      var scheme = s.getAttribute("data-scheme");
+      var media = forced ? (forced === scheme ? "all" : "not all") : "(prefers-color-scheme: " + scheme + ")";
       if (s.getAttribute("media") !== media) s.setAttribute("media", media);
     });
   }
@@ -326,9 +342,9 @@
   var current = 0;
   var opener = null;
 
-  // Full-size view: the vector SVG (sharp at any zoom).
+  // Full-size view: the vector SVG (sharp at any zoom). The name is one encoded path segment.
   function full(shot) {
-    return "assets/screenshots/" + shot + ".svg";
+    return "assets/screenshots/" + encodeURIComponent(String(shot || "")) + ".svg";
   }
 
   function show(index) {

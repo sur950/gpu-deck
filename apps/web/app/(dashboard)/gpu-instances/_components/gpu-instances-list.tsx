@@ -118,7 +118,7 @@ export function GpuInstancesList() {
         <StatCard label="Running" value={stats.running} icon={SquareTerminal} footnote={`${items.length} listed`} />
         <StatCard label="GPUs held" value={stats.gpus} icon={Cpu} footnote={`plus ${stats.slices} slice${stats.slices === 1 ? '' : 's'}`} />
         <StatCard label="Stopping within 1 h" value={stats.expiring} icon={Timer} footnote="TTL about to run out" />
-        <StatCard label="GPU hours" value={gpuHours(stats.gpuSeconds)} icon={Clock} footnote="Metered to billing as GPU minutes" />
+        <StatCard label="GPU hours" value={gpuHours(stats.gpuSeconds)} icon={Clock} footnote="GPU time of the listed instances" />
       </div>
 
       {isError ? (

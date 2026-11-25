@@ -23,7 +23,7 @@ import { OUTCOME_LABELS, SWAP_KIND_LABELS, SWAP_STATE_LABELS, SWAP_TRIGGER_LABEL
 import { filterSeries } from '@/components/charts/series-utils';
 import type { MetricsResult, DeploymentSummary } from '@/types/metrics';
 import type { AlertSummary, RuleRunSummary, SwapSummary } from '@/types/overview';
-import { formatCompact, formatMs, formatUsd } from '@/utils/metrics-format';
+import { formatCompact, formatMs } from '@/utils/metrics-format';
 
 function CardShell({
   title,
@@ -72,7 +72,6 @@ export function TopModelsCard({ usage, deployments, rangeLabel }: { usage: Metri
       const dep = deployments?.find((d) => d.id === id);
       const requests = sum('requests', id);
       const tokens = sum('input_tokens', id) + sum('output_tokens', id);
-      const cost = sum('cost_usd', id);
       // Requests that never reached a deployment (bad key, unknown model) are metered as "unknown".
       const unrouted = id === 'unknown';
       const label = unrouted ? 'Unrouted requests' : (dep?.name ?? filterSeries(usage, 'requests', (l) => l.deployment_id === id)[0]?.labels.deployment ?? id);
@@ -82,7 +81,7 @@ export function TopModelsCard({ usage, deployments, rangeLabel }: { usage: Metri
         sublabel: dep ? `${engineLabel(dep.engine)} · ${dep.readyReplicas}/${dep.replicas} ready` : unrouted ? 'no deployment matched' : undefined,
         value: requests,
         valueLabel: `${formatCompact(requests, 1)} req`,
-        extraLabel: `${formatCompact(tokens, 1)} tok · ${formatUsd(cost)}`,
+        extraLabel: `${formatCompact(tokens, 1)} tok`,
         href: unrouted ? undefined : `/deployments/${id}`,
       };
     })

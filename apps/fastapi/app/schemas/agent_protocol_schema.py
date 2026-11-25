@@ -71,6 +71,7 @@ EventKind = Literal[
     "cert_rotated",
     "cert_expiring",
     "egress_blocked",
+    "ingress_rejected",
     "ssh_instance_state_changed",
     "log",
 ]

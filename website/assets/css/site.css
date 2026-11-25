@@ -73,7 +73,7 @@
   --tok-string: #a6a8b0;
   --tok-flag: #d9d8d4;
   --tok-num: #e8b083;
-  --tok-comment: #6f727b;
+  --tok-comment: #7d808a;
 
   --shadow-lg: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 40px 100px -40px rgba(0, 0, 0, 0.9);
   --shadow-md: 0 16px 40px -20px rgba(0, 0, 0, 0.8);
@@ -127,7 +127,7 @@
   --tok-string: #4d5058;
   --tok-flag: #2a2b30;
   --tok-num: #8a4b12;
-  --tok-comment: #8e9099;
+  --tok-comment: #6b6e76;
   --shadow-lg: 0 0 0 1px rgba(17, 18, 21, 0.05), 0 18px 40px -12px rgba(60, 20, 28, 0.16),
     0 50px 100px -30px rgba(60, 20, 28, 0.2);
   --shadow-md: 0 14px 34px -20px rgba(60, 20, 28, 0.22);
@@ -172,7 +172,7 @@
     --tok-string: #4d5058;
     --tok-flag: #2a2b30;
     --tok-num: #8a4b12;
-    --tok-comment: #8e9099;
+    --tok-comment: #6b6e76;
     --shadow-lg: 0 0 0 1px rgba(17, 18, 21, 0.05), 0 18px 40px -12px rgba(60, 20, 28, 0.16),
       0 50px 100px -30px rgba(60, 20, 28, 0.2);
     --shadow-md: 0 14px 34px -20px rgba(60, 20, 28, 0.22);
@@ -871,6 +871,21 @@ kbd {
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+.hero-kicker {
+  display: block;
+  margin-bottom: 20px;
+  font-family: var(--font-mono);
+  font-size: clamp(0.7rem, 0.66rem + 0.2vw, 0.8rem);
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  -webkit-text-fill-color: var(--accent-text);
+}
+.hero-kicker > span {
+  white-space: nowrap;
+}
 .lead {
   max-width: 58ch;
   margin: 26px 0 0;
@@ -1087,6 +1102,10 @@ kbd {
   font-weight: 400;
   color: var(--line-strong);
 }
+.strip-more {
+  margin: 2px 0 0;
+  font-size: 0.92rem;
+}
 .strip-row .label {
   flex: none;
   width: 120px;
@@ -1194,6 +1213,224 @@ kbd {
 }
 .positioning strong {
   color: var(--text);
+}
+
+/* what makes it different */
+.diff {
+  margin-top: clamp(40px, 5vw, 56px);
+}
+.diff-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.diff-card {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  transition: border-color 0.2s var(--ease);
+}
+.diff-card:hover {
+  border-color: var(--line-strong);
+}
+.diff-card .icon-tile {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 0 var(--line-soft) inset;
+}
+.diff-card .icon-tile .icon {
+  width: 18px;
+  height: 18px;
+}
+.diff-card h4 {
+  margin: 16px 0 8px;
+  font-size: 1.02rem;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+.diff-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-2);
+}
+
+/* ------------------------------------------------------------------ ecosystem */
+.eco {
+  display: grid;
+  gap: 12px;
+}
+.eco-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.eco-row-apis-models {
+  grid-template-columns: minmax(0, 34fr) minmax(0, 66fr);
+}
+.eco-row-accelerators-runs {
+  grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
+}
+.eco-box {
+  padding: 18px 20px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.eco-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 14px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.eco-label .icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-2);
+}
+.eco-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.eco-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 0.93rem;
+  font-weight: 550;
+  line-height: 1.3;
+  color: var(--text);
+}
+.eco-chips li.ok::before,
+.eco-dot {
+  content: "";
+  flex: none;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+/* partial: ran on real hardware with known gaps (an amber ring, left half filled) */
+.eco-chips li.partial::before,
+.eco-dot.partial {
+  content: "";
+  flex: none;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, var(--warn) 50%, transparent 50%);
+  box-shadow: inset 0 0 0 1.3px var(--warn);
+}
+.eco-legend .eco-dot.partial {
+  margin-left: 6px;
+}
+.eco-note {
+  margin: 12px 0 0;
+  font-size: 0.88rem;
+  color: var(--text-3);
+}
+/* GPU Deck itself: a dark slab in both themes, lit crimson from the top left */
+.eco-core {
+  position: relative;
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px 24px;
+  margin: 4px 0;
+  padding: 22px 24px;
+  border: 1px solid rgba(211, 38, 63, 0.55);
+  border-radius: 14px;
+  background: radial-gradient(80% 160% at 16% 0%, rgba(211, 38, 63, 0.3), transparent 70%), #1b1c20;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.eco-core::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 26px;
+  right: 26px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: #d3263f;
+}
+.eco-core-id {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+}
+.eco-core-id img {
+  display: block;
+  width: 123px;
+  height: 34px;
+}
+.eco-core-id span {
+  font-size: 0.84rem;
+  color: #a1a3ab;
+}
+.eco-core .eco-chips li {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  color: #f2f1ee;
+}
+.eco-legend {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-2);
+}
+.eco-legend .eco-dot {
+  margin-right: 8px;
+  vertical-align: 0.06em;
+}
+.eco-legend b {
+  color: var(--text);
+  font-weight: 600;
+}
+.eco-legend a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* The slab is ink on the light page (the lockup on it stays the dark-surface one). */
+:root[data-theme="light"] .eco-core {
+  border-color: #111215;
+  background: radial-gradient(80% 160% at 16% 0%, rgba(211, 38, 63, 0.26), transparent 70%), #111215;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .eco-core {
+    border-color: #111215;
+    background: radial-gradient(80% 160% at 16% 0%, rgba(211, 38, 63, 0.26), transparent 70%), #111215;
+  }
 }
 
 /* ------------------------------------------------------------------ architecture */
@@ -1503,6 +1740,69 @@ kbd {
   margin: 0;
   font-size: 0.91rem;
   color: var(--text-2);
+}
+
+/* where it runs */
+.runs {
+  margin-top: clamp(48px, 6vw, 72px);
+}
+.runs-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+  margin-bottom: 18px;
+}
+.runs-head h3 {
+  margin: 0;
+  font-size: clamp(1.35rem, 1.1rem + 0.8vw, 1.7rem);
+  letter-spacing: -0.03em;
+}
+.runs-head p {
+  margin: 0;
+  color: var(--text-2);
+}
+.runs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.runs-grid li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 4px 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.runs-grid .icon {
+  grid-row: span 2;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  color: var(--text);
+}
+.runs-grid b {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.runs-grid span {
+  font-size: 0.91rem;
+  color: var(--text-2);
+}
+.runs-note {
+  margin: 14px 0 0;
+  font-size: 0.88rem;
+  color: var(--text-3);
+}
+.runs-note a {
+  color: var(--text-2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 /* ------------------------------------------------------------------ feature chapters */
@@ -2086,7 +2386,12 @@ pre .f {
   color: var(--text);
 }
 .callout p {
+  min-width: 0;
   margin: 0;
+}
+.callout code {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* ------------------------------------------------------------------ hardware */
@@ -2101,6 +2406,9 @@ pre .f {
   border-radius: var(--radius);
   background: var(--card);
   overflow: hidden;
+}
+.table-card-wide {
+  grid-column: 1 / -1;
 }
 .table-card h3 {
   display: flex;
@@ -2174,10 +2482,15 @@ td {
   border-color: color-mix(in srgb, var(--ok) 40%, transparent);
   background: color-mix(in srgb, var(--ok) 10%, transparent);
 }
-.badge.pending {
+.badge.partial {
   color: var(--warn-text);
   border-color: color-mix(in srgb, var(--warn) 40%, transparent);
   background: color-mix(in srgb, var(--warn) 9%, transparent);
+}
+.badge.pending {
+  color: var(--text-2);
+  border-color: var(--line-strong);
+  background: var(--surface);
 }
 .hw-note {
   display: flex;
@@ -2473,46 +2786,6 @@ td {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-}
-.docs-search,
-.dh-search {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  width: 280px;
-  max-width: 100%;
-  height: 36px;
-  padding: 0 7px 0 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 9px;
-  background: var(--card);
-  color: var(--text-3);
-  font: inherit;
-  font-size: 0.88rem;
-  cursor: pointer;
-  transition: border-color 0.15s var(--ease), color 0.15s var(--ease);
-}
-.docs-search:hover,
-.dh-search:hover {
-  border-color: color-mix(in srgb, var(--text) 30%, var(--line-strong));
-  color: var(--text-2);
-}
-.docs-search .icon,
-.dh-search .icon {
-  width: 15px;
-  height: 15px;
-}
-.docs-search kbd,
-.dh-search kbd {
-  margin-left: auto;
-}
-.docs-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 .doc {
   position: relative;
@@ -3025,6 +3298,9 @@ td {
 }
 
 @media (max-width: 1100px) {
+  .diff-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
   .hero-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 40px;
@@ -3070,6 +3346,15 @@ td {
 }
 
 @media (max-width: 960px) {
+  .eco-row-apis-models,
+  .eco-row-accelerators-runs,
+  .eco-core {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .diff-grid,
+  .runs-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .nav {
     position: absolute;
     top: 100%;
@@ -3140,6 +3425,26 @@ td {
 }
 
 @media (max-width: 640px) {
+  .hero-kicker > span:not(.sep) {
+    display: block;
+  }
+  .hero-kicker .sep {
+    display: none;
+  }
+  .diff-grid,
+  .runs-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .eco-box {
+    padding: 16px 16px 18px;
+  }
+  .eco-core {
+    padding: 20px 18px;
+  }
+  .eco-chips li {
+    padding: 5px 10px;
+    font-size: 0.88rem;
+  }
   body {
     font-size: 1rem;
   }
@@ -3257,11 +3562,6 @@ td {
   .step-num {
     width: 30px;
     height: 30px;
-  }
-  .docs-search,
-  .docs-actions,
-  .docs-actions .btn {
-    width: 100%;
   }
   .search-dialog {
     margin-top: 8px;

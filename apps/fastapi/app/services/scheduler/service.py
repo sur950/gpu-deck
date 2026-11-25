@@ -4,7 +4,9 @@ plus the latest observed GPU memory from the live metrics cache) and runs the
 pure core in ``app.services.scheduler.core``.
 
 Used by ``DeploymentService`` (reconciliation, previews, ``place_instance``)
-and available to the automation services (rules / layouts / swaps)::
+and available to the automation services (rules / layouts / swaps). ``plan`` adds the
+network input (RTT per API-layer region and the deployment's traffic per region,
+``app.services.latency.placement``) unless the request already carries one::
 
     plan = await SchedulerService.for_session(db).plan(request, cluster_id=...)
     victims = await SchedulerService.for_session(db).evictions(request, "normal")
@@ -12,6 +14,7 @@ and available to the automation services (rules / layouts / swaps)::
 
 from __future__ import annotations
 
+import copy
 import uuid
 from typing import Dict, List, Optional, Sequence
 
@@ -85,6 +88,13 @@ class SchedulerService:
             if nodes is not None
             else await self.snapshot(request.cluster_id, exclude_instance_ids)
         )
+        if request.latency is None:
+            from app.services.latency.placement import load_context
+
+            context = await load_context(request.deployment_id)
+            if context is not None:
+                request = copy.copy(request)
+                request.latency = context
         return place(snapshot, request)
 
     async def evictions(

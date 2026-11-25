@@ -30,7 +30,6 @@ const STATIC: Screen[] = [
   { name: 'obs-inference', path: '/observability/inference' },
   { name: 'obs-infra', path: '/observability/infra' },
   { name: 'obs-logs', path: '/observability/logs' },
-  { name: 'obs-traces', path: '/observability/traces' },
   { name: 'clusters', path: '/clusters' },
   { name: 'clusters-new', path: '/clusters/new' },
   { name: 'nodes', path: '/nodes' },
@@ -57,10 +56,6 @@ const STATIC: Screen[] = [
   { name: 'api-keys', path: '/api-keys' },
   { name: 'api-keys-new', path: '/api-keys/new' },
   { name: 'credentials', path: '/credentials' },
-  { name: 'metering', path: '/metering' },
-  { name: 'billing', path: '/billing' },
-  { name: 'billing-plans', path: '/billing?tab=plans' },
-  { name: 'billing-reports', path: '/billing/reports' },
   { name: 'alerts', path: '/alerts' },
   { name: 'ip-rules', path: '/ip-rules' },
   { name: 'audit-log', path: '/audit-log' },
@@ -94,8 +89,6 @@ async function detailScreens(): Promise<Screen[]> {
     credential: await firstId(api, '/vault?page_size=1'),
     gpuInstance: await firstId(api, '/gpu-instances?page_size=1'),
     cloud: await firstId(api, '/cloud/nodes?page_size=1'),
-    report: await firstId(api, '/billing/reports?page_size=1'),
-    trace: await firstId(api, '/traces?limit=1', 'trace_id'),
   };
   await api.dispose();
   const out: Screen[] = [];
@@ -117,8 +110,6 @@ async function detailScreens(): Promise<Screen[]> {
   add(ids.credential, 'credential-detail', `/credentials/${ids.credential}`);
   add(ids.gpuInstance, 'gpu-instance-detail', `/gpu-instances/${ids.gpuInstance}`);
   add(ids.cloud, 'cloud-detail', `/cloud/${ids.cloud}`);
-  add(ids.report, 'billing-report', `/billing/reports/${ids.report}`);
-  add(ids.trace, 'trace-detail', `/observability/traces/${ids.trace}`);
   return out;
 }
 

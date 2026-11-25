@@ -14,7 +14,6 @@ resource "gpudeck_cluster" "office" {
   type             = "bare_metal"
   description      = "Rack in the Bengaluru office"
   region           = "blr"
-  price_plan_id    = gpudeck_price_plan.standard.id
   egress_allowlist = ["huggingface.co:443", "cdn-lfs.huggingface.co:443"]
   labels = {
     site = "blr"
@@ -31,12 +30,11 @@ resource "gpudeck_cluster" "office" {
 
 ### Optional
 
-- `config` (String, JSON) Provider settings: kubernetes {namespace, kubeconfig_credential_id}, cloud {vpc, subnet, instance_types, ssh_key_credential_id}. JSON-encoded (use `jsonencode`).
+- `config` (String, JSON) Provider settings: kubernetes {namespace, kubeconfig_credential_id}, cloud {vpc, subnet, instance_types, ssh_key_credential_id}; node_security {proxy_allowed_source_cidrs, ssh_default_allowed_cidrs}; agent_updates {mode = manual | auto, window = {days = [mon..sun], start = HH:MM, end = HH:MM, timezone}} (agent self-update: auto runs a rolling update inside the maintenance window). JSON-encoded (use `jsonencode`).
 - `credential_id` (String) Vault credential used to provision machines (cloud / Kubernetes).
 - `description` (String) Free-form description.
 - `egress_allowlist` (List of String) host:port destinations nodes may reach besides the control plane.
 - `labels` (Map of String) Labels.
-- `price_plan_id` (String) Price plan for usage on this cluster (nodes may override).
 - `region` (String) Region or site label.
 - `status` (String) active or disabled. One of: `active`, `disabled`.
 

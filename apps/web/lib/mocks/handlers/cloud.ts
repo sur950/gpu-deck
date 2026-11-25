@@ -688,23 +688,4 @@ registerMockHandlers('cloud', [
       return ok(advance(r));
     },
   },
-  {
-    method: 'POST',
-    path: '/cloud/nodes/:cloud_node_id/apply-price-plan',
-    handle: (req) => {
-      const r = rec(req);
-      if (!r) return notFound('Cloud node');
-      const vm = advance(r);
-      if (!vm.price_plan_suggestion || !vm.node_id) return fail(409, 'CONFLICT', vm.node_id ? 'The provider has no list price for this type' : 'The VM has not joined yet');
-      const s = vm.price_plan_suggestion;
-      let plan = fleetStore.pricePlans.find((p) => p.name === s.name);
-      if (!plan) {
-        plan = { ...fleetStore.pricePlans[0], id: newId('price-plan'), name: s.name, description: `List price ${s.source ?? ''}`.trim(), is_default: false, usd_per_gpu_minute: s.usd_per_gpu_minute ?? 0, created_at: iso(Date.now()), updated_at: iso(Date.now()) };
-        fleetStore.pricePlans.push(plan);
-      }
-      const node = fleetStore.nodes.find((n) => n.id === vm.node_id);
-      if (node) node.price_plan_id = plan.id;
-      return ok(vm);
-    },
-  },
 ]);

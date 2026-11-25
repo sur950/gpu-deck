@@ -54,8 +54,19 @@ ServiceMonitors, dashboards and alert rules. Set `networkPolicy.*CIDRs`,
 
 ### GPU machines
 
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/node-join-dark.svg">
+    <img src="diagrams/node-join-light.svg" alt="How a GPU machine joins, as a sequence between you, the control plane and the GPU machine: 1 create a join token (Nodes, Add node); 2 the token and install command are shown once; 3 run the install command on the machine; 4 it fetches the control plane's CA, checks the pinned sha256, and fetches the agent; 5 the agent generates a key and a CSR; 6 it joins with the token and the CSR; 7 the control plane signs the node certificate and the token is used up; 8 the agent dials out over mutual TLS and says hello; 9 a config push follows and the node is online; then, while connected, heartbeats, metrics and inventory go up and commands come back on the same socket." width="880">
+  </picture>
+</p>
+
 Create a join token (Nodes → Add node, or `POST /api/v1/nodes/join-tokens`, TTL 15 min, one use)
 and run the shown snippet on the machine:
+
+![Add a node: a one-time join token for a cluster, with the install command to run on the GPU machine](screenshots/nodes-join.svg)
+
+*Nodes, Add node: the one-time token and the command to run on the GPU machine.*
 
 ```bash
 # Linux (systemd) / macOS (launchd): the UI shows the exact snippet; the script comes from the
@@ -85,11 +96,35 @@ required. See [DEVELOPMENT.md](DEVELOPMENT.md).
    Helm: `helm upgrade` (the migration hook runs `alembic upgrade head` before pods roll).
 4. Migrations are additive and run in one linear alembic chain; API layer replicas keep serving
    from the routing table while the control plane restarts. Agents reconnect automatically and
-   replay pending commands; agent binaries are upgraded per node from the agent download endpoint
+   replay pending commands. Agents update from the control plane once `AGENT_RELEASE_PUBLIC_KEYS`
+   is set (see *Agent updates* below); without it, per node from the agent download endpoint
    (`/agent/v1/downloads/{version}/{target}`) or the offline bundle.
 5. Verify: `/api/v1/health/ready`, serving `/health`, Fleet screen shows every node online.
 
-Downgrades are not supported across a migration; restore the backup instead.
+> [!WARNING]
+> Downgrades are not supported across a migration; restore the backup instead.
+
+### Agent updates
+
+Setup (release signing key, `AGENT_RELEASE_PUBLIC_KEYS`, the update helper):
+[DEPLOYMENT.md](DEPLOYMENT.md#agent-updates-and-the-release-signing-key). Day to day:
+
+- **Nodes** shows each node's agent version and *Update available* / *Update ready* (staged) /
+  *Updating* / *Update manually* / *Managed by Helm*. The node page's *Agent updates* card has the
+  **Update** button and the live steps: staged, swapping, restarting, re-adopting engines, health
+  check, done or rolled back.
+- **Clusters** has **Rolling update** (one node at a time, stops at the first rollback) and the
+  policy: manual, or automatic inside a maintenance window.
+- CLI: `gpudeck nodes agent-update <node>`, `gpudeck nodes update-agent <node>`,
+  `gpudeck clusters rolling-update <cluster>`, `gpudeck clusters agent-update-policy <cluster>`,
+  `gpudeck agent updates`, `gpudeck agent update-runs list`.
+- On a node: `gpudeck-agent update status`; the helper's log is
+  `journalctl -u gpudeck-agent-update` (Linux) or `<state_dir>/update/helper.log` (macOS); the
+  binary kept for rollback is `<binary>.prev`. To roll back by hand later: stop the service,
+  rename `.prev` over the binary, start it.
+- A rolled-back update raises the alert `node.agent_update_rolled_back` (the run shows why); a
+  node that cannot update shows the reason (no update helper, `update_helper = "off"`, binary
+  not writable).
 
 ## 3. Backup and restore
 
@@ -128,7 +163,7 @@ reconnect with their existing certificates (same CA). Sessions are invalidated b
 | --- | --- |
 | `VAULT_KEYS` | Prepend a new Fernet key (`NEW,OLD`), restart all processes. The hourly `vault.rotate_keys` job re-encrypts every credential still on an old key (audit `vault.keys_rotated`); once it reports 0 remaining, drop the old key and restart |
 | `SECRET_KEY` | Changing it invalidates every session and the admin seed hash; rotate during a maintenance window (admins log in again) |
-| `ADMIN_PASSWORD` | Change in the UI (Account) or change `.env`: the seed re-applies only when the `.env` value changed (`HMAC(SECRET_KEY, password)` comparison) |
+| `ADMIN_PASSWORD` | Change in the UI (Account) or change `.env`: the seed re-applies only when the `.env` value changed (compares a scrypt fingerprint salted from `SECRET_KEY`) |
 | API keys | Rotate per key (`POST /api-keys/{id}/rotate` shows the new `gd-…` key once); revocation is immediate on every API layer process (pub/sub `gpu-deck:apikeys:invalidate`) |
 | Cloud / HF / SMTP / webhook credentials | Update the vault credential; caches are dropped on write |
 | Join tokens | One use, 15-minute TTL; revoke unused ones from the Nodes screen |
@@ -161,7 +196,9 @@ sudo ./install-agent.sh --hub https://hub:8443 --token gdj_…               # e
 ```
 
 Point `HF_ENDPOINT` / `MODELSCOPE_ENDPOINT` at the site mirror (pushed to every agent) or use
-local model files (Catalog → Add a model → scan a local path).
+local model files (Catalog → Add a model → scan a local path). Agent updates work offline too:
+the signed release manifest next to the archives in `AGENT_DIST_DIR` plus
+`AGENT_RELEASE_PUBLIC_KEYS` (DEPLOYMENT.md section 7).
 
 ## 8. Troubleshooting
 
@@ -170,16 +207,17 @@ local model files (Catalog → Add a model → scan a local path).
 | Node stays `pending` / `offline` | Agent logs (`journalctl -u gpudeck-agent` / `log show --predicate 'process == "gpudeck-agent"'`); can the machine reach `AGENT_HUB_PUBLIC_URL:8443`? Clock skew breaks TLS. Hub logs show close codes: 4001 identity mismatch, 4002 schema error, 4003 rejected/revoked |
 | Join fails `JOIN_TOKEN_INVALID/EXPIRED` | The token is used up (one-time tokens join one machine, multi-use ones `max_uses`), revoked or expired (15 min by default); create a new one |
 | Serving 503 `model_not_ready` | Deployment has no ready instance; Deployments → instance state/logs; `SERVING_NO_INSTANCE_WAIT_SECONDS` |
-| Serving 502 `upstream_error` | API layer cannot reach the node proxy :9443 (firewall, `API_LAYER_CLIENT_CERT_PATH`, revoked cert); instance ejected for `SERVING_EJECT_SECONDS` |
+| Serving 502 `upstream_error` | Tunnel mode: the node has no open tunnel to that API-layer worker (outbound 8444+ blocked, `AGENT_TUNNEL_LISTENERS` below the worker count; serving `/health` → `agent_tunnels`). Direct mode: the API layer cannot reach the node proxy :9443 (its address not in the cluster's `proxy_allowed_source_cidrs`, firewall, `API_LAYER_CLIENT_CERT_PATH`, revoked cert). The instance is ejected for `SERVING_EJECT_SECONDS`; `gpudeck-agent security audit` / `firewall status` on the node |
+| Slow first token or slow responses | Read the response's `Server-Timing` (or Observability › Inference › Where the time went): large `queue` = no replica ready or retries; large `connect` = cold connections (pools or tunnels dropping); large `net` / `rtt` = the API layer is far from the node (Node › Network; run an API layer in the node's region, [DEPLOYMENT.md](DEPLOYMENT.md#network-latency-keep-the-api-layer-close-to-the-gpus)); large `engine` = the model or its queue |
 | Serving 401 `invalid_api_key` | Key revoked / mistyped; keys are `gd-` + 48 hex; check Audit for `api_key.auth_failed` |
 | Serving 403 `ip_blocked` | IP rules scope `api_layer` / `GATEWAY_IP_ALLOWLIST`; behind a proxy set `TRUSTED_PROXIES` so `X-Forwarded-For` is believed |
 | Admin locked out by an IP rule | Remove the rule from the DB (`UPDATE ip_rules SET enabled=false WHERE …`) and flush `gpu-deck:ip_rules:*`; the API refuses rules that would block the caller |
 | Login keeps failing | Lockout after `AUTH_LOCKOUT_ATTEMPTS` for `AUTH_LOCKOUT_MINUTES`; the message shows the remaining time |
-| Usage / billing empty | Celery worker running and consuming `metering` + `billing`? `metering.rollup` runs hourly (current hour every 5 min) |
+| Request and token counts empty (dashboard, API keys) | Celery worker running and consuming `metering`? `metering.rollup` runs hourly (current hour every 5 min) |
 | Rules never fire | Scheduler running and a replica holding the leases (`gpudeck_jobs_leader` = 1, `ha_leases` table); rule enabled and not in `dry_run`; see Rule → runs |
 | `generated_models.py` stale (CI) | `apps/fastapi/app/db/postgres/scripts/generate_models.sh` and commit |
 | Env drift (CI) | `python scripts/check_env_docs.py --write`, then document new rows in env.md |
 | Slow serving | `gpudeck_serving_ttfb_seconds` vs `gpudeck_engine_ttft_seconds` (Inference dashboard): the difference is API layer + network |
 
 Logs: every process logs to stdout (loguru; `LOG_FORMAT=json` for aggregation). Request ids
-(`X-Request-ID`) tie admin audit entries, serving usage rows and traces together.
+(`X-Request-ID`) tie admin audit entries and serving usage rows together.

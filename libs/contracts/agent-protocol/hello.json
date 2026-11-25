@@ -69,13 +69,16 @@
       "properties": {
         "port": { "type": "integer", "minimum": 1, "maximum": 65535, "default": 9443 },
         "address": { "type": ["string", "null"], "description": "Advertised host for the API layer when it differs from the connection source (NAT, Kubernetes service)." },
-        "cert_fingerprint_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "Fingerprint of the client cert the agent is presenting (sanity check vs node_certificates)." }
+        "cert_fingerprint_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "Fingerprint of the client cert the agent is presenting (sanity check vs node_certificates)." },
+        "mode": { "type": "string", "enum": ["tunnel", "direct"], "description": "How the API layer reaches this node (added 2026-11-24; sent only to a hub that lists the secure_transport feature). tunnel: the agent dials out to the API layer and serves requests over that connection, no inbound port (default). direct: the API layer dials the mTLS proxy on port. Absent = direct (older agents)." },
+        "bind": { "type": ["string", "null"], "description": "Direct mode: the address the proxy listens on (a private interface by default); null in tunnel mode (added 2026-11-24)." }
       },
       "additionalProperties": false
     },
     "config_version": { "type": "integer", "minimum": 0, "default": 0, "description": "Last config_push.config_version the agent applied (0 = none). The hub sends a full push when it differs." },
     "labels": { "type": "object", "additionalProperties": { "type": "string" }, "default": {}, "description": "Labels from the agent config file; merged under node labels set in the UI (UI wins)." },
-    "observed_engines": { "type": "array", "default": [], "items": { "$ref": "common.json#/$defs/ObservedEngine" }, "description": "Observed (external) model servers from agent.toml [[observe]] as last seen (added 2026-11-23); inventory carries the authoritative list." }
+    "observed_engines": { "type": "array", "default": [], "items": { "$ref": "common.json#/$defs/ObservedEngine" }, "description": "Observed (external) model servers from agent.toml [[observe]] as last seen (added 2026-11-23); inventory carries the authoritative list." },
+    "agent_update": { "$ref": "common.json#/$defs/AgentUpdateStatus", "description": "Self-update state (protocol.md §14); sent only to a hub known to list the agent_updates feature." }
   },
   "additionalProperties": false
 }

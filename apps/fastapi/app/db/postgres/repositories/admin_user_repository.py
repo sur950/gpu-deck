@@ -81,6 +81,15 @@ class AdminUserRepository(BaseRepository[AdminUsers]):
         )
         await self.session.flush()
 
+    async def set_env_secret_hash(self, admin_id: uuid.UUID, env_secret_hash: str) -> None:
+        """Rewrite only the .env fingerprint (scheme upgrade; password untouched)."""
+        await self.session.execute(
+            update(AdminUsers)
+            .where(AdminUsers.id == admin_id)
+            .values(env_secret_hash=env_secret_hash)
+        )
+        await self.session.flush()
+
     async def apply_env_seed(
         self,
         admin_id: uuid.UUID,

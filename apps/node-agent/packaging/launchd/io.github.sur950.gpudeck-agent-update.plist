@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- GPU Deck agent self-update helper (agent protocol §14), a root LaunchDaemon in
+/Library/LaunchDaemons: when the agent writes update/request.json it verifies the staged release
+again, swaps /usr/local/bin/gpudeck-agent atomically (keeping gpudeck-agent.prev), restarts the
+agent job, waits for it to reconnect healthy and rolls back otherwise. The installers write it
+with `gpudeck-agent update install-helper`; this copy restarts the system LaunchDaemon. -->
+<plist version="1.0"><dict>
+  <key>Label</key><string>io.github.sur950.gpudeck-agent-update</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/gpudeck-agent</string>
+    <string>--config</string><string>/usr/local/etc/gpudeck/agent.toml</string>
+    <string>update</string><string>apply</string>
+    <string>--restart</string><string>launchd:system/io.github.sur950.gpudeck-agent</string>
+  </array>
+  <key>EnvironmentVariables</key><dict><key>GPUDECK_AGENT_STATE_DIR</key><string>/usr/local/var/gpudeck</string></dict>
+  <key>WatchPaths</key><array><string>/usr/local/var/gpudeck/update/request.json</string></array>
+  <key>StandardOutPath</key><string>/usr/local/var/log/gpudeck-agent-update.log</string>
+  <key>StandardErrorPath</key><string>/usr/local/var/log/gpudeck-agent-update.log</string>
+</dict></plist>

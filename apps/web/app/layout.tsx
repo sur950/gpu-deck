@@ -9,22 +9,22 @@ import { HealthCheckProvider } from "@/context/health-check-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { DynamicFavicon } from "@/components/shared/DynamicFavicon";
 import { ColorModeProvider } from "@/context/color-mode-provider";
-import { APP_NAME, APP_TITLE, DEFAULT_FAVICON, FAVICON_URL } from "@/utils/brand-env";
+import { APP_NAME, APP_TITLE, DEFAULT_FAVICON, FAVICON_URL, versionedIcon } from "@/utils/brand-env";
 
 const jetbrainsMono = JetBrains_Mono({subsets:['latin'],variable:'--font-mono'});
 
 export const metadata: Metadata = {
   title: { default: APP_TITLE, template: `%s · ${APP_NAME}` },
-  description: "GPU control plane: clusters, models, rules, metering and billing for your own hardware",
+  description: "GPU control plane: clusters, models, rules and observability for your own hardware",
   // Favicon from env (the GPU Deck mark by default); DynamicFavicon probes it on the client.
   icons:
     FAVICON_URL === DEFAULT_FAVICON
       ? {
           icon: [
-            { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
-            { url: "/favicon.svg", type: "image/svg+xml" },
+            { url: versionedIcon("/favicon.ico"), sizes: "16x16 32x32 48x48" },
+            { url: versionedIcon("/favicon.svg"), type: "image/svg+xml" },
           ],
-          apple: "/apple-touch-icon.png",
+          apple: versionedIcon("/apple-touch-icon.png"),
         }
       : { icon: FAVICON_URL, apple: FAVICON_URL },
 };

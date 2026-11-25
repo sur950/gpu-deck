@@ -73,14 +73,16 @@ impl CommandRunner {
         let path = paths.commands_json();
         let mut store = CommandStore::load(&path);
         // Commands that were running when the agent stopped can never finish: fail them so the
-        // hub gets a terminal result for every id.
+        // hub gets a terminal result for every id. `apply_update` restarts the agent on purpose:
+        // the update module (`update.rs`) finishes it from the applier's result.
         let stale: Vec<Uuid> = store
             .records
             .values()
             .filter(|r| {
-                r.last_result
-                    .as_ref()
-                    .is_none_or(|x| !x.status.is_terminal())
+                r.command != "apply_update"
+                    && r.last_result
+                        .as_ref()
+                        .is_none_or(|x| !x.status.is_terminal())
             })
             .map(|r| r.id)
             .collect();
@@ -145,6 +147,46 @@ impl CommandRunner {
 
     pub fn last_result(&self, id: Uuid) -> Option<CommandResult> {
         self.store().get(id).and_then(|r| r.last_result.clone())
+    }
+
+    /// Ids of `command` records without a terminal result (e.g. an `apply_update` that
+    /// restarted the agent).
+    pub fn unfinished(&self, command: &str) -> Vec<Uuid> {
+        self.store()
+            .records
+            .values()
+            .filter(|r| {
+                r.command == command
+                    && r.last_result
+                        .as_ref()
+                        .is_none_or(|x| !x.status.is_terminal())
+            })
+            .map(|r| r.id)
+            .collect()
+    }
+
+    /// Record a terminal result for a command finished outside the runner (an `apply_update`
+    /// completed by the next agent process). Persisted; delivered now or after the next
+    /// `hello_ack` like any other terminal result. False when the id is unknown or already
+    /// terminal.
+    pub fn complete(&self, agent: &Agent, id: Uuid, res: CommandResult) -> bool {
+        {
+            let s = self.store();
+            match s.get(id) {
+                Some(r)
+                    if r.last_result
+                        .as_ref()
+                        .is_some_and(|x| x.status.is_terminal()) =>
+                {
+                    return false
+                }
+                Some(_) => {}
+                None => return false,
+            }
+        }
+        self.record(id, &res, true);
+        agent.outbox.result(id, res);
+        true
     }
 
     fn record(&self, id: Uuid, res: &CommandResult, persist: bool) {
@@ -338,6 +380,8 @@ async fn execute(agent: &Arc<Agent>, ctx: &Ctx, kind: CommandKind) -> Result<Val
         }
         CommandKind::StartSshInstance(a) => agent.start_ssh_instance(ctx, a).await,
         CommandKind::StopSshInstance(a) => agent.stop_ssh_instance(ctx, a).await,
+        CommandKind::StageUpdate(a) => crate::update::stage(agent, ctx, a).await,
+        CommandKind::ApplyUpdate(a) => crate::update::apply(agent, ctx, a).await,
     }
 }
 

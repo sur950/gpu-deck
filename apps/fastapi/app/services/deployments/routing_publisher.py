@@ -68,7 +68,18 @@ def _iso(value: Any) -> Optional[str]:
     return str(value)
 
 
+TUNNEL_SCHEME = "tunnel://"
+
+
 def proxy_url(node: Any) -> Optional[str]:
+    """
+    Where the API layer reaches a node: ``tunnel://<node_id>`` when the agent serves over its
+    outbound tunnel (protocol.md §13, the default; no inbound port on the node), else the
+    direct-mode proxy ``https://<proxy_address>:<proxy_port>``.
+    """
+    meta = getattr(node, "metadata_", None) or {}
+    if isinstance(meta, dict) and meta.get("serving_mode") == "tunnel":
+        return f"{TUNNEL_SCHEME}{node.id}"
     host = getattr(node, "proxy_address", None) or getattr(node, "ip_address", None)
     host = str(host) if host else getattr(node, "hostname", None)
     if not host:

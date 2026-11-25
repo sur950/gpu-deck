@@ -1,6 +1,6 @@
 /**
  * Fleet API — clusters, nodes, join tokens, devices, slices, certificates,
- * plus the vault credentials and price plans the cluster form picks from.
+ * plus the vault credentials the cluster form picks from.
  *
  * Paths are relative to NEXT_PUBLIC_API_URL (…/api/v1) and follow
  * libs/contracts/openapi/admin.yaml. Single resources go through the shared
@@ -42,7 +42,6 @@ import type {
   NodeListParams,
   NodeScanRequest,
   NodeUpdate,
-  PricePlan,
   RevokeRequest,
 } from '@/types/fleet';
 
@@ -178,8 +177,7 @@ export function agentDownloadUrl(build: Pick<AgentBuild, 'version' | 'target' | 
   return `${getGatewayUrl()}${build.download_path ?? `/agent/downloads/${build.version}/${build.target}`}`;
 }
 
-// ─── Pickers (vault credentials, price plans) ─────────────────────────────────
+// ─── Pickers (vault credentials) ──────────────────────────────────────────────
 
 export const listCredentials = (params: { type?: string; status?: string; page_size?: number } = {}) =>
   apiList<Credential>('/vault', clean({ page_size: 200, ...params }));
-export const listPricePlans = () => apiList<PricePlan>('/price-plans', { page_size: 200 });

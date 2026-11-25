@@ -172,6 +172,8 @@ async fn agent_against_fake_hub() {
     let dir = tempfile::tempdir().unwrap();
     let cfg_path = dir.path().join("agent.toml");
     let mut cfg = AgentConfig {
+        // Tests never program the host firewall.
+        firewall: "off".into(),
         state_dir: dir.path().join("state"),
         // Short idle-router grace so the idle stop is observable below.
         router_idle_stop_seconds: 2,
@@ -404,6 +406,26 @@ async fn agent_against_fake_hub() {
     assert_eq!(r.headers()["x-gpudeck-instance"], inst.to_string());
     assert_eq!(r.headers()["x-gpudeck-node"], node.to_string());
     assert_eq!(r.headers()["x-request-id"], req_id.as_str());
+    // The node's share of the request, for the API layer's Server-Timing (serving.md §10).
+    let timing = r.headers()["x-gpudeck-proxy-timing"]
+        .to_str()
+        .unwrap()
+        .to_owned();
+    let durations: Vec<(&str, f64)> = timing
+        .split(", ")
+        .map(|part| {
+            let (name, dur) = part.split_once(";dur=").expect("name;dur=ms");
+            (name, dur.parse::<f64>().expect("milliseconds"))
+        })
+        .collect();
+    assert_eq!(
+        durations.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
+        ["queue", "engine", "node"]
+    );
+    assert!(
+        durations[2].1 >= durations[1].1,
+        "node time includes the engine's: {timing}"
+    );
     let body: Value = r.json().await.unwrap();
     assert_eq!(
         body["model"], "tiny-q4",

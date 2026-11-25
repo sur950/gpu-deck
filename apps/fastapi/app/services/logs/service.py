@@ -75,7 +75,9 @@ class LogService:
         self.repo = LogRepository(session)
 
     @staticmethod
-    async def as_dependency(request: Request, db: AsyncSession = Depends(get_db)) -> "LogService":
+    async def as_dependency(
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
+    ) -> "LogService":
         return LogService(db)
 
     async def query(

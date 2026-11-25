@@ -3,7 +3,15 @@
  * multi-use enrolment token yields one DaemonSet for the whole pool.
  */
 import { describe, expect, it } from 'vitest';
-import { downloadSteps, kubernetesSteps, linuxSteps, type InstallContext } from '@/components/fleet/install-commands';
+import {
+  downloadSteps,
+  joinOptionFlags,
+  kubernetesSteps,
+  linuxSteps,
+  macosSteps,
+  withInstallOptions,
+  type InstallContext,
+} from '@/components/fleet/install-commands';
 
 const ctx: InstallContext = {
   hubUrl: 'https://hub.example.com:8443',
@@ -37,5 +45,28 @@ describe('install steps', () => {
     expect(pool).toContain("--set-string 'nodeAgent.labels.pool=a'");
     const single = kubernetesSteps({ ...ctx, nodeName: 'gpu-1' }).map((s) => s.code).join('\n');
     expect(single).toContain('gpudeck-agent-gpu-1');
+  });
+
+  it('defaults to the outbound tunnel with the host firewall applied and verified', () => {
+    const linux = linuxSteps(ctx).map((s) => s.code).join('\n');
+    expect(linux).not.toContain('--serving-mode');
+    expect(linux).toContain('firewall apply');
+    expect(linux).toContain('firewall status');
+    expect(linux).toContain('AmbientCapabilities=CAP_NET_ADMIN');
+    expect(macosSteps(ctx).map((s) => s.code).join('\n')).toContain('sudo /usr/local/bin/gpudeck-agent firewall apply');
+  });
+
+  it('adds the direct mode and the firewall opt-out to every command', () => {
+    const linux = linuxSteps({ ...ctx, servingMode: 'direct', firewall: false }).map((s) => s.code).join('\n');
+    expect(linux).toContain('--serving-mode direct');
+    expect(linux).toContain('--no-firewall');
+    expect(linux).not.toContain('firewall apply');
+    expect(linux).not.toContain('CAP_NET_ADMIN');
+    expect(joinOptionFlags()).toEqual([]);
+    const one = "sh -c 'curl -fsSL -H \"X-GPUDeck-Join-Token: gdj_x\" https://hub:8443/agent/v1/install.sh | sh'";
+    expect(withInstallOptions(one)).toBe(one);
+    expect(withInstallOptions(one, 'direct')).toContain('/agent/v1/install.sh?mode=direct |');
+    expect(withInstallOptions(one, 'tunnel', false)).toContain('/agent/v1/install.sh?firewall=0 |');
+    expect(withInstallOptions(one, 'direct', false)).toContain('install.sh?mode=direct&firewall=0');
   });
 });

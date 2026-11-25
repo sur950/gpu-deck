@@ -93,6 +93,12 @@ THEME_INIT = (
     "}catch(e){}})();"
 )
 THEME_HASH = "sha256-" + base64.b64encode(hashlib.sha256(THEME_INIT.encode()).digest()).decode()
+# Content hash of the site icons, appended as ?v= to icon links so browsers refetch them after a
+# brand change (favicons are cached very aggressively). index.html and 404.html carry the same
+# stamp; --check fails when they are stale.
+ICON_V = hashlib.sha256(
+    b"".join((SITE / n).read_bytes() for n in ("favicon.svg", "favicon.ico", "apple-touch-icon.png"))
+).hexdigest()[:10]
 
 
 @dataclass(frozen=True)
@@ -124,6 +130,28 @@ NAV: list[tuple[str, str, list[Entry]]] = [
               "The agent on every GPU machine: commands, configuration, packaging, behaviour."),
         Entry("docs/components/fastapi-cloud.md", "cloud-gpu-vms", "Cloud GPU VMs",
               "GPU VMs on AWS, Azure, GCP and DigitalOcean that join their cluster on boot."),
+    ]),
+    ("Hardware & engines", "Which accelerator x engine combinations are supported, and how to prepare each machine.", [
+        Entry("docs/hardware/README.md", "hardware", "Support matrix",
+              "Every accelerator x engine combination, what each engine serves, and verification status."),
+        Entry("docs/hardware/nvidia.md", "hardware-nvidia", "NVIDIA",
+              "Drivers, CUDA builds, MIG/MPS slicing and multi-GPU support, by engine."),
+        Entry("docs/hardware/amd.md", "hardware-amd", "AMD Instinct and Radeon",
+              "ROCm versions, CU-mask slicing and which engines need a ROCm image added."),
+        Entry("docs/hardware/apple-silicon.md", "hardware-apple-silicon", "Apple Silicon",
+              "What's verified on a Mac today: llama.cpp, MLX, mlx-audio and memory-cap slicing."),
+        Entry("docs/hardware/hygon.md", "hardware-hygon", "Hygon DCU",
+              "Status and what runs today; unverified until a hardware report arrives."),
+        Entry("docs/hardware/metax.md", "hardware-metax", "MetaX",
+              "Status and what runs today; unverified until a hardware report arrives."),
+        Entry("docs/hardware/moore-threads.md", "hardware-moore-threads", "Moore Threads",
+              "Status and what runs today; unverified until a hardware report arrives."),
+        Entry("docs/hardware/t-head.md", "hardware-t-head", "T-Head PPU",
+              "Status and what runs today; unverified until a hardware report arrives."),
+        Entry("docs/hardware/cpu.md", "hardware-cpu", "CPU-only",
+              "Running GPU Deck with no accelerator, including the multi-node test setup."),
+        Entry("docs/hardware/engines.md", "hardware-engines", "Engines",
+              "The same ground organised per engine: pins, requirements, metrics, API formats."),
     ]),
     ("Using GPU Deck", "Serve models, automate the fleet and drive it from code.", [
         Entry("libs/contracts/openapi/serving.md", "serving-api", "Serving API",
@@ -206,6 +234,8 @@ class BuildError(Exception):
     pass
 
 
+
+
 def git(*args: str) -> str:
     return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=True).stdout
 
@@ -231,6 +261,29 @@ def git_date(path: str) -> dt.date | None:
         return dt.date.fromisoformat(out) if out else None
     except (OSError, subprocess.CalledProcessError, ValueError):
         return None
+
+
+_image_sizes: dict[str, tuple[float, float] | None] = {}
+
+
+def image_size(path: str) -> tuple[float, float] | None:
+    """Intrinsic size of a repository SVG (its width / height attributes, else its viewBox)."""
+    if path not in _image_sizes:
+        size = None
+        full = ROOT / path
+        if full.suffix.lower() == ".svg" and full.is_file():
+            with full.open(encoding="utf-8", errors="ignore") as fh:
+                tag = re.search(r"<svg\b[^>]*>", fh.read(4096), re.S)
+            if tag:
+                w = re.search(r'\swidth="([\d.]+)(?:px)?"', tag.group(0))
+                h = re.search(r'\sheight="([\d.]+)(?:px)?"', tag.group(0))
+                vb = re.search(r'viewBox="[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)"', tag.group(0))
+                if w and h:
+                    size = (float(w.group(1)), float(h.group(1)))
+                elif vb:
+                    size = (float(vb.group(1)), float(vb.group(2)))
+        _image_sizes[path] = size
+    return _image_sizes[path]
 
 
 def gh_slug(text: str) -> str:
@@ -260,6 +313,77 @@ def clip(text: str, limit: int) -> str:
     if len(text) <= limit:
         return text
     return text[: limit - 1].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+
+
+# ------------------------------------------------------------------------------------ page meta
+# <title>, meta description, Open Graph / Twitter cards, JSON-LD and the sitemap.
+DESC_MIN, DESC_MAX = 110, 158  # a meta description shorter than DESC_MIN takes in the next block
+INLINE_TAGS = r"a|abbr|b|code|em|i|kbd|mark|s|small|span|strong|sub|sup|u|var"
+OG_IMAGE = f"{SITE_URL}assets/brand/og-image.png"
+OG_IMAGE_ALT = "GPU Deck logo and tagline next to a fleet panel of GPUs across three nodes"
+# A <title> for pages whose H1 alone says little in a search result (slug -> title).
+TITLE_OVERRIDES = {
+    "introduction": "Introduction to GPU Deck, the open-source GPU control plane",
+}
+DOCS_HOME_TITLE = "GPU Deck documentation: deploy, serve and automate your GPU fleet"
+DOCS_HOME_DESCRIPTION = ("Deploy the GPU Deck control plane, add GPU machines, serve models through OpenAI, "
+                         "Anthropic and Ollama compatible APIs, and automate the fleet with rules and layouts.")
+
+
+def meta_text(fragment: str) -> str:
+    """Plain text for meta tags: inline markup is dropped without the spaces strip_tags adds."""
+    fragment = re.sub(r"<(script|style|svg|template)\b.*?</\1>", " ", fragment, flags=re.S | re.I)
+    fragment = re.sub(rf"</?(?:{INLINE_TAGS})\b[^>]*>", "", fragment, flags=re.I)
+    return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", fragment))).strip()
+
+
+def clip_sentence(text: str, limit: int = DESC_MAX) -> str:
+    """Clip at the last sentence end that leaves a useful description, else at a word."""
+    if len(text) <= limit:
+        return text
+    cut = max(text.rfind(". ", 0, limit), text.rfind("? ", 0, limit))
+    if cut + 1 >= DESC_MIN:
+        return text[: cut + 1]
+    return clip(text, limit)
+
+
+def describe_body(body: str, fallback: str) -> str:
+    """A page's meta description: its first paragraph, plus the next blocks while it is short."""
+    parts: list[str] = []
+    for m in re.finditer(r"<(p|ul|ol)>(.*?)</\1>", body, re.S):
+        text = meta_text(m.group(2))
+        if len(text) < 20 and not parts:  # a badge row, an image or a one-word line
+            continue
+        parts.append(text)
+        if len(" ".join(parts)) >= DESC_MIN:
+            break
+    text = " ".join(parts).replace(": ", ": ", 1) if parts else fallback
+    return clip_sentence(text) if text else fallback
+
+
+def front_matter(text: str) -> tuple[dict[str, str], str]:
+    """Optional YAML-style front matter (`title:`, `description:` lines between --- fences)."""
+    m = re.match(r"---\n(.*?)\n---\n+", text, re.S)
+    if not m:
+        return {}, text
+    meta = {}
+    for line in m.group(1).splitlines():
+        if ":" in line:
+            key, value = line.split(":", 1)
+            meta[key.strip().lower()] = value.strip().strip("\"'")
+    return meta, text[m.end():]
+
+
+def last_modified(path: str) -> dt.date | None:
+    """Last commit date of a file, or its modification date when it has uncommitted changes."""
+    full = ROOT / path
+    try:
+        dirty = git("status", "--porcelain", "--", path).strip()
+    except (OSError, subprocess.CalledProcessError):
+        dirty = ""
+    if dirty and full.exists():
+        return dt.date.fromtimestamp(full.stat().st_mtime)
+    return git_date(path) or (dt.date.fromtimestamp(full.stat().st_mtime) if full.exists() else None)
 
 
 def attr(value: str) -> str:
@@ -555,6 +679,7 @@ class Builder:
         self.anchor_checks: list[tuple[str, str, str]] = []  # (from source, to source, anchor)
         self.diagram_css: dict[str, str] = {}
         self.media: dict[str, str] = {}
+        self.page_meta: dict[str, dict[str, str]] = {}  # front matter per source
         self.line_offset: dict[str, int] = {}  # README: lines trimmed by source_text()
         self.md = self._markdown()
 
@@ -600,6 +725,7 @@ class Builder:
         md.use(footnote_plugin).use(tasklists_plugin)
         md.core.ruler.push("gpudeck_headings", self._core_headings)
         md.core.ruler.push("gpudeck_alerts", self._core_alerts)
+        md.core.ruler.push("gpudeck_cards", self._core_cards)
         md.add_render_rule("fence", lambda r, *a, f=self._r_fence: f(r, *a))
         md.add_render_rule("code_block", lambda r, *a, f=self._r_fence: f(r, *a))
         md.add_render_rule("link_open", lambda r, *a, f=self._r_link: f(r, *a))
@@ -663,6 +789,39 @@ class Builder:
             if not kids:  # the marker had its own paragraph
                 toks[i + 1].hidden = True
                 toks[i + 3].hidden = True
+
+    CARD_TONES = {"verified": "ok", "partial": "warn", "awaiting": "pending", "not ": "pending"}
+
+    def _core_cards(self, state) -> None:
+        """`<!-- cards -->` right before a bullet list renders the list as summary cards.
+
+        GitHub hides the comment and shows the plain list. Each item reads `**Title**: text`; a title
+        starting with Verified / Partial / Awaiting gets that status colour.
+        """
+        toks = state.tokens
+        for i, tok in enumerate(toks[:-1]):
+            if tok.type != "html_block" or not re.fullmatch(r"\s*<!--\s*cards\s*-->\s*", tok.content):
+                continue
+            if toks[i + 1].type != "bullet_list_open":
+                continue
+            toks[i + 1].attrSet("class", "summary-cards")
+            level = toks[i + 1].level
+            for j in range(i + 2, len(toks)):
+                t = toks[j]
+                if t.type == "bullet_list_close" and t.level == level:
+                    break
+                if t.type != "list_item_open" or t.level != level + 1:
+                    continue
+                inline = next((x for x in toks[j + 1:j + 4] if x.type == "inline"), None)
+                kids = [k for k in (inline.children if inline else []) if k.type != "text" or k.content]
+                if len(kids) > 3 and kids[0].type == "strong_open" and kids[1].type == "text":
+                    title = kids[1].content.lower()
+                    tone = next((v for k, v in self.CARD_TONES.items() if title.startswith(k)), None)
+                    if tone:
+                        t.attrSet("data-tone", tone)
+                    if kids[2].type == "strong_close" and kids[3].type == "text":  # the title is its own line
+                        body = re.sub(r"^\s*[:—-]\s*", "", kids[3].content)
+                        kids[3].content = body[:1].upper() + body[1:]
 
     def _r_quote_open(self, r, tokens, idx, options, env) -> str:
         kind = tokens[idx].meta.get("alert")
@@ -767,8 +926,12 @@ class Builder:
     def _r_image(self, r, tokens, idx, options, env) -> str:
         tok = tokens[idx]
         alt = r.renderInlineAsText(tok.children or [], options, env)
+        local = self.local_path(tok.attrGet("src") or "", env["page"])
+        size = image_size(local) if local else None
         src, srcset = self.img_src(tok.attrGet("src") or "", env)
         parts = [f'src="{attr(src)}"', f'alt="{attr(alt)}"']
+        if size:
+            parts.append(f'width="{round(size[0])}" height="{round(size[1])}"')
         if srcset:
             parts.append(f'srcset="{attr(srcset)}" sizes="(min-width: 1100px) 780px, 92vw"')
         title = tok.attrGet("title")
@@ -777,8 +940,60 @@ class Builder:
         parts.append('loading="lazy" decoding="async"')
         return f"<img {' '.join(parts)}>"
 
+    def local_path(self, src: str, page: Page) -> str | None:
+        """The repository path a relative image URL points at (None for remote or data URLs)."""
+        parts = urlsplit(src.strip())
+        if parts.scheme or src.strip().startswith("//") or not parts.path:
+            return None
+        try:
+            return self.resolve(unquote(parts.path), page)
+        except BuildError:
+            return None
+
+    def img_attrs(self, tag: str, env: dict) -> str:
+        """An <img> gets its intrinsic width and height (no layout shift) and lazy loading.
+
+        The Markdown sets only a width (GitHub would distort a scaled image with a fixed height);
+        the height follows from the SVG's own size. Brand art and diagrams carry their own card,
+        so they are marked to skip the screenshot frame.
+        """
+        src = re.search(r"""\ssrc=(["'])(.*?)\1""", tag)
+        local = self.local_path(html.unescape(src.group(2)), env["page"]) if src else None
+        size = image_size(local) if local else None
+        add = []
+        if size and not re.search(r"\sheight=", tag):
+            w = re.search(r"""\swidth=(["']?)(\d+)\1""", tag)
+            if w:
+                add.append(f'height="{round(int(w.group(2)) * size[1] / size[0])}"')
+            else:
+                add.append(f'width="{round(size[0])}" height="{round(size[1])}"')
+        if local and local.startswith(("docs/diagrams/", "assets/brand/")) and "data-art" not in tag:
+            add.append("data-art")
+        if "loading=" not in tag:
+            add.append('loading="lazy"')
+        if "decoding=" not in tag:
+            add.append('decoding="async"')
+        if not add:
+            return tag
+        end = "/>" if tag.endswith("/>") else ">"
+        return tag[: -len(end)].rstrip() + " " + " ".join(add) + end
+
+    @staticmethod
+    def themed_picture(m: re.Match) -> str:
+        """A <picture> with prefers-color-scheme sources follows the site's theme switch (site.js)."""
+        pic = m.group(0)
+        if "prefers-color-scheme" not in pic:
+            return pic
+        pic = re.sub(r"""<source\b(?![^>]*data-scheme)([^>]*?\smedia=(["'])\(prefers-color-scheme:\s*(light|dark)\)\2[^>]*)>""",
+                     lambda s: f'<source data-scheme="{s.group(3)}"{s.group(1)}>', pic)
+        if "data-themed" not in pic.split(">", 1)[0]:
+            pic = pic.replace("<picture", "<picture data-themed", 1)
+        return pic
+
     def _r_html(self, r, tokens, idx, options, env) -> str:
         content = tokens[idx].content
+        content = re.sub(r"<img\b[^>]*>", lambda m: self.img_attrs(m.group(0), env), content)
+        content = re.sub(r"<picture\b[^>]*>.*?</picture>", self.themed_picture, content, flags=re.S)
 
         def fix_url(m: re.Match) -> str:
             name, quote, value = m.group(1), m.group(2), html.unescape(m.group(3))
@@ -892,15 +1107,22 @@ class Builder:
 
     # ---------------------------------------------------------------- render one page
     def source_text(self, entry: Entry) -> str:
-        text = (ROOT / entry.source).read_text(encoding="utf-8")
+        raw = (ROOT / entry.source).read_text(encoding="utf-8")
+        meta, text = front_matter(raw)
+        self.page_meta[entry.source] = meta
+        offset = raw[: len(raw) - len(text)].count("\n")
         if entry.source == "README.md":
             # The README's centred logo, badges and link row are GitHub chrome; the site has its own.
             first = re.search(r"^## ", text, re.M)
             if first:
-                title = "# Introduction\n\nThe control plane for your own GPUs.\n\n"
-                self.line_offset[entry.source] = text[:first.start()].count("\n") - title.count("\n")
+                title = ("# Introduction\n\nGPU Deck is an open-source control plane for self-hosted LLM inference: "
+                         "it runs vLLM, SGLang, llama.cpp and MLX across every GPU you own. It swaps models by "
+                         "schedule and rule, serves OpenAI, Anthropic and Ollama compatible APIs, and meters "
+                         "what every GPU minute costs.\n\n")
+                offset += text[:first.start()].count("\n") - title.count("\n")
                 text = title + text[first.start():]
             text = re.sub(r"\n<p align=\"center\">\s*<br>.*\Z", "\n", text, flags=re.S)
+        self.line_offset[entry.source] = offset
         return text
 
     def render(self, page: Page) -> None:
@@ -916,7 +1138,7 @@ class Builder:
         h1 = re.search(r"<h1\b([^>]*)>(.*?)</h1>\s*", body, re.S)
         if h1:
             page.title_html = h1.group(2).strip()
-            page.title = strip_tags(page.title_html)
+            page.title = meta_text(page.title_html)
             hid = re.search(r'id="([^"]+)"', h1.group(1))
             page.h1_id = hid.group(1) if hid else ""
             body = body.replace(h1.group(0), "", 1)
@@ -925,10 +1147,11 @@ class Builder:
             page.title_html = escapeHtml(page.title)
         body = re.sub(r"<code>([^<]{1,28})</code>", r'<code class="nw">\1</code>', body)
         page.body = body
-        first_p = re.search(r"<p>(.*?)</p>", body, re.S)
-        page.description = clip(strip_tags(first_p.group(1)) if first_p else page.entry.blurb, 158)
+        meta = self.page_meta.get(page.entry.source, {})
+        page.description = clip_sentence(meta["description"]) if meta.get("description") else \
+            describe_body(body, page.entry.blurb)
         page.words = len(strip_tags(body).split())
-        page.updated = git_date(page.entry.source)
+        page.updated = last_modified(page.entry.source)
 
     def _render_with_sections(self, tokens, env) -> str:
         out = []
@@ -979,12 +1202,14 @@ class Builder:
 
     # ---------------------------------------------------------------- templates
     def head(self, *, title: str, description: str, canonical: str, root: str, og_type: str,
-             extra_css: list[str], img_hosts: set[str], jsonld: dict) -> str:
+             extra_css: list[str], img_hosts: set[str], jsonld: dict, modified: dt.date | None = None) -> str:
         img_src = " ".join(["'self'", "data:", *sorted(img_hosts)])
         csp = (f"default-src 'self'; script-src 'self' '{THEME_HASH}'; style-src 'self'; img-src {img_src}; "
                "font-src 'self'; connect-src 'self' https://api.github.com; manifest-src 'self'; "
                "object-src 'none'; base-uri 'self'; form-action 'none'")
         css = "\n".join(f'  <link rel="stylesheet" href="{root}{c}">' for c in ["assets/css/site.css", "assets/css/docs.css", *extra_css])
+        modified_meta = (f'\n  <meta property="article:modified_time" content="{modified.isoformat()}">'
+                         if modified and og_type == "article" else "")
         return f"""<!DOCTYPE html>
 <html lang="en" class="docs">
 <head>
@@ -1000,17 +1225,24 @@ class Builder:
   <meta name="theme-color" content="#F4F3F0" media="(prefers-color-scheme: light)">
   <meta property="og:type" content="{og_type}">
   <meta property="og:site_name" content="GPU Deck">
+  <meta property="og:locale" content="en_US">
   <meta property="og:title" content="{attr(title)}">
   <meta property="og:description" content="{attr(description)}">
   <meta property="og:url" content="{canonical}">
-  <meta property="og:image" content="{SITE_URL}assets/brand/og-image.png">
+  <meta property="og:image" content="{OG_IMAGE}">
+  <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1280">
   <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="{attr(OG_IMAGE_ALT)}">{modified_meta}
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" href="{root}favicon.ico" sizes="48x48">
-  <link rel="icon" href="{root}favicon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="{root}apple-touch-icon.png">
-  <link rel="manifest" href="{root}site.webmanifest">
+  <meta name="twitter:title" content="{attr(title)}">
+  <meta name="twitter:description" content="{attr(description)}">
+  <meta name="twitter:image" content="{OG_IMAGE}">
+  <meta name="twitter:image:alt" content="{attr(OG_IMAGE_ALT)}">
+  <link rel="icon" href="{root}favicon.ico?v={ICON_V}" sizes="48x48">
+  <link rel="icon" href="{root}favicon.svg?v={ICON_V}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{root}apple-touch-icon.png?v={ICON_V}">
+  <link rel="manifest" href="{root}site.webmanifest?v={ICON_V}">
   <script>{THEME_INIT}</script>
   <link rel="preload" href="{root}assets/fonts/figtree-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
 {css}
@@ -1064,19 +1296,28 @@ class Builder:
         prev_p = order[index - 1] if index > 0 else None
         next_p = order[index + 1] if index + 1 < len(order) else None
         canonical = f"{SITE_URL}{page.url}"
-        jsonld = {
-            "@context": "https://schema.org", "@type": "TechArticle", "headline": page.title,
-            "description": page.description, "url": canonical, "isPartOf": {"@type": "WebSite", "name": "GPU Deck", "url": SITE_URL},
-            "author": {"@type": "Person", "name": "Suresh Konakanchi"},
-            **({"dateModified": page.updated.isoformat()} if page.updated else {}),
-            "breadcrumb": {"@type": "BreadcrumbList", "itemListElement": [
-                {"@type": "ListItem", "position": 1, "name": "Docs", "item": f"{SITE_URL}docs/"},
-                {"@type": "ListItem", "position": 2, "name": page.entry.label, "item": canonical}]},
-        }
+        meta = self.page_meta.get(e.source, {})
+        title = meta.get("title") or TITLE_OVERRIDES.get(e.slug) or f"{page.title} · GPU Deck docs"
+        group_anchor = f"{SITE_URL}docs/#g-{gh_slug(page.group)}"
+        jsonld = {"@context": "https://schema.org", "@graph": [
+            {"@type": "TechArticle", "@id": f"{canonical}#article", "headline": page.title,
+             "description": page.description, "url": canonical, "mainEntityOfPage": canonical,
+             "inLanguage": "en", "image": OG_IMAGE, "articleSection": page.group,
+             "wordCount": page.words,
+             "isPartOf": {"@type": "WebSite", "@id": f"{SITE_URL}#website", "name": "GPU Deck", "url": SITE_URL},
+             "about": {"@type": "SoftwareApplication", "@id": f"{SITE_URL}#software", "name": "GPU Deck"},
+             "author": {"@type": "Person", "name": "Suresh Konakanchi", "url": "https://suresh-konakanchi.in"},
+             **({"dateModified": page.updated.isoformat()} if page.updated else {})},
+            {"@type": "BreadcrumbList", "@id": f"{canonical}#breadcrumb", "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "GPU Deck", "item": SITE_URL},
+                {"@type": "ListItem", "position": 2, "name": "Docs", "item": f"{SITE_URL}docs/"},
+                {"@type": "ListItem", "position": 3, "name": page.group, "item": group_anchor},
+                {"@type": "ListItem", "position": 4, "name": e.label, "item": canonical}]},
+        ]}
         extra_css = ["docs/diagrams.css"] if page.diagrams else []
-        head = self.head(title=f"{page.title} · GPU Deck docs", description=page.description,
+        head = self.head(title=title, description=page.description,
                          canonical=canonical, root=root, og_type="article", extra_css=extra_css,
-                         img_hosts=page.img_hosts, jsonld=jsonld)
+                         img_hosts=page.img_hosts, jsonld=jsonld, modified=page.updated)
         minutes = max(1, round(page.words / 230))
         toc = self.toc_list(page)
         toc_side = f"""
@@ -1160,11 +1401,17 @@ class Builder:
         root = "../"
         chrome = self.chrome(root)
         canonical = f"{SITE_URL}docs/"
-        jsonld = {"@context": "https://schema.org", "@type": "CollectionPage", "name": "GPU Deck documentation",
-                  "url": canonical, "isPartOf": {"@type": "WebSite", "name": "GPU Deck", "url": SITE_URL}}
-        description = ("Deploy the GPU Deck control plane, add GPU machines, serve models through OpenAI, "
-                       "Anthropic and Ollama APIs, automate the fleet with rules and layouts, and run it.")
-        head = self.head(title="Documentation · GPU Deck", description=description, canonical=canonical,
+        jsonld = {"@context": "https://schema.org", "@graph": [
+            {"@type": "CollectionPage", "@id": f"{canonical}#page", "name": "GPU Deck documentation",
+             "description": DOCS_HOME_DESCRIPTION, "url": canonical, "inLanguage": "en",
+             "isPartOf": {"@type": "WebSite", "@id": f"{SITE_URL}#website", "name": "GPU Deck", "url": SITE_URL},
+             "hasPart": [{"@type": "TechArticle", "name": p.entry.label, "url": f"{SITE_URL}{p.url}"}
+                         for p in self.pages]},
+            {"@type": "BreadcrumbList", "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "GPU Deck", "item": SITE_URL},
+                {"@type": "ListItem", "position": 2, "name": "Docs", "item": canonical}]},
+        ]}
+        head = self.head(title=DOCS_HOME_TITLE, description=DOCS_HOME_DESCRIPTION, canonical=canonical,
                          root=root, og_type="website", extra_css=[], img_hosts=set(), jsonld=jsonld)
         by_slug = {p.entry.slug: p for p in self.pages}
         start_cards = []
@@ -1208,7 +1455,6 @@ class Builder:
           <p class="eyebrow">Documentation</p>
           <h1>Everything to run GPU Deck on your own GPUs.</h1>
           <p class="dh-lead">Deploy the control plane once, add GPU machines with one command, serve models through OpenAI, Anthropic and Ollama APIs, and let rules and layouts keep the fleet busy. The specifications behind every API are here too.</p>
-          <button type="button" class="dh-search" data-search-open aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><span>Search the docs</span><kbd data-kbd-mod>⌘K</kbd></button>
         </header>
         <section class="dh-start" aria-labelledby="start-title">
           <h2 class="mini-label" id="start-title">Start here</h2>
@@ -1247,7 +1493,9 @@ class Builder:
         return json.dumps({"v": 1, "docs": docs}, ensure_ascii=False, separators=(",", ":"))
 
     def sitemap(self, order: list[Page]) -> str:
-        rows = [(SITE_URL, git_date("website/index.html"), "1.0"), (f"{SITE_URL}docs/", None, "0.8")]
+        days = [p.updated for p in order if p.updated]
+        rows = [(SITE_URL, last_modified("website/index.html"), "1.0"),
+                (f"{SITE_URL}docs/", max(days) if days else None, "0.8")]
         rows += [(f"{SITE_URL}{p.url}", p.updated, "0.6") for p in order]
         body = []
         for loc, day, prio in rows:
@@ -1279,7 +1527,6 @@ class Builder:
       <div class="cta-row">
         <a class="btn btn-primary" href="{root}">Go to the home page</a>
         <a class="btn btn-secondary" href="{root}docs/">Browse the docs</a>
-        <button type="button" class="btn btn-ghost" data-search-open aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Search</button>
       </div>
     </div>
   </main>
@@ -1296,6 +1543,10 @@ class Builder:
                 self.errors.append(f"website/{name}: the inline theme script differs from THEME_INIT in build_docs.py")
             if f"'{THEME_HASH}'" not in text:
                 self.errors.append(f"website/{name}: the Content-Security-Policy needs '{THEME_HASH}'")
+            for icon in ("favicon.ico", "favicon.svg", "apple-touch-icon.png", "site.webmanifest"):
+                if f'href="{icon}?v={ICON_V}"' not in text:
+                    self.errors.append(f"website/{name}: link {icon} as {icon}?v={ICON_V} (icons changed)")
+        self.errors += check_faq_jsonld((SITE / "index.html").read_text(encoding="utf-8"))
 
     def build(self) -> None:
         t0 = time.time()
@@ -1329,6 +1580,7 @@ class Builder:
         (self.out / "sitemap.xml").write_text(self.sitemap(order), encoding="utf-8")
         (self.out / "404.html").write_text(self.not_found_page(), encoding="utf-8")
         self.errors += check_site(self.out, set(by_source))
+        self.errors += check_meta(self.out)
         kb = (docs_out / "search-index.json").stat().st_size // 1024
         print(f"built {len(order)} doc pages + docs home into {docs_out.relative_to(self.out.parent) if self.out == SITE else docs_out}"
               f" (search index {kb} KB, {len(self.diagram_css)} diagrams) in {time.time() - t0:.1f}s")
@@ -1410,6 +1662,66 @@ def check_site(site: Path, doc_sources: set[str]) -> list[str]:
             if parts.fragment and target.suffix == ".html":
                 if parts.fragment not in load(target).ids:
                     errors.append(f"{rel_page}: {url!r} points at a missing #{parts.fragment}")
+    return errors
+
+
+def check_faq_jsonld(index: str) -> list[str]:
+    """The home page's FAQPage JSON-LD must say exactly what its visible FAQ says."""
+    errors: list[str] = []
+    faq = None
+    for m in re.finditer(r'<script type="application/ld\+json">(.*?)</script>', index, re.S):
+        try:
+            data = json.loads(m.group(1))
+        except ValueError as err:
+            return [f"website/index.html: JSON-LD does not parse ({err})"]
+        for node in data.get("@graph", [data]):
+            if node.get("@type") == "FAQPage":
+                faq = node
+    section = re.search(r'<section[^>]*id="faq".*?</section>', index, re.S)
+    if not faq or not section:
+        return ["website/index.html: needs a #faq section and a FAQPage in its JSON-LD"]
+
+    def norm(text: str) -> str:
+        return re.sub(r"\s+", " ", text.replace("\u2019", "'")).strip()
+
+    shown = [(norm(meta_text(q)), norm(meta_text(a))) for q, a in re.findall(
+        r"<summary>(.*?)</summary>\s*<div class=\"answer\">(.*?)</div>", section.group(0), re.S)]
+    listed = [(norm(q["name"]), norm(q["acceptedAnswer"]["text"])) for q in faq.get("mainEntity", [])]
+    if shown != listed:
+        missing = {q for q, _ in shown} ^ {q for q, _ in listed}
+        detail = f" (questions only on one side: {sorted(missing)})" if missing else " (an answer differs)"
+        errors.append("website/index.html: the FAQPage JSON-LD does not match the visible FAQ" + detail)
+    return errors
+
+
+def check_meta(site: Path) -> list[str]:
+    """Every indexable page has one <title>, a description, a canonical URL and valid JSON-LD; none repeat."""
+    errors: list[str] = []
+    seen_titles: dict[str, str] = {}
+    seen_desc: dict[str, str] = {}
+    for page in sorted(p for p in site.rglob("*.html") if "node_modules" not in p.parts):
+        rel = page.relative_to(site).as_posix()
+        text = page.read_text(encoding="utf-8")
+        if 'name="robots" content="noindex' in text:
+            continue
+        titles = re.findall(r"<title>(.*?)</title>", text, re.S)
+        desc = re.search(r'<meta name="description" content="([^"]*)"', text)
+        if len(titles) != 1:
+            errors.append(f"{rel}: needs exactly one <title>")
+        if not desc or not 50 <= len(html.unescape(desc.group(1))) <= 170:
+            errors.append(f"{rel}: the meta description must be 50 to 170 characters")
+        if '<link rel="canonical"' not in text:
+            errors.append(f"{rel}: has no canonical URL")
+        for m in re.finditer(r'<script type="application/ld\+json">(.*?)</script>', text, re.S):
+            try:
+                json.loads(m.group(1))
+            except ValueError as err:
+                errors.append(f"{rel}: JSON-LD does not parse ({err})")
+        for value, seen, what in ((titles[0] if titles else "", seen_titles, "<title>"),
+                                  (desc.group(1) if desc else "", seen_desc, "meta description")):
+            if value and value in seen:
+                errors.append(f"{rel}: same {what} as {seen[value]}")
+            seen.setdefault(value, rel)
     return errors
 
 

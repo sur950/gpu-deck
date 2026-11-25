@@ -107,6 +107,32 @@ class ServingSettings(DomainSettings):
     )
 
     # mTLS client identity towards the node-agent proxies (:9443)
+    AGENT_TUNNEL_ENABLED: bool = Field(
+        default=True,
+        description="Run the outbound-tunnel listener agents dial in serving mode tunnel "
+        "(protocol.md §13)",
+    )
+    AGENT_TUNNEL_BIND: str = Field(
+        default="0.0.0.0", description="Bind address of the agent tunnel listener"
+    )
+    AGENT_TUNNEL_PORT: int = Field(
+        default=8444,
+        description="Agent tunnel listener port (TLS 1.3, node client certificate required)",
+    )
+    AGENT_TUNNEL_LISTENERS: int = Field(
+        default=1,
+        ge=1,
+        le=64,
+        description="Tunnel ports per API-layer host (AGENT_TUNNEL_PORT upward): one per worker "
+        "process (set it to the gunicorn WORKERS count); the hub lists every port",
+    )
+    AGENT_TUNNEL_KEEPALIVE_SECONDS: float = Field(
+        default=10.0,
+        description="Keep-alive probe interval per tunnel connection (also detects dead ones)",
+    )
+    AGENT_TUNNEL_MAX_PENDING_HANDSHAKES: int = Field(
+        default=256, description="Concurrent unauthenticated tunnel handshakes accepted"
+    )
     API_LAYER_CLIENT_CERT_PATH: Optional[str] = Field(
         None, description="Client certificate (PEM) presented to node-agent proxies"
     )

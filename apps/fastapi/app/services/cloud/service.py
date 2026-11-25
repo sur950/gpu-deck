@@ -88,7 +88,9 @@ class CloudService:
         self.nodes = NodeRepository(session)
 
     @staticmethod
-    async def as_dependency(request: Request, db: AsyncSession = Depends(get_db)) -> "CloudService":
+    async def as_dependency(
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
+    ) -> "CloudService":
         return CloudService(db)
 
     # ---------- provider clients ----------

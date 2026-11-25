@@ -68,11 +68,11 @@ gpudeck [-P profile] [-e endpoint] [-o table|json|yaml|csv] [--fields a,b.c] [-k
         [--refresh-spec] [--no-validate] GROUP ... COMMAND
 ```
 
-Groups: `auth`, `api-keys`, `audit`, `ip-rules`, `vault`, `price-plans`, `clusters`, `nodes`
+Groups: `auth`, `api-keys`, `audit`, `ip-rules`, `vault`, `clusters`, `nodes`
 (`join-tokens`, `certificates`), `devices`, `topology`, `catalog`, `models` (`versions`), `engines`
 (`versions`), `deployments`, `instances`, `cache`, `layouts`, `rules`, `rule-runs`, `swaps`,
-`alerts` (`channels`, `events`), `metrics`, `logs`, `traces`, `benchmarks`, `benchmark-runs`,
-`metering` (`usage`, `batches`), `billing` (`reports`, `estimate`), `pki`, `system`, `live`,
+`alerts` (`channels`, `events`), `metrics`, `logs`, `benchmarks`, `benchmark-runs`, `batches`,
+`pki`, `system`, `live`,
 `agent` (downloads, install script), `gpu-instances` (SSH GPU instances), `cloud` (`providers`,
 `nodes`), `config`.
 `gpudeck GROUP --help` lists the commands; `gpudeck/registry.py` `COMMAND_MAP` maps each
@@ -105,7 +105,6 @@ gpudeck rules create -f idle-unload.yaml && gpudeck rules dry-run "$RULE_ID"
 gpudeck layouts apply "$LAYOUT_ID"
 gpudeck api-keys create --name gateway -o json     # the key is shown once
 gpudeck metrics gpu --metrics gpu_utilization_pct --from 2026-11-17T00:00:00 --aggregate avg
-gpudeck billing reports export "$REPORT_ID" > report.csv
 gpudeck live events -t nodes -t deployments       # SSE stream, Ctrl-C to stop
 gpudeck logs stream --deployment-id "$DID" --level error
 ```

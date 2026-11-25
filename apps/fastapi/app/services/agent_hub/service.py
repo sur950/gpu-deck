@@ -93,9 +93,13 @@ COMMANDS = (
     "hash_files",
     "start_ssh_instance",
     "stop_ssh_instance",
+    "stage_update",
+    "apply_update",
 )
 SWEEP_TICK_SECONDS = 1.0
 MAINTENANCE_EVERY_SECONDS = 5.0
+# Key pins / tunnel endpoints are re-checked this often; a change re-pushes the signed policy.
+SECURITY_CHECK_EVERY_SECONDS = 60.0
 REDISPATCH_AFTER_SECONDS = 2.0
 
 
@@ -151,6 +155,8 @@ class HubRuntime:
         self._dispatch: Optional[bus.Subscription] = None
         self._sweeper: Optional[asyncio.Task] = None
         self._follow_ups: set = set()
+        self._security_sig: Optional[str] = None
+        self._next_security_check = 0.0
 
     async def start(self) -> None:
         await bus.clear_presence_for_hub(self.hub_id)
@@ -192,6 +198,9 @@ class HubRuntime:
                     await self._redispatch_pending()
                     await self._maintenance()
                     next_maintenance = now + MAINTENANCE_EVERY_SECONDS
+                if now >= self._next_security_check:
+                    self._next_security_check = now + SECURITY_CHECK_EVERY_SECONDS
+                    await self._refresh_security()
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 - the sweeper must keep running
@@ -262,6 +271,25 @@ class HubRuntime:
             await session.commit()
         if rows:
             logger.info(f"hub sweeper re-dispatched {len(rows)} pending command(s)")
+
+    async def _refresh_security(self) -> None:
+        """Re-push the signed policy to every connected node when a pin or endpoint changed
+        (service key re-issued / rotated, settings changed)."""
+        from app.services.agent_hub.security_policy import pins_signature
+
+        async with get_session_maker()() as session:
+            sig = await pins_signature(session)
+            await session.commit()
+        if self._security_sig is None or sig == self._security_sig:
+            self._security_sig = sig
+            return
+        self._security_sig = sig
+        logger.info("hub: key pins or tunnel endpoints changed; re-pushing security policies")
+        for conn in self.registry.all():
+            try:
+                await self._push_config(conn, False, ["security"])
+            except Exception as exc:  # noqa: BLE001 - next check retries
+                logger.warning(f"security push to node={conn.node_id} failed: {exc}")
 
     async def _maintenance(self) -> None:
         from app.services.nodes.maintenance import run_hub_maintenance
@@ -339,6 +367,13 @@ class HubRuntime:
 
     async def on_connected(self, conn) -> None:
         self.mark_routing_dirty()
+        await _agent_update_hook("on_connected", conn.node_id, conn.agent_version)
+        # A fresh signed policy on every connect (pins may have changed while it was away; the
+        # full push only follows when config versions differ).
+        try:
+            await self._push_config(conn, False, ["security"])
+        except Exception as exc:  # noqa: BLE001 - the periodic check retries
+            logger.warning(f"security push to node={conn.node_id} failed: {exc}")
         await publish_live_event(
             "node",
             {
@@ -353,6 +388,7 @@ class HubRuntime:
     async def on_disconnected(self, conn) -> None:
         self._node_routing_sigs.pop(conn.node_id, None)
         self.mark_routing_dirty()
+        await _agent_update_hook("on_disconnected", conn.node_id)
         await publish_live_event(
             "node",
             {
@@ -404,6 +440,10 @@ class HubRuntime:
             from app.services.gpu_instances.lifecycle import on_command_terminal
 
             return on_command_terminal(row.id)
+        if row.command_type in ("stage_update", "apply_update"):
+            from app.services.agent_updates import orchestrator
+
+            return orchestrator.on_command_terminal(row.id)
         if row.command_type in (
             "load_model",
             "unload_model",
@@ -937,6 +977,16 @@ def _outcome_from_payload(payload: Dict[str, Any]) -> CommandOutcome:
         payload.get("progress_pct"),
         raw=payload,
     )
+
+
+async def _agent_update_hook(name: str, *args: Any) -> None:
+    """Agent updates follow connects / disconnects (restart, re-adoption); never raises."""
+    try:
+        from app.services.agent_updates import orchestrator
+
+        await getattr(orchestrator, name)(*args)
+    except Exception as exc:  # noqa: BLE001 - the socket lifecycle must go on
+        logger.warning(f"hub: agent update {name} failed: {exc}")
 
 
 def _uuid(value: Any) -> Optional[uuid.UUID]:

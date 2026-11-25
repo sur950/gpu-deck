@@ -26,14 +26,14 @@ describe('breadcrumb labels are route-scoped', () => {
 
   it('uses page titles for registered hrefs and title-cases the rest', () => {
     expect(crumbs('/observability/logs')).toEqual(['Observability', 'Logs']);
-    expect(crumbs('/billing/reports')).toEqual(['Billing', 'Reports']);
+    expect(crumbs('/observability/infra')).toEqual(['Observability', 'GPUs / infra']);
     expect(crumbs('/nodes/join')).toEqual(['Nodes', 'Add a node']);
     expect(crumbs('/unknown-thing/some-page')).toEqual(['Unknown Thing', 'Some Page']);
   });
 
   it('labels ids with the owner detail label', () => {
     expect(crumbs(`/nodes/${UUID}`)).toEqual(['Nodes', 'Node details']);
-    expect(crumbs('/observability/traces/4bf92f3577b34da6a3ce929d0e0e4736')).toEqual(['Observability', 'Traces', 'Trace details']);
+    expect(crumbs(`/observability/infra/${UUID}`)).toEqual(['Observability', 'GPUs / infra', 'GPU details']);
   });
 
   it('recognises dynamic segments', () => {
@@ -70,8 +70,8 @@ describe('active nav rule', () => {
     expect(isNavItemActive('/dashboard', '/dashboard')).toBe(true);
     expect(isNavItemActive('/dashboard', '/dashboard/x')).toBe(false);
     expect(isNavItemActive('/nodes', `/nodes/${UUID}`)).toBe(true);
-    const hrefs = ['/billing', '/billing/reports'];
-    expect(isNavItemActive('/billing', '/billing/reports/1', hrefs)).toBe(false);
-    expect(isNavItemActive('/billing/reports', '/billing/reports/1', hrefs)).toBe(true);
+    const hrefs = ['/nodes', '/nodes/join'];
+    expect(isNavItemActive('/nodes', '/nodes/join/1', hrefs)).toBe(false);
+    expect(isNavItemActive('/nodes/join', '/nodes/join/1', hrefs)).toBe(true);
   });
 });

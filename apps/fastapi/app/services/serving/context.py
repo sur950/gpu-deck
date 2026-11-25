@@ -44,6 +44,9 @@ class ServingContext:
     anthropic_version: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
     metered: bool = False
+    # Phase durations in ms (app.services.serving.timing): route, queue, connect, rtt, net,
+    # engine, upstream; ttft and total are derived when the breakdown is read.
+    timing: Dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.request_id:
@@ -67,6 +70,37 @@ class ServingContext:
         if self.ttft_ms is None:
             self.ttft_ms = self.elapsed_ms()
 
+    def timing_breakdown(self, final: bool = True) -> Dict[str, float]:
+        """Known phases plus ttft and (``final``) total, in ms."""
+        out = dict(self.timing)
+        if self.ttft_ms is not None:
+            out["ttft_ms"] = float(self.ttft_ms)
+        if final:
+            out["total_ms"] = round((time.perf_counter() - self.started) * 1000.0, 3)
+        return out
+
+    def _server_timing(self, streaming: bool) -> Optional[str]:
+        from app.services.serving import timing
+
+        if timing.mode() == "off" or (not self.timing and streaming):
+            return None
+        region = node_name = None
+        if timing.mode() == "detailed":
+            from app.services.latency.store import api_layer_identity
+
+            region = api_layer_identity()[1]
+            if self.target is not None:
+                from app.services.serving.routing import get_routing_table
+
+                node = get_routing_table().nodes.get(self.target.instance.node_id) or {}
+                node_name = node.get("name")
+        return timing.server_timing(
+            self.timing_breakdown(final=not streaming),
+            include_total=not streaming,
+            region=region,
+            node_name=node_name,
+        )
+
     def response_headers(self, streaming: bool = False) -> Dict[str, str]:
         headers: Dict[str, str] = {
             "Cache-Control": "no-store",
@@ -86,4 +120,10 @@ class ServingContext:
             headers["x-gpudeck-node"] = i.node_id
         if streaming:
             headers["X-Accel-Buffering"] = "no"
+        try:
+            server_timing = self._server_timing(streaming)
+        except Exception:  # noqa: BLE001 - never fail a response over a diagnostics header
+            server_timing = None
+        if server_timing:
+            headers["Server-Timing"] = server_timing
         return headers

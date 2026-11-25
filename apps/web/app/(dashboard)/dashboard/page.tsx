@@ -5,7 +5,7 @@ import { DashboardView } from '@/app/(dashboard)/dashboard/_components/dashboard
 
 export const metadata: Metadata = { title: 'Dashboard' };
 
-/** Overview: fleet health, inference traffic, automation activity and spend. */
+/** Overview: fleet health, inference traffic and automation activity. */
 export default function DashboardPage() {
   return (
     // The range lives in the URL (useSearchParams), which needs a Suspense boundary.

@@ -450,6 +450,26 @@ html.docs {
   border: 0;
   border-top: 1px solid var(--line);
 }
+/* <details> blocks in Markdown (README FAQ, "all screens", the ecosystem table) */
+.prose details {
+  margin: 14px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+}
+.prose details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text);
+}
+.prose details[open] > summary {
+  margin-bottom: 10px;
+}
+.prose details > :last-child {
+  margin-bottom: 0;
+}
+
 .prose blockquote {
   padding: 2px 0 2px 18px;
   border-left: 2px solid var(--line-strong);
@@ -462,6 +482,102 @@ html.docs {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface);
+}
+/* images on their own line (screenshots, diagrams); a following *italic* line is the caption */
+.prose p:has(> img:only-child),
+.prose p:has(> picture:only-child),
+.prose p.has-zoom {
+  margin-bottom: 10px;
+}
+.prose p > img:only-child,
+.prose p > picture:only-child,
+.prose p > picture:only-child img,
+.prose p.has-zoom > img,
+.prose p.has-zoom > picture,
+.prose p.has-zoom > picture img {
+  display: block;
+  margin-inline: auto;
+}
+.prose p:has(> img:only-child) + p:has(> em:only-child),
+.prose p:has(> picture:only-child) + p:has(> em:only-child),
+.prose p.has-zoom + p:has(> em:only-child) {
+  margin: 0 auto 26px;
+  max-width: 64ch;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+.prose p:has(> img:only-child) + p > em:only-child,
+.prose p:has(> picture:only-child) + p > em:only-child,
+.prose p.has-zoom + p > em:only-child {
+  font-style: normal;
+}
+/* brand art and the docs diagrams (docs/diagrams/) carry their own card */
+.prose img[data-art] {
+  border: 0;
+  border-radius: 18px;
+  background: none;
+}
+
+/* summary cards: `<!-- cards -->` before a bullet list (GitHub shows the plain list) */
+.prose .summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 4px 0 26px;
+  padding: 0;
+  list-style: none;
+}
+.prose .summary-cards > li {
+  position: relative;
+  margin: 0;
+  padding: 15px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text-2);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.prose .summary-cards > li::marker {
+  content: none;
+}
+.prose .summary-cards > li > strong:first-child,
+.prose .summary-cards > li > p > strong:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: var(--text);
+  font-size: 0.98rem;
+}
+.prose .summary-cards > li[data-tone] > strong:first-child::before,
+.prose .summary-cards > li[data-tone] > p > strong:first-child::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+.prose .summary-cards > li[data-tone="ok"] {
+  border-top: 2px solid var(--ok);
+}
+.prose .summary-cards > li[data-tone="ok"] > strong:first-child::before {
+  background: var(--ok);
+}
+.prose .summary-cards > li[data-tone="warn"] {
+  border-top: 2px solid var(--warn);
+}
+.prose .summary-cards > li[data-tone="warn"] > strong:first-child::before {
+  background: var(--warn);
+}
+.prose .summary-cards > li[data-tone="pending"] {
+  border-top: 2px solid var(--line-strong);
+}
+.prose .summary-cards > li > p {
+  margin: 0;
 }
 .prose :not(pre) > code {
   font-size: 0.85em;
@@ -727,6 +843,18 @@ html.docs {
   width: 15px;
   height: 15px;
 }
+.admonition-tip {
+  border-left-color: var(--ok);
+}
+.admonition-tip .admonition-title {
+  color: var(--ok-text);
+}
+.admonition-important {
+  border-left-color: var(--accent);
+}
+.admonition-important .admonition-title {
+  color: var(--accent-text);
+}
 .admonition-warning {
   border-left-color: var(--warn);
 }
@@ -831,8 +959,18 @@ html.docs {
   height: 14px;
 }
 .diagram:hover .diagram-expand,
+.has-zoom:hover .img-expand,
 .diagram-expand:focus-visible {
   opacity: 1;
+}
+.prose p.has-zoom {
+  position: relative;
+}
+.diagram-dialog .dg-img {
+  display: block;
+  max-width: none;
+  height: auto;
+  margin-inline: auto;
 }
 .diagram-expand:hover {
   color: var(--text);
@@ -989,12 +1127,6 @@ html.docs {
   margin: 20px 0 0;
   font-size: 1.08rem;
   color: var(--text-2);
-}
-.dh-search {
-  width: 380px;
-  height: 42px;
-  margin-top: 28px;
-  font-size: 0.92rem;
 }
 .dh-start {
   margin-top: 56px;
@@ -1250,9 +1382,6 @@ html.docs {
 @media (max-width: 640px) {
   .start-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .dh-search {
-    width: 100%;
   }
   .pager {
     grid-template-columns: minmax(0, 1fr);

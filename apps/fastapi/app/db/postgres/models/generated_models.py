@@ -107,11 +107,17 @@ class AdminUsers(Base):
     deployments: Mapped[list["Deployments"]] = relationship(
         "Deployments", back_populates="admin_users"
     )
+    agent_update_rollouts: Mapped[list["AgentUpdateRollouts"]] = relationship(
+        "AgentUpdateRollouts", back_populates="admin_users"
+    )
     benchmarks: Mapped[list["Benchmarks"]] = relationship(
         "Benchmarks", back_populates="admin_users"
     )
     join_tokens: Mapped[list["JoinTokens"]] = relationship(
         "JoinTokens", back_populates="admin_users"
+    )
+    agent_update_runs: Mapped[list["AgentUpdateRuns"]] = relationship(
+        "AgentUpdateRuns", back_populates="admin_users"
     )
     benchmark_runs: Mapped[list["BenchmarkRuns"]] = relationship(
         "BenchmarkRuns", back_populates="admin_users"
@@ -649,6 +655,67 @@ class MetricSamplesSession(Base):
     elapsed_ms: Mapped[Optional[float]] = mapped_column(REAL)
     tokens_per_second: Mapped[Optional[float]] = mapped_column(REAL)
     extra: Mapped[Optional[object]] = mapped_column(JSONB)
+
+
+class NodeLatencySamples(Base):
+    __tablename__ = "node_latency_samples"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="node_latency_samples_pkey"),
+        Index("idx_node_latency_samples_node_ts", "node_id", "ts"),
+        Index("idx_node_latency_samples_ts", "ts"),
+        Index(
+            "idx_node_latency_samples_unique",
+            "node_id",
+            "source",
+            "api_layer_id",
+            "ts",
+            unique=True,
+        ),
+        {
+            "comment": "Per-minute round-trip time from the agent hub (source hub) and "
+            "from each API layer (source api_layer) to a node. Written by the "
+            "jobs process from the live Redis view gpu-deck:latency:*; "
+            "retention LATENCY_RETENTION_DAYS. No FKs on purpose."
+        },
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    ts: Mapped[datetime.datetime] = mapped_column(
+        DateTime(True),
+        nullable=False,
+        comment="Minute the value was taken (UTC, truncated to the minute).",
+    )
+    node_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    source: Mapped[str] = mapped_column(
+        Enum("hub", "api_layer", name="latency_source"), nullable=False
+    )
+    api_layer_id: Mapped[str] = mapped_column(
+        String(120),
+        nullable=False,
+        server_default=text("''::character varying"),
+        comment="API_LAYER_ID of the measuring API layer; empty for the hub.",
+    )
+    rtt_ms: Mapped[float] = mapped_column(
+        REAL, nullable=False, comment="Smoothed round trip (EWMA of the probes) in milliseconds."
+    )
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(True), nullable=False, server_default=text("now()")
+    )
+    region: Mapped[Optional[str]] = mapped_column(
+        String(64), comment="API_LAYER_REGION of the measuring API layer; null for the hub."
+    )
+    mode: Mapped[Optional[str]] = mapped_column(
+        String(16),
+        comment="Serving path the API layer used: tunnel (agent dials out) or direct (mTLS proxy).",
+    )
+    jitter_ms: Mapped[Optional[float]] = mapped_column(
+        REAL, comment="Smoothed absolute difference between consecutive probes (RFC 3550 style)."
+    )
+    min_ms: Mapped[Optional[float]] = mapped_column(REAL)
+    max_ms: Mapped[Optional[float]] = mapped_column(REAL)
+    p95_ms: Mapped[Optional[float]] = mapped_column(
+        REAL, comment="95th percentile of the most recent probes (up to 60)."
+    )
 
 
 class Traces(Base):
@@ -1754,10 +1821,16 @@ class Clusters(Base):
     )
     deployments: Mapped[list["Deployments"]] = relationship("Deployments", back_populates="cluster")
     nodes: Mapped[list["Nodes"]] = relationship("Nodes", back_populates="cluster")
+    agent_update_rollouts: Mapped[list["AgentUpdateRollouts"]] = relationship(
+        "AgentUpdateRollouts", back_populates="cluster"
+    )
     gpu_instances: Mapped[list["GpuInstances"]] = relationship(
         "GpuInstances", back_populates="cluster"
     )
     join_tokens: Mapped[list["JoinTokens"]] = relationship("JoinTokens", back_populates="cluster")
+    agent_update_runs: Mapped[list["AgentUpdateRuns"]] = relationship(
+        "AgentUpdateRuns", back_populates="cluster"
+    )
     cloud_instances: Mapped[list["CloudInstances"]] = relationship(
         "CloudInstances", back_populates="cluster"
     )
@@ -2467,6 +2540,16 @@ class Nodes(Base):
 
     cluster: Mapped["Clusters"] = relationship("Clusters", back_populates="nodes")
     price_plan: Mapped[Optional["PricePlans"]] = relationship("PricePlans", back_populates="nodes")
+    agent_update_rollouts_current_node: Mapped[list["AgentUpdateRollouts"]] = relationship(
+        "AgentUpdateRollouts",
+        foreign_keys="[AgentUpdateRollouts.current_node_id]",
+        back_populates="current_node",
+    )
+    agent_update_rollouts_failed_node: Mapped[list["AgentUpdateRollouts"]] = relationship(
+        "AgentUpdateRollouts",
+        foreign_keys="[AgentUpdateRollouts.failed_node_id]",
+        back_populates="failed_node",
+    )
     devices: Mapped[list["Devices"]] = relationship("Devices", back_populates="node")
     engine_compat_checks: Mapped[list["EngineCompatChecks"]] = relationship(
         "EngineCompatChecks", back_populates="node"
@@ -2485,6 +2568,9 @@ class Nodes(Base):
     node_model_cache: Mapped[list["NodeModelCache"]] = relationship(
         "NodeModelCache", back_populates="node"
     )
+    agent_update_runs: Mapped[list["AgentUpdateRuns"]] = relationship(
+        "AgentUpdateRuns", back_populates="node"
+    )
     benchmark_runs: Mapped[list["BenchmarkRuns"]] = relationship(
         "BenchmarkRuns", back_populates="node"
     )
@@ -2496,6 +2582,114 @@ class Nodes(Base):
     )
     agent_commands: Mapped[list["AgentCommands"]] = relationship(
         "AgentCommands", back_populates="node"
+    )
+
+
+class AgentUpdateRollouts(Base):
+    __tablename__ = "agent_update_rollouts"
+    __table_args__ = (
+        CheckConstraint(
+            "trigger::text = ANY (ARRAY['manual'::character varying, 'auto'::character varying]::text[])",
+            name="agent_update_rollouts_trigger_check",
+        ),
+        ForeignKeyConstraint(
+            ["cluster_id"],
+            ["clusters.id"],
+            ondelete="CASCADE",
+            name="agent_update_rollouts_cluster_id_fkey",
+        ),
+        ForeignKeyConstraint(
+            ["created_by"],
+            ["admin_users.id"],
+            ondelete="SET NULL",
+            name="agent_update_rollouts_created_by_fkey",
+        ),
+        ForeignKeyConstraint(
+            ["current_node_id"],
+            ["nodes.id"],
+            ondelete="SET NULL",
+            name="agent_update_rollouts_current_node_id_fkey",
+        ),
+        ForeignKeyConstraint(
+            ["failed_node_id"],
+            ["nodes.id"],
+            ondelete="SET NULL",
+            name="agent_update_rollouts_failed_node_id_fkey",
+        ),
+        PrimaryKeyConstraint("id", name="agent_update_rollouts_pkey"),
+        Index(
+            "idx_agent_update_rollouts_cluster",
+            "cluster_id",
+            "created_at",
+            postgresql_where="(deleted_at IS NULL)",
+        ),
+        Index(
+            "idx_agent_update_rollouts_running",
+            "cluster_id",
+            postgresql_where="((state = 'running'::agent_rollout_state) AND (deleted_at IS NULL))",
+            unique=True,
+        ),
+        {
+            "comment": "Rolling agent update of a cluster: node_ids in order, one node at "
+            "a time, stops at the first failed or rolled-back node. At most "
+            "one running rollout per cluster."
+        },
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    cluster_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    target_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    trigger: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        server_default=text("'manual'::character varying"),
+        comment="manual = an admin started it; auto = the cluster policy (clusters.config.agent_updates.mode = auto) started it inside the maintenance window.",
+    )
+    state: Mapped[str] = mapped_column(
+        Enum("running", "succeeded", "failed", "cancelled", name="agent_rollout_state"),
+        nullable=False,
+        server_default=text("'running'::agent_rollout_state"),
+    )
+    node_ids: Mapped[list[uuid.UUID]] = mapped_column(
+        ARRAY(Uuid()), nullable=False, server_default=text("'{}'::uuid[]")
+    )
+    completed_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    skipped: Mapped[object] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+        comment='[{"node_id","reason"}]: nodes left out (offline, managed by Kubernetes, agent too old to update itself, already on the version).',
+    )
+    started_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(True), nullable=False, server_default=text("now()")
+    )
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(True), nullable=False, server_default=text("now()")
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(True), nullable=False, server_default=text("now()")
+    )
+    current_node_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid)
+    failed_node_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid)
+    message: Mapped[Optional[str]] = mapped_column(String(1024))
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid)
+    finished_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True))
+    deleted_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True))
+
+    cluster: Mapped["Clusters"] = relationship("Clusters", back_populates="agent_update_rollouts")
+    admin_users: Mapped[Optional["AdminUsers"]] = relationship(
+        "AdminUsers", back_populates="agent_update_rollouts"
+    )
+    current_node: Mapped[Optional["Nodes"]] = relationship(
+        "Nodes", foreign_keys=[current_node_id], back_populates="agent_update_rollouts_current_node"
+    )
+    failed_node: Mapped[Optional["Nodes"]] = relationship(
+        "Nodes", foreign_keys=[failed_node_id], back_populates="agent_update_rollouts_failed_node"
+    )
+    agent_update_runs: Mapped[list["AgentUpdateRuns"]] = relationship(
+        "AgentUpdateRuns", back_populates="rollout"
     )
 
 
@@ -3312,6 +3506,130 @@ class NodeModelCache(Base):
         "ModelVersions", back_populates="node_model_cache"
     )
     node: Mapped["Nodes"] = relationship("Nodes", back_populates="node_model_cache")
+
+
+class AgentUpdateRuns(Base):
+    __tablename__ = "agent_update_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "trigger::text = ANY (ARRAY['manual'::character varying, 'auto'::character varying, 'rollout'::character varying]::text[])",
+            name="agent_update_runs_trigger_check",
+        ),
+        ForeignKeyConstraint(
+            ["cluster_id"],
+            ["clusters.id"],
+            ondelete="SET NULL",
+            name="agent_update_runs_cluster_id_fkey",
+        ),
+        ForeignKeyConstraint(
+            ["created_by"],
+            ["admin_users.id"],
+            ondelete="SET NULL",
+            name="agent_update_runs_created_by_fkey",
+        ),
+        ForeignKeyConstraint(
+            ["node_id"], ["nodes.id"], ondelete="CASCADE", name="agent_update_runs_node_id_fkey"
+        ),
+        ForeignKeyConstraint(
+            ["rollout_id"],
+            ["agent_update_rollouts.id"],
+            ondelete="SET NULL",
+            name="agent_update_runs_rollout_id_fkey",
+        ),
+        PrimaryKeyConstraint("id", name="agent_update_runs_pkey"),
+        Index(
+            "idx_agent_update_runs_active",
+            "node_id",
+            postgresql_where="((state = ANY (ARRAY['pending'::agent_update_state, 'staging'::agent_update_state, 'staged'::agent_update_state, 'swapping'::agent_update_state, 'restarting'::agent_update_state, 'readopting'::agent_update_state, 'health_check'::agent_update_state])) AND (deleted_at IS NULL))",
+            unique=True,
+        ),
+        Index(
+            "idx_agent_update_runs_node",
+            "node_id",
+            "created_at",
+            postgresql_where="(deleted_at IS NULL)",
+        ),
+        Index(
+            "idx_agent_update_runs_rollout",
+            "rollout_id",
+            postgresql_where="(rollout_id IS NOT NULL)",
+        ),
+        {
+            "comment": "One agent update of one node: staged -> swapping -> restarting -> "
+            "readopting (engines) -> health_check -> succeeded, or rolled_back "
+            "/ failed. At most one active run per node."
+        },
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    node_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    to_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[str] = mapped_column(
+        Enum(
+            "pending",
+            "staging",
+            "staged",
+            "swapping",
+            "restarting",
+            "readopting",
+            "health_check",
+            "succeeded",
+            "rolled_back",
+            "failed",
+            "cancelled",
+            name="agent_update_state",
+        ),
+        nullable=False,
+        server_default=text("'pending'::agent_update_state"),
+    )
+    trigger: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default=text("'manual'::character varying")
+    )
+    steps: Mapped[object] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+        comment='[{"phase","at","message"}] in order, from the agent\'s agent_update events and the hub (disconnect = restarting).',
+    )
+    health_timeout_seconds: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("120")
+    )
+    started_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(True), nullable=False, server_default=text("now()")
+    )
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(True), nullable=False, server_default=text("now()")
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(True), nullable=False, server_default=text("now()")
+    )
+    cluster_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid)
+    rollout_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid)
+    from_version: Mapped[Optional[str]] = mapped_column(String(64))
+    stage_command_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid)
+    apply_command_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid)
+    error_code: Mapped[Optional[str]] = mapped_column(String(64))
+    error_message: Mapped[Optional[str]] = mapped_column(String(2048))
+    deadline_at: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime(True),
+        comment="Past this the control plane stops waiting (the node rolls back on its own and reports when it reconnects).",
+    )
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid)
+    finished_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True))
+    deleted_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True))
+
+    cluster: Mapped[Optional["Clusters"]] = relationship(
+        "Clusters", back_populates="agent_update_runs"
+    )
+    admin_users: Mapped[Optional["AdminUsers"]] = relationship(
+        "AdminUsers", back_populates="agent_update_runs"
+    )
+    node: Mapped["Nodes"] = relationship("Nodes", back_populates="agent_update_runs")
+    rollout: Mapped[Optional["AgentUpdateRollouts"]] = relationship(
+        "AgentUpdateRollouts", back_populates="agent_update_runs"
+    )
 
 
 class BenchmarkRuns(Base):

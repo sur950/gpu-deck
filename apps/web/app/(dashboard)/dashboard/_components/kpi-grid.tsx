@@ -1,14 +1,14 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Activity, Coins, Cpu, Gauge, Timer, Users } from 'lucide-react';
+import { Activity, Cpu, Gauge, Timer, Users } from 'lucide-react';
 import { MetricCard } from '@/components/charts/metric-card';
 import { combineSeries, filterSeries, latestValue, toSpark, trendChange } from '@/components/charts/series-utils';
 import type { LiveEngineSample, LiveGpuSample } from '@/hooks/use-live-events';
 import type { OverviewTrends } from '@/hooks/use-overview';
 import type { Overview } from '@/types/overview';
 import type { MetricSeries } from '@/types/metrics';
-import { formatCompact, formatMs, formatPct, formatUsd, formatWatts } from '@/utils/metrics-format';
+import { formatCompact, formatMs, formatPct, formatWatts } from '@/utils/metrics-format';
 
 /** A GPU counts as busy above this utilisation. */
 export const BUSY_UTIL_PCT = 10;
@@ -27,7 +27,10 @@ function perSecond(series: MetricSeries | undefined, stepSeconds: number): Metri
   return { ...series, points: series.points.map((p) => ({ t: p.t, v: p.v === null ? null : p.v / stepSeconds })) };
 }
 
-/** The six headline numbers: traffic, throughput, latency, sessions, GPU load, spend. */
+/**
+ * The five headline numbers: traffic, throughput, latency, sessions, GPU load.
+ * Three cards on the first row, two wider ones on the second (xl: 6-column grid).
+ */
 export function KpiGrid({ overview, trends, gpuLive, engineLive, stepSeconds }: KpiGridProps) {
   const live = overview.live;
 
@@ -40,7 +43,6 @@ export function KpiGrid({ overview, trends, gpuLive, engineLive, stepSeconds }: 
     const tps = combineSeries(filterSeries(inf, 'generation_tps'), 'sum');
     const active = combineSeries(filterSeries(inf, 'active_sessions'), 'sum');
     const util = combineSeries(filterSeries(trends.gpu, 'gpu_utilization_pct'), 'avg');
-    const cost = combineSeries(filterSeries(trends.usage, 'cost_usd'), 'sum');
     const inputTokens = filterSeries(trends.usage, 'input_tokens').reduce((s, x) => s + x.points.reduce((a, p) => a + (p.v ?? 0), 0), 0);
     const cachedTokens = filterSeries(trends.usage, 'cached_tokens').reduce((s, x) => s + x.points.reduce((a, p) => a + (p.v ?? 0), 0), 0);
     return {
@@ -50,7 +52,6 @@ export function KpiGrid({ overview, trends, gpuLive, engineLive, stepSeconds }: 
       tps,
       active,
       util,
-      cost,
       cachedShare: inputTokens > 0 ? (cachedTokens / inputTokens) * 100 : null,
     };
   }, [trends.inference, trends.gpu, trends.usage, stepSeconds]);
@@ -64,7 +65,10 @@ export function KpiGrid({ overview, trends, gpuLive, engineLive, stepSeconds }: 
     : latestValue(derived.ttftP50);
 
   return (
-    <section aria-label="Key metrics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <section
+      aria-label="Key metrics"
+      className="grid gap-4 sm:grid-cols-2 sm:max-xl:[&>*:last-child]:col-span-2 xl:grid-cols-6 xl:[&>*]:col-span-2 xl:[&>*:nth-child(n+4)]:col-span-3"
+    >
       <MetricCard
         label="Requests / s"
         value={formatCompact(requestsPerSecond, 1)}
@@ -119,16 +123,6 @@ export function KpiGrid({ overview, trends, gpuLive, engineLive, stepSeconds }: 
         goodDirection="neutral"
         trend={toSpark(derived.util)}
         href="/observability/infra"
-      />
-      <MetricCard
-        label="Spend today"
-        value={formatUsd(overview.costTodayUsd)}
-        icon={Coins}
-        detail={`${formatUsd(overview.costMonthUsd)} month to date`}
-        change={null}
-        footnote="GPU minutes plus token prices"
-        trend={toSpark(derived.cost)}
-        href="/billing"
       />
     </section>
   );

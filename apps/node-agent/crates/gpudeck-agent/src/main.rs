@@ -1,4 +1,5 @@
-//! `gpudeck-agent` CLI: `join`, `run`, `status`, `stop-engines`, `version`.
+//! `gpudeck-agent` CLI: `join`, `run`, `status`, `stop-engines`, `firewall`, `security`,
+//! `update`, `version`.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -34,9 +35,20 @@ enum Cmd {
         url: String,
         #[arg(long)]
         name: Option<String>,
-        /// SHA-256 of the hub CA certificate (pins the CA; otherwise trust on first use).
+        /// SHA-256 of the hub CA certificate (required: pins the control plane's CA before the
+        /// join token or anything else is sent).
         #[arg(long)]
         ca_fingerprint: Option<String>,
+        /// Join without --ca-fingerprint (trust on first use). Only on a network you trust.
+        #[arg(long)]
+        insecure_skip_ca_pin: bool,
+        /// `tunnel` (default: the agent dials out, no inbound port) or `direct` (the API layer
+        /// dials the mTLS proxy on proxy_port; low-latency private networks).
+        #[arg(long, value_parser = ["tunnel", "direct"])]
+        serving_mode: Option<String>,
+        /// Do not manage the host firewall (`firewall = "off"` in agent.toml).
+        #[arg(long)]
+        no_firewall: bool,
         /// Node label k=v (repeatable).
         #[arg(long = "label")]
         labels: Vec<String>,
@@ -61,8 +73,81 @@ enum Cmd {
         #[arg(long, default_value_t = 20)]
         grace_seconds: u64,
     },
+    /// Host firewall for the agent's ports (nftables / pf).
+    Firewall {
+        #[command(subcommand)]
+        action: FirewallCmd,
+    },
+    /// Security checks and recovery.
+    Security {
+        #[command(subcommand)]
+        action: SecurityCmd,
+    },
+    /// Self-update (driven by the control plane: Update button or a cluster's rolling update).
+    Update {
+        #[command(subcommand)]
+        action: UpdateCmd,
+    },
     /// Print agent and protocol versions.
     Version,
+}
+
+#[derive(Subcommand)]
+enum FirewallCmd {
+    /// Show what is loaded vs the current plan (exit 1 when not applied or stale).
+    Status,
+    /// Detect and keep the operator's SSH ports open, render and program the rules, verify.
+    Apply {
+        /// Print the rules instead of programming them.
+        #[arg(long)]
+        dry_run: bool,
+        /// Also lock egress (outbound only to the hub, model sources and the allow-list;
+        /// inbound default deny). Recorded in agent.toml.
+        #[arg(long)]
+        egress_lock: bool,
+        /// Extra TCP port to always accept (repeatable), e.g. a non-standard sshd port.
+        #[arg(long = "preserve-port")]
+        preserve_ports: Vec<u16>,
+    },
+    /// Remove GPU Deck's rules (table `inet gpudeck` / anchor `com.apple/gpudeck`).
+    Remove,
+}
+
+#[derive(Subcommand)]
+enum UpdateCmd {
+    /// Show the update mode, the staged and the previous version.
+    Status,
+    /// Apply the staged update requested in <state_dir>/update/request.json: verify the
+    /// signature again, swap the binary atomically (keeping <binary>.prev), restart the
+    /// service, wait for the new agent to report healthy, roll back otherwise. Run by the
+    /// update helper (systemd path unit / launchd daemon) or by the agent itself.
+    Apply {
+        /// How to restart the agent: systemd:<unit>, launchd:<domain>/<label> or signal
+        /// (default: systemd:gpudeck-agent.service as root on Linux, else signal).
+        #[arg(long)]
+        restart: Option<String>,
+    },
+    /// Install the root-owned update helper for this binary and config (the installers run it
+    /// as root): systemd gpudeck-agent-update.path + .service, or the launchd daemon
+    /// io.github.sur950.gpudeck-agent-update.
+    InstallHelper {
+        /// How the helper restarts the agent: systemd:<unit> / launchd:<domain>/<label>.
+        #[arg(long)]
+        restart: Option<String>,
+        /// Print the unit files instead of installing them.
+        #[arg(long)]
+        dry_run: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum SecurityCmd {
+    /// List listening sockets and flag anything of GPU Deck's reachable from the network
+    /// (exit 1 when something is exposed).
+    Audit,
+    /// Forget the signed security policy (hub / API-layer key pins). Recovery after a key
+    /// rotation this node missed; the next config_push brings a fresh policy.
+    ResetPolicy,
 }
 
 fn config_path(cli: &Cli) -> PathBuf {
@@ -88,7 +173,8 @@ async fn run() -> Result<()> {
     match cli.cmd {
         Cmd::Version => {
             println!(
-                "gpudeck-agent {AGENT_VERSION} (protocol v{})",
+                "gpudeck-agent {} (protocol v{})",
+                gpudeck_agent::update::current_version(),
                 gpudeck_protocol::PROTOCOL_VERSION
             );
             Ok(())
@@ -98,12 +184,24 @@ async fn run() -> Result<()> {
             url,
             name,
             ca_fingerprint,
+            insecure_skip_ca_pin,
+            serving_mode,
+            no_firewall,
             labels,
             proxy_port,
             state_dir,
         } => {
             if let Some(s) = state_dir {
                 cfg.state_dir = s;
+            }
+            if ca_fingerprint.is_none() && cfg.ca_fingerprint.is_none() && !insecure_skip_ca_pin {
+                bail!("refusing to join without --ca-fingerprint: it pins the control plane's CA before the join token is sent (copy it from the join dialog, or `GET <hub>/agent/v1/ca`). Pass --insecure-skip-ca-pin only on a network you trust");
+            }
+            if let Some(m) = serving_mode {
+                cfg.serving_mode = m;
+            }
+            if no_firewall {
+                cfg.firewall = "off".into();
             }
             let mut l: BTreeMap<String, String> = cfg.labels.clone();
             for kv in labels {
@@ -137,6 +235,10 @@ async fn run() -> Result<()> {
                 // Non-interactive join (DaemonSet): GPUDECK_AGENT_JOIN_TOKEN + GPUDECK_AGENT_HUB_URL.
                 match (std::env::var("GPUDECK_AGENT_JOIN_TOKEN").ok(), cfg.hub_url.clone()) {
                     (Some(token), Some(url)) => {
+                        let insecure = std::env::var("GPUDECK_AGENT_INSECURE_SKIP_CA_PIN").is_ok_and(|v| v == "1");
+                        if cfg.ca_fingerprint.is_none() && !insecure {
+                            bail!("automatic join needs GPUDECK_AGENT_CA_FINGERPRINT (pins the control plane's CA); set GPUDECK_AGENT_INSECURE_SKIP_CA_PIN=1 only on a network you trust");
+                        }
                         let opts = JoinOptions { hub_url: url, token, name: cfg.name.clone(), ca_fingerprint: cfg.ca_fingerprint.clone(), proxy_port: cfg.proxy_port, labels: cfg.labels.clone() };
                         join(&mut cfg, &path, opts).await.context("automatic join")?;
                     }
@@ -163,7 +265,134 @@ async fn run() -> Result<()> {
         }
         Cmd::Status => status(&cfg, &path).await,
         Cmd::StopEngines { grace_seconds } => stop_engines(&cfg, grace_seconds).await,
+        Cmd::Firewall { action } => match action {
+            FirewallCmd::Status => {
+                if !gpudeck_agent::firewall::cli_status(&cfg).await? {
+                    std::process::exit(1);
+                }
+                Ok(())
+            }
+            FirewallCmd::Apply {
+                dry_run,
+                egress_lock,
+                preserve_ports,
+            } => {
+                gpudeck_agent::firewall::cli_apply(
+                    &mut cfg,
+                    &path,
+                    &preserve_ports,
+                    egress_lock,
+                    dry_run,
+                )
+                .await
+            }
+            FirewallCmd::Remove => {
+                let kind = gpudeck_agent::egress::detect_kind(&cfg.egress_lock);
+                gpudeck_agent::firewall::remove(kind).await?;
+                println!("GPU Deck firewall rules removed ({kind})");
+                Ok(())
+            }
+        },
+        Cmd::Update { action } => match action {
+            UpdateCmd::Status => {
+                gpudeck_agent::update::print_status(&cfg);
+                Ok(())
+            }
+            UpdateCmd::InstallHelper { restart, dry_run } => {
+                gpudeck_agent::update::install_helper(&cfg, &path, restart.as_deref(), dry_run)
+                    .await
+            }
+            UpdateCmd::Apply { restart } => {
+                let opts = gpudeck_agent::update::ApplyOptions::from_cli(restart.as_deref())?;
+                let r = gpudeck_agent::update::run_applier(&cfg, &opts).await?;
+                println!(
+                    "update {}: {} ({} -> {}){}",
+                    r.request_id,
+                    r.outcome,
+                    r.from_version,
+                    r.version,
+                    r.message.map(|m| format!(": {m}")).unwrap_or_default()
+                );
+                if r.outcome != "succeeded" {
+                    std::process::exit(1);
+                }
+                Ok(())
+            }
+        },
+        Cmd::Security { action } => match action {
+            SecurityCmd::Audit => security_audit(&cfg).await,
+            SecurityCmd::ResetPolicy => {
+                let p = StatePaths::new(&cfg.state_dir).security_policy();
+                match std::fs::remove_file(&p) {
+                    Ok(()) => println!("removed {} (restart the agent; the next config_push brings a fresh policy)", p.display()),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => println!("no policy at {}", p.display()),
+                    Err(e) => bail!("remove {}: {e}", p.display()),
+                }
+                Ok(())
+            }
+        },
     }
+}
+
+async fn security_audit(cfg: &AgentConfig) -> Result<()> {
+    use gpudeck_agent::audit;
+    let paths = StatePaths::new(&cfg.state_dir);
+    let policy = match (cfg.node_id, std::fs::read_to_string(paths.ca())) {
+        (Some(node), Ok(ca)) => gpudeck_agent::security::load(&paths.security_policy(), &ca, node),
+        _ => Ok(None),
+    };
+    println!("serving mode    {}", cfg.serving_mode().as_str());
+    match &policy {
+        Ok(Some(p)) => {
+            println!(
+                "policy          serial {} issued {} (signature verified)",
+                p.serial, p.issued_at
+            );
+            println!(
+                "pins            hub {} key(s), API layer {} key(s)",
+                gpudeck_agent::security::hub_pins(Some(p)).len(),
+                gpudeck_agent::security::api_layer_identity(Some(p)).0.len()
+            );
+            println!(
+                "tunnel          {:?}",
+                gpudeck_agent::security::tunnel_endpoints(Some(p))
+            );
+        }
+        Ok(None) => println!("policy          none (hub and API-layer keys not pinned yet)"),
+        Err(e) => println!("policy          INVALID: {e:#}"),
+    }
+    let kind = gpudeck_agent::egress::detect_kind(&cfg.egress_lock);
+    match gpudeck_agent::firewall::loaded(kind).await {
+        Ok(gpudeck_agent::firewall::Loaded::Plan(h)) => {
+            println!("firewall        {kind}, plan {h} loaded")
+        }
+        Ok(other) => println!(
+            "firewall        {kind}: {other:?} (run `gpudeck-agent firewall apply` as root)"
+        ),
+        Err(e) => println!("firewall        {kind}: unknown ({e:#})"),
+    }
+    println!();
+    let range = gpudeck_agent::firewall::engine_range(&paths);
+    let findings = audit::assess(
+        cfg,
+        range,
+        &audit::engine_ports(&paths),
+        &audit::listeners(),
+    );
+    let worst = audit::print_report(&findings);
+    if worst >= audit::Level::Exposed {
+        println!("\nresult: EXPOSED (see above)");
+        std::process::exit(1);
+    }
+    println!(
+        "\nresult: {}",
+        if worst >= audit::Level::Warning {
+            "warnings"
+        } else {
+            "nothing of GPU Deck's is reachable from the network except what the mode requires"
+        }
+    );
+    Ok(())
 }
 
 async fn wait_for_signal() {
@@ -230,6 +459,7 @@ async fn status(cfg: &AgentConfig, path: &std::path::Path) -> Result<()> {
             .unwrap_or_else(|| "- (not joined)".into())
     );
     println!("state_dir   {}", cfg.state_dir.display());
+    println!("serving     {}", cfg.serving_mode().as_str());
     println!("cache_dir   {}", cfg.cache_dir().display());
     let paths = StatePaths::new(&cfg.state_dir);
     match gpudeck_agent::tls::Identity::load(&paths) {
@@ -283,6 +513,15 @@ async fn status(cfg: &AgentConfig, path: &std::path::Path) -> Result<()> {
                 .find(|l| l.starts_with("gpudeck_agent_hub_connected"))
                 .map(|l| l.ends_with(" 1"))
                 .unwrap_or(false);
+            if let Some(l) = text
+                .lines()
+                .find(|l| l.starts_with("gpudeck_agent_tunnel_connections"))
+            {
+                println!(
+                    "tunnels     {} connected",
+                    l.rsplit(' ').next().unwrap_or("0")
+                );
+            }
             println!(
                 "agent       running (hub {})",
                 if connected {

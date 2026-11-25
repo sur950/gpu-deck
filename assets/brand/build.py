@@ -423,7 +423,7 @@ def social_preview(bold: Outliner, medium: Outliner, mono: Outliner, fg: bool = 
     parts.append(f'<g transform="translate({wx + 18} {wy + 46}) scale({24 / 64:.4f})">{tile_mark("sp-s", "small")}</g>')
     d, _ = bold.path(NAME, 14.5, wx + 50, wy + 63, NAME_TRACKING)
     parts.append(f'<path d="{d}" fill="{INK}"/>')
-    nav = ["Dashboard", "Fleet", "Deployments", "Layouts", "Rules", "Metering", "Billing"]
+    nav = ["Dashboard", "Fleet", "Deployments", "Layouts", "Rules", "Metrics", "Alerts"]
     for i, item in enumerate(nav):
         y = wy + 104 + i * 34
         active = item == "Fleet"
@@ -497,7 +497,7 @@ def social_preview(bold: Outliner, medium: Outliner, mono: Outliner, fg: bool = 
     cr_y = tag_y + 44 + 66
     d, _ = bold.path("Open source, Apache-2.0", 25, left - 1, cr_y, -0.005)
     parts.append(f'<path d="{d}" fill="{CRIMSON}"/>')
-    d, _ = mono.path("MODELS · LAYOUTS · RULES · METERING", 13, left, cr_y + 36, 0.14)
+    d, _ = mono.path("MODELS · LAYOUTS · RULES · SWAPS", 13, left, cr_y + 36, 0.14)
     parts.append(f'<path d="{d}" fill="{MUTED}"/>')
     return svg(W, H, "".join(parts))
 

@@ -25,7 +25,8 @@ import { VramMeter } from '@/components/fleet/vram-meter';
 import { Heartbeat } from '@/components/fleet/heartbeat';
 import { CLUSTER_BADGE } from '@/components/fleet/status';
 import { NodeStatusBadge, nodeStateInput } from '@/components/fleet/node-status';
-import { useCluster, useClusterNodes, useCredentialOptions, useDeleteCluster, usePricePlans, useUpdateCluster } from '@/hooks/api/fleet';
+import { AgentUpdateBadge, ClusterAgentUpdateCard } from '@/components/fleet/agent-update';
+import { useCluster, useClusterNodes, useCredentialOptions, useDeleteCluster, useUpdateCluster } from '@/hooks/api/fleet';
 import { formatBytes, formatDate } from '@/utils/format';
 import { NODE_OS_LABELS } from '@/types/fleet';
 import { KindGlyph } from '@/components/vault/kind-icon';
@@ -38,7 +39,6 @@ export function ClusterDetail() {
   const nodes = useClusterNodes(id);
   const credentials = useCredentialOptions();
   const { byId } = useCredentialKinds();
-  const pricePlans = usePricePlans();
   const deleteCluster = useDeleteCluster();
   const updateCluster = useUpdateCluster();
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -55,7 +55,6 @@ export function ClusterDetail() {
 
   const counts = cluster.counts ?? {};
   const credential = credentials.data?.find((c) => c.id === cluster.credential_id);
-  const plan = pricePlans.data?.find((p) => p.id === cluster.price_plan_id);
   const config = cluster.config ?? {};
   const configEntries = Object.entries(config).filter(([, v]) => v !== null && v !== undefined && v !== '');
 
@@ -148,7 +147,6 @@ export function ClusterDetail() {
                     'None'
                   ),
                 },
-                { label: 'Price plan', value: plan ? `${plan.name} · $${plan.usd_per_gpu_minute}/GPU-min` : 'Default plan' },
                 { label: 'Created', value: formatDate(cluster.created_at) },
                 { label: 'Updated', value: cluster.updated_at ? formatDate(cluster.updated_at) : undefined },
                 { label: 'ID', value: cluster.id, mono: true },
@@ -219,6 +217,7 @@ export function ClusterDetail() {
                       <TableHead>Node</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>OS</TableHead>
+                      <TableHead>Agent</TableHead>
                       <TableHead className="text-right">GPUs</TableHead>
                       <TableHead className="text-right">Instances</TableHead>
                       <TableHead>Cache</TableHead>
@@ -235,11 +234,15 @@ export function ClusterDetail() {
                           <div className="text-xs text-muted-foreground">{node.ip_address ?? node.hostname ?? '—'}</div>
                         </TableCell>
                         <TableCell>
-                          <NodeStatusBadge node={nodeStateInput(node)} />
+                          {node.agent_update?.status === 'updating' ? <AgentUpdateBadge info={node.agent_update} /> : <NodeStatusBadge node={nodeStateInput(node)} />}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {node.os ? NODE_OS_LABELS[node.os] : '—'}
                           {node.arch ? ` · ${node.arch}` : ''}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-mono text-xs">{node.agent_version ?? '—'}</div>
+                          {node.agent_update?.status !== 'updating' && <AgentUpdateBadge info={node.agent_update} className="mt-1" />}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{node.device_count ?? 0}</TableCell>
                         <TableCell className="text-right tabular-nums">{node.instance_count ?? 0}</TableCell>
@@ -262,6 +265,8 @@ export function ClusterDetail() {
           </CardContent>
         </Card>
       </div>
+
+      <ClusterAgentUpdateCard clusterId={cluster.id} nodeNames={Object.fromEntries((nodes.data?.items ?? []).map((n) => [n.id, n.name]))} />
 
       <DeleteConfirmationDialog
         open={deleteOpen}

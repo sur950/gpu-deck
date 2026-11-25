@@ -167,6 +167,8 @@ async fn engines_survive_agent_restarts() {
     let dir = tempfile::tempdir().unwrap();
     let cfg_path = dir.path().join("agent.toml");
     let mut cfg = AgentConfig {
+        // Tests never program the host firewall.
+        firewall: "off".into(),
         state_dir: dir.path().join("state"),
         router_idle_stop_seconds: 0,
         engine_warmup: "on".into(),

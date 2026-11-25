@@ -28,8 +28,6 @@ import { layoutsNav } from '@/lib/nav/items/layouts';
 import { swapsNav } from '@/lib/nav/items/swaps';
 import { alertsNav } from '@/lib/nav/items/alerts';
 import { observabilityNav } from '@/lib/nav/items/observability';
-import { meteringNav } from '@/lib/nav/items/metering';
-import { billingNav } from '@/lib/nav/items/billing';
 import { apiKeysNav } from '@/lib/nav/items/api-keys';
 import { credentialsNav } from '@/lib/nav/items/credentials';
 import { auditLogNav } from '@/lib/nav/items/audit-log';
@@ -54,8 +52,6 @@ export const NAV_ENTRIES: NavEntry[] = [
   ...swapsNav,
   ...alertsNav,
   ...observabilityNav,
-  ...meteringNav,
-  ...billingNav,
   ...apiKeysNav,
   ...credentialsNav,
   ...auditLogNav,

@@ -56,12 +56,44 @@ def tls_info_from_transport(transport: Any) -> Dict[str, Any]:
 
 
 class MTLSWebSocketProtocol(WebSocketsSansIOProtocol):
-    """websockets-sansio protocol that exposes the client certificate to the ASGI app."""
+    """
+    websockets-sansio protocol that exposes the client certificate to the ASGI app and
+    reports the round trip of every keep-alive ping an agent answers
+    (``app.services.agent_hub.latency``).
+    """
+
+    _gpudeck_node: Optional[str] = None
 
     async def run_asgi(self) -> None:  # type: ignore[override]
         extensions = self.scope.setdefault("extensions", {})
-        extensions["tls"] = tls_info_from_transport(self.transport)
+        tls = tls_info_from_transport(self.transport)
+        extensions["tls"] = tls  # type: ignore[assignment]
+        from app.services.agent_hub.latency import node_id_from_der
+
+        self._gpudeck_node = node_id_from_der(tls.get("client_cert_der"))
         await super().run_asgi()
+
+    def handle_pong(self, event: Any) -> None:  # type: ignore[override]
+        pending = getattr(self, "pending_ping_payload", None)
+        matched = pending is not None and bytes(event.data) == pending
+        super().handle_pong(event)
+        if matched and self._gpudeck_node:
+            try:
+                from app.services.agent_hub import latency
+
+                latency.record(self._gpudeck_node, float(self.last_ping_rtt) * 1000.0)
+            except Exception as exc:  # noqa: BLE001 - diagnostics only
+                logger.debug(f"hub RTT not recorded: {exc}")
+
+    def connection_lost(self, exc: Optional[Exception]) -> None:  # type: ignore[override]
+        super().connection_lost(exc)
+        if self._gpudeck_node:
+            try:
+                from app.services.agent_hub import latency
+
+                latency.forget(self._gpudeck_node)
+            except Exception:  # noqa: BLE001
+                pass
 
 
 __all__ = ["MTLSWebSocketProtocol", "tls_info_from_transport"]

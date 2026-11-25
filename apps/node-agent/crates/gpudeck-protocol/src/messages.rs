@@ -89,6 +89,33 @@ pub struct ProxyInfo {
     pub address: Option<String>,
     #[serde(default)]
     pub cert_fingerprint_sha256: Option<String>,
+    /// Serving mode (`tunnel` / `direct`); sent only to a hub listing
+    /// [`hub_feature::SECURE_TRANSPORT`]. Absent = direct (older agents).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode: Option<ServingMode>,
+    /// Direct mode: the proxy's listen address (`None` in tunnel mode). Sent with `mode`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind: Option<String>,
+}
+
+/// How the API layer reaches a node (`protocol.md` §13).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ServingMode {
+    /// The agent dials out to the API layer; no inbound port (default).
+    #[default]
+    Tunnel,
+    /// The API layer dials the agent's mTLS proxy.
+    Direct,
+}
+
+impl ServingMode {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Tunnel => "tunnel",
+            Self::Direct => "direct",
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -122,6 +149,10 @@ pub struct Hello {
     /// `observed_engines` feature on an earlier `hello_ack`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub observed_engines: Vec<ObservedEngine>,
+    /// Self-update state (`protocol.md` §14); sent only to a hub known to list
+    /// [`hub_feature::AGENT_UPDATES`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_update: Option<AgentUpdateStatus>,
 }
 
 // ---------------------------------------------------------------------------
@@ -194,6 +225,11 @@ pub mod hub_feature {
     pub const OBSERVED_ENGINES: &str = "observed_engines";
     /// `GpuSample.processes`.
     pub const GPU_PROCESSES: &str = "gpu_processes";
+    /// `hello.proxy.mode` / `bind`, event kind `ingress_rejected`, `config_push.security`.
+    pub const SECURE_TRANSPORT: &str = "secure_transport";
+    /// `hello/inventory.agent_update`, event kind `agent_update`, commands `stage_update` /
+    /// `apply_update`, policy `release` keys (`protocol.md` §14).
+    pub const AGENT_UPDATES: &str = "agent_updates";
 }
 
 // ---------------------------------------------------------------------------
@@ -282,6 +318,10 @@ pub struct Inventory {
     pub system: Option<SystemInfo>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub config_version: Option<u64>,
+    /// Self-update state (`protocol.md` §14); only to a hub listing
+    /// [`hub_feature::AGENT_UPDATES`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_update: Option<AgentUpdateStatus>,
 }
 
 // ---------------------------------------------------------------------------
@@ -336,7 +376,13 @@ pub enum EventKind {
     CertRotated,
     CertExpiring,
     EgressBlocked,
+    /// Rejected inbound attempts (direct-mode proxy, SSH forwarders) summed per interval;
+    /// only sent to a hub listing [`hub_feature::SECURE_TRANSPORT`].
+    IngressRejected,
     SshInstanceStateChanged,
+    /// Self-update progress (`details.phase`); only to a hub listing
+    /// [`hub_feature::AGENT_UPDATES`].
+    AgentUpdate,
     Log,
 }
 
@@ -625,4 +671,93 @@ pub struct ConfigPush {
     pub settings: Option<Settings>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model_sources: Option<ModelSources>,
+    /// Signed node security policy (`security_policy.json`, `protocol.md` §13).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub security: Option<SignedPolicy>,
+}
+
+/// `common.json#/$defs/SignedPolicy`: a base64 [`SecurityPolicy`] document signed with the
+/// internal CA key.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SignedPolicy {
+    pub policy: String,
+    pub signature: String,
+    pub algorithm: String,
+}
+
+/// `security_policy.json` (only ever trusted after the signature check).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct SecurityPolicy {
+    pub v: u32,
+    pub node_id: Uuid,
+    pub serial: u64,
+    pub issued_at: Timestamp,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hub: Option<IdentityPins>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub api_layer: Option<IdentityPins>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tunnel: Option<TunnelPolicy>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub direct: Option<DirectPolicy>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ssh: Option<SshPolicy>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ingress_report: Option<IngressReportPolicy>,
+    /// Release signing keys for agent self-update (`protocol.md` §14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub release: Option<ReleasePolicy>,
+}
+
+/// `security_policy.json#/properties/release`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct ReleasePolicy {
+    /// Standard base64 of 32-byte raw ed25519 public keys.
+    #[serde(default)]
+    pub public_keys: Vec<String>,
+}
+
+/// Pinned keys (SubjectPublicKeyInfo sha256, lowercase hex) and subject rules of a service.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct IdentityPins {
+    #[serde(default)]
+    pub spki_sha256: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subjects: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct TunnelPolicy {
+    #[serde(default)]
+    pub endpoints: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connections: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub idle_timeout_seconds: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct DirectPolicy {
+    #[serde(default)]
+    pub allowed_source_cidrs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handshakes_per_minute: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handshake_burst: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_pending_handshakes: Option<u32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct SshPolicy {
+    #[serde(default)]
+    pub default_allowed_cidrs: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct IngressReportPolicy {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interval_seconds: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub burst_threshold: Option<u64>,
 }

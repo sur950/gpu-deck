@@ -143,7 +143,10 @@ async def test_live_openai_chat(live):
         for c in chunks
     )
     assert all(c.usage is None for c in chunks)  # injected usage chunk stripped
-    assert live["usage"][-1]["output_tokens"] > 0 and not live["usage"][-1]["metadata"]
+    meta = live["usage"][-1]["metadata"] or {}
+    assert live["usage"][-1]["output_tokens"] > 0 and not meta.get("estimated")
+    # Where the time went (serving.md §10) is recorded with every routed request.
+    assert meta["timing"]["upstream_ms"] >= 0 and "total_ms" in meta["timing"]
 
 
 async def test_live_anthropic_messages_stream_and_thinking(live):

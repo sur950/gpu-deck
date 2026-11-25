@@ -75,7 +75,9 @@ class RuleService:
         self.runs = RuleRunRepository(session)
 
     @staticmethod
-    async def as_dependency(request: Request, db: AsyncSession = Depends(get_db)) -> "RuleService":
+    async def as_dependency(
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
+    ) -> "RuleService":
         return RuleService(db)
 
     # ------------------------------------------------------------------ helpers

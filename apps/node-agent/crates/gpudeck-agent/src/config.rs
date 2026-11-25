@@ -42,10 +42,25 @@ pub struct AgentConfig {
     /// Advertised proxy port when it differs from `proxy_port` (the node is reached through a
     /// port forward / NAT mapping, e.g. an SSH `-L 19443:127.0.0.1:9443` tunnel).
     pub proxy_advertise_port: Option<u16>,
-    /// Bind address for the proxy listener. `auto` (default): `proxy_address` when it is an IP
-    /// of this host (e.g. `127.0.0.1` behind an SSH tunnel), else all interfaces (`0.0.0.0`;
-    /// firewall the port to the API layer, see docs/components/node-agent.md).
+    /// Bind address for the direct-mode proxy listener. `auto` (default): `proxy_address` when
+    /// it is an IP of this host (e.g. `127.0.0.1` behind an SSH tunnel), else the host's first
+    /// private address (RFC 1918, CGNAT, ULA), else loopback. Never all interfaces unless set
+    /// explicitly (`0.0.0.0`).
     pub proxy_bind: String,
+    /// How the API layer reaches this node: `tunnel` (default: the agent dials out, no inbound
+    /// port) or `direct` (the mTLS proxy listens on `proxy_port`). Local opt-in only: the
+    /// control plane cannot open a listener on the node.
+    pub serving_mode: String,
+    /// Host firewall for the agent's ports (nftables / pf): `auto` (default: programmed when the
+    /// agent may — root or CAP_NET_ADMIN — and rendered to `<state_dir>/firewall.*` always) or
+    /// `off` (never programmed; `gpudeck-agent firewall apply` still works by hand).
+    pub firewall: String,
+    /// TCP ports the firewall always accepts (the operator's sshd); the installer records the
+    /// ports sshd listens on and the port of the installing SSH session.
+    pub firewall_preserve_ports: Vec<u16>,
+    /// Also program the egress lock (outbound only to the hub, model sources and the
+    /// allow-list; inbound default deny). Same as `run --apply-egress-lock`.
+    pub firewall_egress_lock: bool,
     pub labels: BTreeMap<String, String>,
     pub log_level: String,
     /// Preinstalled engine binaries, keyed by engine name (`llama_cpp`, `mlx`, ...).
@@ -88,6 +103,16 @@ pub struct AgentConfig {
     /// llama.cpp router: a model the running router does not know is started as its own
     /// `llama-server` while the router hosts other models (a router restart would reload them).
     pub router_overflow: bool,
+    /// Self-update (`protocol.md` §14): `auto` (default: the root-owned update helper when
+    /// the installer added it, else the agent swaps its own binary when it may write it and a
+    /// service manager restarts it), `helper` / `self` (force one), `off` (never; update by
+    /// re-running the installer).
+    pub update_helper: String,
+    /// Extra pinned release signing keys (base64 ed25519), on top of the ones the signed
+    /// security policy carries. In a root-owned `agent.toml` they are a root-anchored trust
+    /// root for the update helper.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub release_public_keys: Vec<String>,
     /// Model servers GPU Deck did not start and only observes (`[[observe]]`, read-only).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub observe: Vec<ObserveConfig>,
@@ -143,6 +168,10 @@ impl Default for AgentConfig {
             proxy_address: None,
             proxy_advertise_port: None,
             proxy_bind: "auto".into(),
+            serving_mode: "tunnel".into(),
+            firewall: "auto".into(),
+            firewall_preserve_ports: vec![22],
+            firewall_egress_lock: false,
             labels: BTreeMap::new(),
             log_level: "info".into(),
             engine_paths: BTreeMap::new(),
@@ -163,6 +192,8 @@ impl Default for AgentConfig {
             engine_warmup: "auto".into(),
             verify_local_files: "background".into(),
             router_overflow: true,
+            update_helper: "auto".into(),
+            release_public_keys: vec![],
             observe: vec![],
         }
     }
@@ -212,6 +243,16 @@ impl AgentConfig {
         }
         if let Some(v) = g("PROXY_BIND") {
             self.proxy_bind = v;
+        }
+        if let Some(v) = g("SERVING_MODE") {
+            self.serving_mode = v.trim().to_ascii_lowercase();
+        }
+        if let Some(v) = g("FIREWALL") {
+            self.firewall = v.trim().to_ascii_lowercase();
+        }
+        if let Some(v) = g("FIREWALL_PRESERVE_PORTS") {
+            self.firewall_preserve_ports =
+                v.split(',').filter_map(|p| p.trim().parse().ok()).collect();
         }
         if let Some(v) = g("LOG_LEVEL") {
             self.log_level = v;
@@ -282,6 +323,19 @@ impl AgentConfig {
         if let Some(v) = g("ROUTER_OVERFLOW") {
             self.router_overflow = flag(v);
         }
+        if let Some(v) = g("FIREWALL_EGRESS_LOCK") {
+            self.firewall_egress_lock = flag(v);
+        }
+        if let Some(v) = g("UPDATE_HELPER") {
+            self.update_helper = v.trim().to_ascii_lowercase();
+        }
+        if let Some(v) = g("RELEASE_PUBLIC_KEYS") {
+            self.release_public_keys = v
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+        }
         if let Some(v) = g("LABELS") {
             // "k=v,k2=v2"
             for pair in v.split(',') {
@@ -324,8 +378,17 @@ impl AgentConfig {
         self.state_dir.join("engines")
     }
 
-    /// Proxy listen address for `proxy_bind` (`auto`: `proxy_address` when it is one of
-    /// `local_ips` or loopback, else `0.0.0.0`).
+    /// Serving mode (`tunnel` unless `serving_mode = "direct"`).
+    pub fn serving_mode(&self) -> gpudeck_protocol::ServingMode {
+        match self.serving_mode.trim() {
+            "direct" => gpudeck_protocol::ServingMode::Direct,
+            _ => gpudeck_protocol::ServingMode::Tunnel,
+        }
+    }
+
+    /// Direct-mode proxy listen address for `proxy_bind` (`auto`: `proxy_address` when it is
+    /// loopback or one of `local_ips`, else the first private address of the host, else
+    /// loopback — never all interfaces unless configured explicitly).
     pub fn proxy_bind_addr(&self, local_ips: &[String]) -> String {
         if self.proxy_bind.trim() != "auto" && !self.proxy_bind.trim().is_empty() {
             return self.proxy_bind.trim().to_string();
@@ -337,13 +400,35 @@ impl AgentConfig {
                 }
             }
         }
-        "0.0.0.0".into()
+        private_ip(local_ips).unwrap_or_else(|| "127.0.0.1".into())
+    }
+
+    /// Firewall managed by the agent (`firewall != off`).
+    pub fn firewall_managed(&self) -> bool {
+        self.firewall.trim() != "off"
     }
 
     /// The engine binary configured for `engine`, if any.
     pub fn engine_path(&self, engine: &str) -> Option<&str> {
         self.engine_paths.get(engine).map(String::as_str)
     }
+}
+
+/// First private (RFC 1918, CGNAT, IPv6 ULA) address in `ips`, IPv4 preferred.
+pub fn private_ip(ips: &[String]) -> Option<String> {
+    let parsed: Vec<std::net::IpAddr> = ips.iter().filter_map(|a| a.parse().ok()).collect();
+    let private = |ip: &std::net::IpAddr| match ip {
+        std::net::IpAddr::V4(v) => {
+            let o = v.octets();
+            v.is_private() || (o[0] == 100 && (64..128).contains(&o[1]))
+        }
+        std::net::IpAddr::V6(v) => (v.segments()[0] & 0xfe00) == 0xfc00,
+    };
+    parsed
+        .iter()
+        .find(|ip| ip.is_ipv4() && private(ip))
+        .or_else(|| parsed.iter().find(|ip| private(ip)))
+        .map(|ip| ip.to_string())
 }
 
 #[cfg(test)]
@@ -460,9 +545,18 @@ model = "Qwen/Qwen3-8B"
 
     #[test]
     fn proxy_bind_auto() {
-        let ips = vec!["10.0.0.5".to_string(), "203.0.113.7".to_string()];
+        let ips = vec!["203.0.113.7".to_string(), "10.0.0.5".to_string()];
         let mut c = AgentConfig::default();
-        assert_eq!(c.proxy_bind_addr(&ips), "0.0.0.0");
+        assert_eq!(
+            c.proxy_bind_addr(&ips),
+            "10.0.0.5",
+            "default: the private interface, never every interface"
+        );
+        assert_eq!(
+            c.proxy_bind_addr(&["203.0.113.7".to_string()]),
+            "127.0.0.1",
+            "no private interface: loopback"
+        );
         c.proxy_address = Some("127.0.0.1".into());
         assert_eq!(
             c.proxy_bind_addr(&ips),
@@ -476,11 +570,23 @@ model = "Qwen/Qwen3-8B"
             "private address of this host"
         );
         c.proxy_address = Some("198.51.100.1".into());
-        assert_eq!(c.proxy_bind_addr(&ips), "0.0.0.0", "NAT address: not local");
+        assert_eq!(
+            c.proxy_bind_addr(&ips),
+            "10.0.0.5",
+            "NAT address: not local"
+        );
         c.proxy_address = Some("gpu-1.internal".into());
-        assert_eq!(c.proxy_bind_addr(&ips), "0.0.0.0");
-        c.proxy_bind = "10.0.0.5".into();
         assert_eq!(c.proxy_bind_addr(&ips), "10.0.0.5");
+        c.proxy_bind = "0.0.0.0".into();
+        assert_eq!(c.proxy_bind_addr(&ips), "0.0.0.0", "explicit only");
+        assert_eq!(
+            private_ip(&["fd00::5".into(), "8.8.8.8".into()]).as_deref(),
+            Some("fd00::5")
+        );
+        assert_eq!(
+            AgentConfig::default().serving_mode(),
+            gpudeck_protocol::ServingMode::Tunnel
+        );
     }
 
     #[test]

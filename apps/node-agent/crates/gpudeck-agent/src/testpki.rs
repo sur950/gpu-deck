@@ -10,6 +10,7 @@ use rcgen::{
 pub struct TestCa {
     pub cert: Certificate,
     issuer: Issuer<'static, KeyPair>,
+    key_pem: String,
 }
 
 pub struct Issued {
@@ -34,8 +35,31 @@ impl TestCa {
             KeyUsagePurpose::DigitalSignature,
         ];
         let cert = params.self_signed(&key).expect("self sign");
+        let key_pem = key.serialize_pem();
         let issuer = Issuer::new(params, key);
-        Self { cert, issuer }
+        Self {
+            cert,
+            issuer,
+            key_pem,
+        }
+    }
+
+    /// Sign a node security policy the way the hub does (CA key, ECDSA P-256 / SHA-256).
+    pub fn sign_policy(
+        &self,
+        policy: &gpudeck_protocol::SecurityPolicy,
+    ) -> gpudeck_protocol::SignedPolicy {
+        use base64::Engine;
+        use rcgen::SigningKey;
+        let bytes = serde_json::to_vec(policy).expect("policy json");
+        let key = KeyPair::from_pem(&self.key_pem).expect("ca key");
+        let sig = key.sign(&bytes).expect("sign policy");
+        let b64 = base64::engine::general_purpose::STANDARD;
+        gpudeck_protocol::SignedPolicy {
+            policy: b64.encode(&bytes),
+            signature: b64.encode(sig),
+            algorithm: "ecdsa-p256-sha256".into(),
+        }
     }
 
     pub fn ca_pem(&self) -> String {

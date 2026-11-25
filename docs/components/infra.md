@@ -45,8 +45,8 @@ nodes `gpudeck.sur950.github.io/gpu-node=true`.
 
 ## Dashboards
 
-`python3 infra/observability/grafana/build_dashboards.py` regenerates the four dashboards (GPU
-fleet, inference, usage and cost, control plane) from `libs/contracts/metrics.md` names and copies
+`python3 infra/observability/grafana/build_dashboards.py` regenerates the three dashboards (GPU
+fleet, inference, control plane) from `libs/contracts/metrics.md` names and copies
 them (plus the alert rules) into the chart; `--check` fails on stale files or unknown metrics.
 
 ## Agent cross-compilation

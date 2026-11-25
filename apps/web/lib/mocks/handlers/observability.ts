@@ -1,11 +1,10 @@
 /**
  * Observability mocks: GPU / inference / session metrics, live sessions,
- * logs, traces, metric catalog, and read-only instance / deployment lists
+ * logs, metric catalog, and read-only instance / deployment lists
  * (overridden by the deployments feature's own handler file).
  */
 
 import { DEPLOYMENTS, DEVICES, INSTANCES, instanceById } from '@/lib/mocks/fixtures/fleet';
-import { listRootSpans, traceById } from '@/lib/mocks/fixtures/traces';
 import { logChunksBetween, queryLogs } from '@/lib/mocks/fixtures/logs';
 import { sessionSeries, sessionsSnapshot } from '@/lib/mocks/fixtures/sessions';
 import {
@@ -306,36 +305,4 @@ registerMockHandlers('observability', [
     },
   },
 
-  // ── Traces ────────────────────────────────────────────────────────────────
-  {
-    method: 'GET',
-    path: '/traces',
-    handle: (req) => {
-      const q = req.query;
-      const to = q.get('to') ? new Date(q.get('to') as string).getTime() : Date.now();
-      const from = q.get('from') ? new Date(q.get('from') as string).getTime() : to - 3_600_000;
-      const spans = listRootSpans(from, to, {
-        service: q.get('service') ?? undefined,
-        apiKeyId: q.get('api_key_id') ?? undefined,
-        modelId: q.get('model_id') ?? undefined,
-        deploymentId: q.get('deployment_id') ?? undefined,
-        instanceId: q.get('instance_id') ?? undefined,
-        nodeId: q.get('node_id') ?? undefined,
-        format: q.get('format') ?? undefined,
-        statusCode: q.get('status_code') ? Number(q.get('status_code')) : undefined,
-        errorOnly: q.get('error') === 'true',
-        minDurationMs: q.get('min_duration_ms') ? Number(q.get('min_duration_ms')) : undefined,
-        requestId: q.get('request_id') ?? undefined,
-      });
-      return paginate(spans, req.query, 50);
-    },
-  },
-  {
-    method: 'GET',
-    path: '/traces/:trace_id',
-    handle: (req) => {
-      const trace = traceById(req.params.trace_id);
-      return trace ? ok(trace) : notFound('Trace');
-    },
-  },
 ]);

@@ -55,7 +55,9 @@ class TraceService:
         self.repo = TraceRepository(session)
 
     @staticmethod
-    async def as_dependency(request: Request, db: AsyncSession = Depends(get_db)) -> "TraceService":
+    async def as_dependency(
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
+    ) -> "TraceService":
         return TraceService(db)
 
     async def search(

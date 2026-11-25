@@ -13,8 +13,8 @@ func TestDocsUpToDate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(files) != 1+10+3 {
-		t.Fatalf("expected 14 doc pages, got %d", len(files))
+	if len(files) != 1+9+3 {
+		t.Fatalf("expected 13 doc pages, got %d", len(files))
 	}
 	for name, want := range files {
 		got, err := os.ReadFile(filepath.Join(root, "docs", name))

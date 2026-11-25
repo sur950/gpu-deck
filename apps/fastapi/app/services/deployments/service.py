@@ -273,7 +273,7 @@ class DeploymentService:
 
     @staticmethod
     async def as_dependency(
-        request: Request, db: AsyncSession = Depends(get_db)
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
     ) -> "DeploymentService":
         return DeploymentService.for_session(db)
 
@@ -1082,6 +1082,7 @@ class DeploymentService:
             ),
             fraction_base_bytes=fraction_base_bytes(engine.name, estimate),
             blocked_nodes=dict(blocked_nodes or {}),
+            deployment_id=dep.id,
         )
 
     async def blocked_nodes(self, ctx: DeploymentContext) -> Dict[uuid.UUID, str]:

@@ -117,7 +117,6 @@ func (p *gpudeckProvider) Configure(ctx context.Context, req provider.ConfigureR
 func (p *gpudeckProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewClusterResource,
-		NewPricePlanResource,
 		NewJoinTokenResource,
 		NewModelResource,
 		NewDeploymentResource,

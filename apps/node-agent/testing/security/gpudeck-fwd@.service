@@ -1,0 +1,9 @@
+# Loopback-only forwarder: 127.0.0.1:<port> -> the control plane on the Docker host (or, during
+# the spoofing checks, the attacker container named in /etc/gpudeck-fwd-<port>).
+[Unit]
+Description=forward 127.0.0.1:%i to the control plane
+[Service]
+ExecStart=/bin/sh -c 'exec socat TCP-LISTEN:%i,bind=127.0.0.1,fork,reuseaddr,nodelay TCP:$(cat /etc/gpudeck-fwd-%i 2>/dev/null || echo host.docker.internal:%i),nodelay'
+Restart=always
+[Install]
+WantedBy=multi-user.target

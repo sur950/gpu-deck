@@ -144,6 +144,6 @@ describe('helpers', () => {
 
   it('apiGetList falls back to a synthetic meta', async () => {
     fetchMock.mockResolvedValueOnce(json(200, { success: true, data: [1, 2, 3], error: null, meta: null }));
-    await expect(apiGetList<number>('/traces')).resolves.toEqual({ items: [1, 2, 3], meta: { total: 3, page: 1, page_size: 3, has_more: false } });
+    await expect(apiGetList<number>('/audit')).resolves.toEqual({ items: [1, 2, 3], meta: { total: 3, page: 1, page_size: 3, has_more: false } });
   });
 });

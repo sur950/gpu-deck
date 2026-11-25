@@ -13,7 +13,8 @@ DigitalOcean and as ``startup-script`` metadata by GCP):
 3. installs ``/usr/local/bin/gpudeck-agent``, the ``gpudeck`` user (GPU device
    groups) and the hardened systemd unit from apps/node-agent/packaging,
 4. joins with the one-time token minted for this VM (``--ca-fingerprint`` pins
-   the CA) and starts the service.
+   the CA; serving mode tunnel, so the VM needs no inbound port), applies the host
+   firewall for the agent's ports and starts the service.
 
 It is idempotent: on later boots (GCP re-runs startup scripts) it only makes
 sure the service runs. The join token is single use and expires after
@@ -64,6 +65,9 @@ DeviceAllow=/dev/nvidia-uvm rw
 DeviceAllow=char-nvidia-frontend rw
 DeviceAllow=/dev/kfd rw
 DeviceAllow=char-drm rw
+# Host firewall for the agent's ports, kept current by the agent (agent protocol §13).
+AmbientCapabilities=CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_ADMIN
 
 [Install]
 WantedBy=multi-user.target
@@ -147,12 +151,21 @@ JOIN=(/usr/local/bin/gpudeck-agent --config "$CONFIG" join --url "$HUB_URL" --to
 for l in "${LABELS[@]}"; do JOIN+=(--label "$l"); done
 "${JOIN[@]}"
 chown -R gpudeck:gpudeck "$STATE_DIR" /etc/gpudeck
+# Agent ports closed to everyone but the API layer (tunnel mode: nothing listens at all); the
+# ports sshd listens on stay open.
+if command -v nft >/dev/null 2>&1; then
+  /usr/local/bin/gpudeck-agent --config "$CONFIG" firewall apply \
+    || echo "host firewall not applied (see above); the cloud security group still applies"
+fi
 touch "$STATE_DIR/.gpudeck-joined"
 
 cat >/etc/systemd/system/gpudeck-agent.service <<'GPUDECK_UNIT'
 __SYSTEMD_UNIT__GPUDECK_UNIT
 systemctl daemon-reload
 systemctl enable --now gpudeck-agent.service
+# Self-update helper (agent protocol 14): applies staged, signature-verified releases.
+/usr/local/bin/gpudeck-agent --config "$CONFIG" update install-helper \
+  || echo "update helper not installed"
 echo "gpu-deck bootstrap done $(date -u +%FT%TZ)"
 """
 

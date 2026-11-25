@@ -5,7 +5,7 @@ What runs where, and how to install it. GPU Deck has two halves:
 - The **control plane** runs on **one CPU-only server** (or on Kubernetes) in Docker. It holds the web UI, the APIs, the database and the scheduler. It never touches a GPU.
 - Every **GPU machine** runs **only the GPU Deck node agent**, plus the vendor driver and the inference engines the agent starts. The agent dials out to the control plane. Models are cached on the GPU machine.
 
-Nothing runs on a GPU machine except the agent and its engines, and nothing on a GPU machine listens for the internet. Put any AI gateway (LiteLLM, Kong, Portkey, your own) in front of the serving API for users, quotas and rate limits; GPU Deck stores nothing about end users.
+Nothing runs on a GPU machine except the agent and its engines, and by default nothing on a GPU machine listens on any port: the agent dials out to the control plane, and inference requests come back over that outbound connection. A GPU machine trusts exactly one control plane, the one whose CA it pinned when it joined. Put any AI gateway (LiteLLM, Kong, Portkey, your own) in front of the serving API for users, quotas and rate limits; GPU Deck stores nothing about end users.
 
 ```mermaid
 flowchart LR
@@ -26,7 +26,7 @@ flowchart LR
   end
 
   subgraph G1["GPU machine 1: Linux, NVIDIA or AMD"]
-    A1["gpudeck-agent<br/>systemd service, proxy :9443"]
+    A1["gpudeck-agent<br/>systemd service, no listener"]
     E1["engines on 127.0.0.1<br/>llama.cpp, vLLM, SGLang, ..."]
     M1[("model cache")]
     A1 --> E1
@@ -34,7 +34,7 @@ flowchart LR
   end
 
   subgraph G2["GPU machine 2: Mac, Apple silicon"]
-    A2["gpudeck-agent<br/>launchd service, proxy :9443"]
+    A2["gpudeck-agent<br/>launchd service, no listener"]
     E2["engines on 127.0.0.1<br/>llama.cpp, MLX"]
     A2 --> E2
   end
@@ -53,13 +53,25 @@ flowchart LR
   OBS -.-> ADMIN
   A1 ==>|"dials out: mTLS WSS :8443"| HUB
   A2 ==>|"dials out: mTLS WSS :8443"| HUB
-  SERVE -->|"mTLS :9443"| A1
-  SERVE -->|"mTLS :9443"| A2
+  A1 ==>|"dials out: mTLS tunnel :8444"| SERVE
+  A2 ==>|"dials out: mTLS tunnel :8444"| SERVE
+  SERVE -.->|"direct mode only: mTLS :9443"| A1
 ```
 
-Solid arrows are connections opened by the arrow's source. The thick arrows are the agents' outbound connections: the only thing a GPU machine opens toward the control plane, for the install as well as at run time. The only inbound port on a GPU machine is the agent's proxy (9443), and it accepts only the API layer's certificate.
+Solid arrows are connections opened by the arrow's source. The thick arrows are the agents' outbound connections, the only thing a GPU machine opens toward the control plane: the hub (control, install) and the API layer's tunnel listener (inference requests travel back over it). In the default **tunnel** serving mode a GPU machine needs **no inbound port**. The dotted arrow is the opt-in **direct** mode for low-latency private networks: the API layer dials the agent's proxy on 9443, which then accepts only the API layer's addresses and its pinned key.
 
-**What has been verified.** The Compose control plane, the node agent installed with the one-line command on a Mac (launchd), llama.cpp and MLX serving, and all three API formats have been run end to end. The Linux install path (systemd), NVIDIA and AMD machines, the container engines (vLLM, SGLang, TensorRT-LLM), the Kubernetes chart and DaemonSet (linted and rendered in CI, not yet installed on a live cluster) and the cloud providers are implemented and tested against fixtures but not yet verified on real hardware or accounts. [TESTING.md](TESTING.md) has the full list; please send a [hardware report](https://github.com/sur950/gpu-deck/issues/new?template=hardware_report.yml) if you try them.
+> [!NOTE]
+> **What has been verified.** The Compose control plane; the one-line install on a Mac (launchd)
+> and on Linux (systemd); llama.cpp and MLX on a Mac; an NVIDIA Hopper GPU with NVML monitoring,
+> vLLM, the llama.cpp CUDA build, slices, routing, failover, auto-heal, idle unload, layout swaps
+> and SSH GPU instances; and all three API formats end to end. SGLang and TensorRT-LLM ran on the
+> NVIDIA GPU with known gaps. AMD and the other vendors, MIG, multi-node models, the Kubernetes
+> chart and DaemonSet (linted and rendered in CI, not yet installed on a live cluster) and the
+> cloud providers are implemented and tested against fixtures, awaiting reports. Fixes made after
+> the NVIDIA run (engine re-adoption on agent restart, pooled HTTP/2 connections, the
+> outbound-only mode) await re-verification on a GPU. [TESTING.md](TESTING.md) has the full list;
+> please send a [hardware report](https://github.com/sur950/gpu-deck/issues/new?template=hardware_report.yml)
+> if you try them.
 
 ## 1. What runs where
 
@@ -70,10 +82,10 @@ One image (`ghcr.io/sur950/gpu-deck-api`) provides six of the processes; the web
 | Container | Image | Port | Default bind | What it does |
 | --- | --- | --- | --- | --- |
 | `web` | `gpu-deck-web` | 3180 | 127.0.0.1 (`GPUDECK_BIND`) | Admin web UI (Next.js) and a small gateway that forwards `/api/*` to the admin API (`GPUDECK_API_INTERNAL_URL`, set by Compose and Helm), so the UI and its API share one origin. Nothing deployment-specific is compiled into the image: it works on any hostname |
-| `admin-api` | `gpu-deck-api` | 8180 | 127.0.0.1 (`GPUDECK_BIND`) | `/api/v1`: auth, fleet, models, deployments, rules, billing, audit. Used by the web UI (through its gateway), the CLI and Terraform |
-| `api-layer` | `gpu-deck-api` | 8181 | 127.0.0.1 (`GPUDECK_SERVING_BIND`) | Serving API: OpenAI, Anthropic and Ollama formats, API-key auth, routes to the node agents over mTLS |
+| `admin-api` | `gpu-deck-api` | 8180 | 127.0.0.1 (`GPUDECK_BIND`) | `/api/v1`: auth, fleet, models, deployments, rules, audit. Used by the web UI (through its gateway), the CLI and Terraform |
+| `api-layer` | `gpu-deck-api` | 8181; 8444-8445 | 127.0.0.1 (`GPUDECK_SERVING_BIND`); 0.0.0.0 (`GPUDECK_TUNNEL_BIND`) | Serving API: OpenAI, Anthropic and Ollama formats, API-key auth, routes to the node agents over mTLS. 8444-8445: the agents' outbound tunnels, one port per worker (`AGENT_TUNNEL_LISTENERS` = `WORKERS`; node certificates only) |
 | `agent-hub` | `gpu-deck-api` | 8443 | 0.0.0.0 (`GPUDECK_HUB_BIND`) | Everything a GPU machine needs: the install script (`/agent/v1/install.sh`), agent builds and their sha256 (`/agent/v1/downloads/...`), the CA (`/agent/v1/ca.pem`), node join (`/agent/v1/join`) and the agents' mTLS WebSocket (`/agent/v1/ws`) |
-| `worker` | `gpu-deck-api` | 9464 (metrics, internal) | none | Celery: usage writes, rollups, billing, alert delivery |
+| `worker` | `gpu-deck-api` | 9464 (metrics, internal) | none | Celery: usage writes, rollups, alert delivery |
 | `beat` | `gpu-deck-api` | none | none | Celery beat. Exactly one per deployment |
 | `scheduler` | `gpu-deck-api` | 9465 (metrics, internal) | none | Rules, layouts, swaps, housekeeping; elects a leader, so more than one is safe |
 | `postgres` | `postgres:17.12-alpine` | 5432 (internal) | none | All state (full overlay) |
@@ -102,11 +114,20 @@ Disk is dominated by PostgreSQL time series. Raw metrics are kept 48 hours, one-
 
 The single-server Compose setup is not highly available. For HA run the [Kubernetes chart](#6-kubernetes-helm): two or more replicas of the admin API, API layer, agent hub and scheduler, PodDisruptionBudgets, an HPA on the API layer, and managed or operator-run PostgreSQL and Redis (Patroni, CloudNativePG, Sentinel or a cloud service). The scheduler elects one leader with Postgres leases, and a swap resumes from its persisted step on the new leader. Agents keep their engines running while the control plane is down, and serving continues as long as the API layer and Redis are up. Details: [operations.md](operations.md) section 6.
 
+Outbound tunnels and several API-layer replicas: an API-layer worker can only send requests over tunnels it accepted, so every agent keeps tunnels to every worker. List each worker's reachable `host:port` in `AGENT_TUNNEL_PUBLIC_URLS` (Compose: one host, `AGENT_TUNNEL_LISTENERS` ports, set automatically). The Helm chart does not give API-layer pods individual addresses, so it runs in-cluster GPU nodes in direct mode over the cluster network; for tunnel-mode machines outside the cluster, expose each API-layer worker (for example one LoadBalancer Service per pod) and list them.
+
 ### GPU machine (agent only)
 
-Each GPU machine runs exactly one extra program, the **node agent** (`gpudeck-agent`, a single Rust binary), as a native service: systemd on Linux, launchd on macOS. It detects GPUs, joins the control plane, starts and stops engines on command, ships metrics and logs, caches model files and runs the mTLS proxy on port 9443. The control plane never SSHes in and never runs anything on the machine except through the agent.
+Each GPU machine runs exactly one extra program, the **node agent** (`gpudeck-agent`, a single Rust binary), as a native service: systemd on Linux, launchd on macOS. It detects GPUs, joins the control plane, starts and stops engines on command, ships metrics and logs, caches model files and carries inference requests to the engines over its outbound tunnel to the API layer (or, in direct mode, its mTLS proxy on port 9443). The control plane never SSHes in and never runs anything on the machine except through the agent.
 
 A Kubernetes DaemonSet (`gpu-deck-agent` image) runs the agent on GPU nodes that are part of a cluster; see [section 6](#6-kubernetes-helm).
+
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/prepare-gpu-machine-dark.svg">
+    <img src="diagrams/prepare-gpu-machine-light.svg" alt="Preparing a GPU machine in four steps. 1 Driver: install the vendor driver and check that it lists every GPU (nvidia-smi, amd-smi). 2 Container runtime, optional and only for the vLLM, SGLang and TensorRT-LLM images: Docker or Podman plus the NVIDIA Container Toolkit. 3 Network: outbound only, 8443 and 8444-8445 to the control plane and 443 to model hubs; direct mode adds inbound 9443 from the API layer. 4 Join: run the install command from Nodes, Add node. Then the agent does the rest: pinned engine builds, model cache, host firewall, certificates and rotation, metrics and logs." width="880">
+  </picture>
+</p>
 
 #### What the agent installs, and what you install
 
@@ -117,7 +138,7 @@ A Kubernetes DaemonSet (`gpu-deck-agent` image) runs the agent on GPU nodes that
 | Container runtime | Nothing | Docker, Podman or nerdctl, only if you use container engines (vLLM, SGLang, TensorRT-LLM, vLLM-Omni, custom images) or SSH GPU instances. NVIDIA: the NVIDIA Container Toolkit so `--gpus` works. AMD: `/dev/kfd` and `/dev/dri` are passed through. The agent user must be allowed to run the container CLI (typically membership of the `docker` group). Container engines are not supported on macOS nodes |
 | Engines | Downloads the pinned build of each native engine on first use into `<state dir>/engines/<engine>/<version>/`, verified by sha256, picking the build for the machine's GPU (see the table below); creates a Python venv for MLX, mlx-audio and SGLang Diffusion; builds whisper.cpp from the pinned source on a Mac. Container engines are pulled by the container runtime on first start, pinned by tag and digest | Python 3.11+ for the venv engines (3.12 for SGLang Diffusion), `cmake` and the Xcode Command Line Tools for whisper.cpp on a Mac. Or install any engine yourself and list it under `[engine_paths]` in `agent.toml` (or put it on `PATH`): an installed engine always wins over a download |
 | Models | Downloads the model files you deploy (Hugging Face or ModelScope, or your mirror), verifies them and keeps them in the cache directory (`/var/lib/gpudeck/cache`, limit 70 % of the volume by default, least-recently-used sweep) | Disk space on that volume. Local model directories (Ollama store, LM Studio, plain GGUF) are used in place |
-| Firewall | Optionally programs an egress lock (`pf` on macOS, nftables on Linux) when started with `--apply-egress-lock` | Allow inbound 9443 from the control plane server only; allow outbound 8443 to the hub, and 443 to Hugging Face / ModelScope or your mirror |
+| Firewall | Applies and verifies a host firewall for its own ports (nftables on Linux, a pf anchor on macOS): the proxy port closed (tunnel mode) or open to the API layer's addresses only (direct mode), the SSH-instance range open only to the instances' CIDRs, metrics and engine ports never reachable from the network. The ports your sshd listens on and the SSH session running the installer always stay open. Opt out with `firewall=0` on the install URL (`--no-firewall`); `gpudeck-agent firewall status|apply|remove`. Optional egress lock (`firewall apply --egress-lock`) | Allow outbound 8443 (hub) and 8444-8445 (API-layer tunnels) to the control plane, and 443 to Hugging Face / ModelScope or your mirror. Direct mode only: inbound 9443 from the API layer |
 
 Notes that save time:
 
@@ -143,6 +164,8 @@ Notes that save time:
 | whisper.cpp | ggml-org release `b5907` | native | Linux x86_64 / arm64 release build (CPU); on a Mac, the pinned source built with CMake (Metal) | Mac: `cmake` and the Xcode Command Line Tools |
 | stable-diffusion.cpp | release `master-1106-532d2c1` | native | macOS arm64 build (macOS 26+); Linux x86_64 CPU, Vulkan or ROCm 10.1 build (built on Ubuntu 26.04, so it needs a glibc that new) | On older systems, your own `sd-server` in `engine_paths` |
 | Custom | your image | container | Pulled by the runtime | Your image and its launch, health and metrics settings |
+
+See the [hardware and engine support matrix](hardware/README.md) and the per-accelerator pages ([NVIDIA](hardware/nvidia.md), [AMD](hardware/amd.md), [Apple Silicon](hardware/apple-silicon.md), [Hygon](hardware/hygon.md), [MetaX](hardware/metax.md), [Moore Threads](hardware/moore-threads.md), [T-Head](hardware/t-head.md), [CPU-only](hardware/cpu.md)) for drivers, slicing, multi-GPU support and a prepare-this-machine checklist; [hardware/engines.md](hardware/engines.md) covers the same ground per engine.
 
 #### Linux requirements per platform
 
@@ -190,7 +213,8 @@ Deny everything, then open only these. The full table of rules and where each is
 | Your AI gateway or apps | Control plane, serving API | 443 (to 8181) | HTTPS + API key | Inference requests | Client. Restrict to the gateway's IPs |
 | Admins | Control plane, web UI and admin API | 443 (to 3180 / 8180) | HTTPS | Management | Browser, CLI, Terraform. Private network or VPN only |
 | **Node agent** | **Control plane, agent hub** | **8443** | **TLS 1.3; mTLS on the WebSocket** | Install script, agent build and CA (with a join token), join, then heartbeats, commands, metrics, logs | **The install command and the agent, outbound** |
-| **Control plane (API layer, jobs)** | **Node agent proxy** | **9443** | **mTLS** (API layer certificate) | Inference traffic, health probes | **The control plane, inbound to the GPU machine: the only inbound port** |
+| **Node agent** | **Control plane, API layer tunnel** | **8444 (one port per API-layer worker)** | **TLS 1.3, mutual** | Inference requests (default serving mode: they come back over this connection) | **The agent, outbound** |
+| Control plane (API layer) | Node agent proxy | 9443 | mTLS (pinned API-layer key) | Inference traffic, direct mode only (private networks) | The control plane, inbound to the GPU machine; allow-listed sources only |
 | Node agent | Engines | 127.0.0.1, ports 10240 to 10340 | HTTP | Engines never bind a network interface | Local only |
 | Node agent | Hugging Face, ModelScope | 443 | HTTPS | Model downloads (or your mirror) | The agent, outbound |
 | Node agent | GitHub, PyPI | 443 | HTTPS | Pinned engine builds on first use (not needed when you install engines yourself) | The agent, outbound |
@@ -199,7 +223,37 @@ Deny everything, then open only these. The full table of rules and where each is
 | Admins | GPU machines | 22 | SSH | Maintenance | Your bastion or VPN (outside GPU Deck) |
 | Admins' users | GPU machines | 2200 to 2299 | SSH | Only if you use SSH GPU instances | Per instance, optional CIDR allow-list |
 
-Trust: on first start the control plane creates an internal certificate authority (key encrypted in the vault) and, from it, the hub's server certificate and the API layer's and control plane's client certificates. A node joins with a join token (one-time by default, 15 minutes; or a multi-use enrolment token for node pools) plus a certificate signing request, and gets a certificate signed by that CA. The install command pins the CA's sha256 before it fetches anything from the hub. The agent hub requires a valid client certificate on the WebSocket; the agent proxy requires the API layer's client certificate; revoking a certificate drops the node at once.
+**A GPU machine in the default (tunnel) mode needs zero inbound ports**: everything in the table it takes part in is outbound. Direct mode adds the single inbound 9443, open only to the API layer's addresses.
+
+Trust: on first start the control plane creates an internal certificate authority (key encrypted in the vault) and, from it, the hub's server certificate and the API layer's certificate (client identity towards direct-mode proxies, server identity of the tunnel listener). A node joins with a join token (one-time by default, 15 minutes; or a multi-use enrolment token for node pools) plus a certificate signing request, and gets a certificate signed by that CA. The install command pins the CA's sha256 before it fetches anything from the hub, and `gpudeck-agent join` refuses to run without that pin. With the certificate the node receives a security policy signed by the CA: the hub's and the API layer's key fingerprints, the tunnel endpoints and the allowed source addresses. From then on the agent talks only to those keys and endpoints, so even a certificate from the same CA for another purpose, or a spoofed DNS name, gets nowhere. Revoking a certificate drops the node at once. Details and the verification results: [security-model.md](security-model.md).
+
+### Network latency: keep the API layer close to the GPUs
+
+Every inference request crosses the network between the API layer and a GPU machine at least once, and a streamed response pays that round trip before its first token. GPU Deck keeps the cost of that hop low (no database read on the request path, warm HTTP/2 connections or the agent's tunnel, streaming passed straight through) and measures it, but it cannot make a long link short. Put the distance on the client side instead:
+
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/network-latency-dark.svg">
+    <img src="diagrams/network-latency-light.svg" alt="An AI gateway or geo-DNS sends each client to the API layer of its region. Two regions, each with an API layer next to its GPU machines: the API layer probes every node and routes to the nearest replica over a short round trip, and uses the other region's machines only when its own are busy. Every response carries a Server-Timing header with route, queue, connect, net, engine and first-token time." width="880">
+  </picture>
+</p>
+
+- **Run the API layer in the same site or region as the GPU machines it serves.** The API layer is stateless (routing table in memory, everything else in Redis and PostgreSQL), so you can run several. Give each one a region label with `API_LAYER_REGION` (and a stable `API_LAYER_ID` if host names change), for example `API_LAYER_REGION=region-a` on the API layers next to one group of machines and `region-b` on the others. Every API layer of one region should share the label.
+- **One or more API layers per region, behind your AI gateway or geo-DNS.** Point clients (or the gateway's upstreams) at the API layer of their own region; the long hop is then the client's, once per request, not every token's. Agents keep a tunnel to every API layer listed in `AGENT_TUNNEL_PUBLIC_URLS`.
+- **Tunnel or direct.** In the default tunnel mode the agent dials the API layer and requests come back over that connection: no inbound port on the machine, the same round trip as direct mode once the tunnel is up (the tunnel is kept open and probed, so requests never wait for a handshake). Direct mode (the API layer dials the agent's proxy on 9443) saves nothing per request; use it only where an outbound tunnel is not possible and the private network allows the inbound port. Either way the connection is warm: Server-Timing shows `connect` as 0.
+- **The control plane can be farther away.** The agent hub only carries commands, metrics and logs; its round trip does not slow requests down.
+
+**What the numbers mean.** Node detail › Network and Observability › GPUs / infra show two round-trip times per node. *Serving* is measured by each API layer over the path it uses for that node (one `GET /_health` on the warm connection or tunnel every `SERVING_RTT_PROBE_SECONDS`; the connect and TLS handshake are not counted), smoothed (EWMA) with its jitter and kept per minute for `LATENCY_RETENTION_DAYS`. *Control plane* is the agent hub's WebSocket ping. A streamed response cannot start sooner than one serving round trip after the request reaches the API layer; tens of milliseconds are a different region, and jitter that is large compared to the round trip points at a congested or lossy link.
+
+**How routing and placement use them.** With the default `least_sessions` strategy each API layer sends a request to the replica with the lowest expected latency: its measured round trip plus a penalty for how busy the replica is (`SERVING_LATENCY_LOAD_PENALTY_MS` at full concurrency). Replicas within `SERVING_LATENCY_TOLERANCE_MS` of each other share the load; the nearest replica takes the traffic until it is busy enough that a farther one answers sooner, then requests spill over. Each API layer measures its own round trips, so this is automatically local to its region. When the scheduler places or scales a deployment it prefers nodes close to the API-layer regions that carried that deployment's requests over the last `SCHEDULER_TRAFFIC_WINDOW_HOURS`, and for a model split across nodes it prefers nodes in the same cluster, zone label (`zone` or `topology.kubernetes.io/zone`) and rack label; the placement preview shows the reason. Without measurements nothing changes. `SERVING_LATENCY_ROUTING=false` and `SCHEDULER_LATENCY_AWARE=false` turn the two off.
+
+**Reading `Server-Timing`.** Every serving response carries it, for example:
+
+```
+Server-Timing: route;dur=0.1, queue;dur=0.0, connect;dur=0.0, rtt;dur=18.4, net;dur=19.0, engine;dur=30.6, upstream;dur=50.2, total;dur=53.0
+```
+
+`route` is the routing decision, `queue` time spent waiting for a ready replica or on retried attempts, `connect` opening a connection (0 when warm), `rtt` the probed round trip to the chosen node, `net` this request's network time, `engine` the engine's time to its response headers measured on the node, `upstream` the whole hop as the API layer saw it and `total` the request in the API layer (not on streamed responses, whose headers leave before the first token; their full breakdown with time to first token is on Observability › Inference). A large `net` with a small `rtt` means a slow request body upload; a large `queue` means no replica was ready; a large `engine` is the model, not the network. By default the header carries only these names and durations, nothing that names a host or node (`SERVING_SERVER_TIMING=detailed` adds the region and node name, `off` removes it). An AI gateway in front can read the header from the response, add its own entries and decide whether to pass it on. The exact definitions are in [serving.md](../libs/contracts/openapi/serving.md#10-server-timing-and-the-request-timing-breakdown).
 
 ## 3. Deploy the control plane with Docker Compose
 
@@ -287,27 +341,41 @@ The hub (8443) is published directly by Compose; do not proxy it.
 ## 4. First run: log in, add a GPU machine, serve a model
 
 1. **Log in.** Open the web UI and sign in with `ADMIN_USERNAME` / `ADMIN_PASSWORD`.
-2. **Create a cluster.** Clusters, new cluster. A cluster groups machines and carries a price plan; choose `bare_metal` or `vm` for machines you operate yourself.
+2. **Create a cluster.** Clusters, new cluster. A cluster groups machines that share a network and a credential; choose `bare_metal` or `vm` for machines you operate yourself.
 3. **Generate a join token.** Nodes, **Add node**, pick the cluster. You get a one-time token (`gdj_...`, valid 15 minutes by default) and the install command; for a pool of machines choose how many may join with it (a multi-use enrolment token, up to a year). The same call over the API is `POST /api/v1/nodes/join-tokens` (`max_uses`, `ttl_minutes`); the CLI is `gpudeck nodes join-tokens create --cluster-id <id> [--max-uses 50 --ttl-minutes 43200]`. Every join is audited with the token it used; revoke a token at any time.
+
+   ![Add a node: pick the cluster, get a one-time join token and the install command for the GPU machine](screenshots/nodes-join.svg)
+
+   *Nodes, Add node: the token and the install command, shown once.*
 4. **Install the agent on the GPU machine.** Log in to the machine, install its GPU driver (and container runtime if needed, section 1), then run the command shown in the UI. It looks like this:
 
    ```bash
    sh -c 'c=$(mktemp) && curl -fsSk -o "$c" https://gpudeck-hub.example.com:8443/agent/v1/ca.pem && echo "<ca sha256>  $c" | (sha256sum -c - 2>/dev/null || shasum -a 256 -c -) >/dev/null && curl -fsSL --cacert "$c" -H "X-GPUDeck-Join-Token: gdj_..." https://gpudeck-hub.example.com:8443/agent/v1/install.sh | sh'
    ```
 
-   Everything comes from the agent hub, so the machine needs outbound 8443 only. The command fetches the hub's CA and checks it against the sha256 pinned in the command, then fetches the install script over TLS verified by that CA. The script (authorised only by the join token) works out the OS and CPU, downloads the matching build from `/agent/v1/downloads/<version>/<target>` with its SHA-256 (the hub fetches it from the GitHub release on first use), verifies it, installs it, creates the `gpudeck` user and the systemd unit (Linux) or a launchd agent (macOS), runs `gpudeck-agent join` with the hub URL and the pinned CA fingerprint, and starts the service. It needs `curl` and `sudo` (a Mac without sudo installs under `~/.gpudeck`). When the hub has a certificate from a public CA (`AGENT_HUB_TLS_CERT_FILE`) the command is a plain `curl -fsSL ... | sh`.
+   Everything comes from the agent hub, so the install needs outbound 8443 only (serving then uses outbound 8444 as well). The command fetches the hub's CA and checks it against the sha256 pinned in the command, then fetches the install script over TLS verified by that CA. The script (authorised only by the join token) works out the OS and CPU, downloads the matching build from `/agent/v1/downloads/<version>/<target>` with its SHA-256 (the hub fetches it from the GitHub release on first use), verifies it, installs it, creates the `gpudeck` user and the systemd unit (Linux) or a launchd agent (macOS), runs `gpudeck-agent join` with the hub URL and the pinned CA fingerprint, applies and verifies the host firewall (keeping your SSH port open), and starts the service. The machine serves over its outbound tunnel; for direct mode add `?mode=direct` to the `install.sh` URL (the join dialog has both choices, and the firewall opt-out). It needs `curl` and `sudo` (a Mac without sudo installs under `~/.gpudeck`). When the hub has a certificate from a public CA (`AGENT_HUB_TLS_CERT_FILE`) the command is a plain `curl -fsSL ... | sh`.
 
    **Without the script** (nothing but the hub port is needed): download `gpudeck-agent-<version>-<target>.tar.gz` and `SHA256SUMS.txt` from the [release](https://github.com/sur950/gpu-deck/releases), verify the checksum, unpack, then:
 
    ```bash
    sudo install -m 0755 gpudeck-agent /usr/local/bin/gpudeck-agent
    sudo gpudeck-agent join --hub https://gpudeck-hub.example.com:8443 --token gdj_... --ca-fingerprint <sha256>
+   sudo gpudeck-agent firewall apply      # agent ports closed to everyone but the API layer
    # then install packaging/systemd/gpudeck-agent.service (Linux) or the launchd plist (macOS) from the archive
    ```
 
    Verify the machine: Nodes shows it `online` within a few seconds, with its GPUs, driver and installed engines.
+
+   <picture>
+     <source media="(prefers-color-scheme: dark)" srcset="diagrams/node-join-dark.svg">
+     <img src="diagrams/node-join-light.svg" alt="How a GPU machine joins: you create a join token, the control plane shows it and the install command once, you run the command on the machine, it fetches the CA (checked against the pinned sha256) and the agent, the agent generates a key and a CSR and joins with the token, the control plane signs the node certificate and uses up the token, then the agent dials out over mutual TLS, receives its config and the node is online; heartbeats, metrics and inventory go up and commands come back on the same socket." width="880">
+   </picture>
 5. **Add a model.** Catalog, **Add a model**: search Hugging Face or ModelScope (store a token under Credentials for gated models) or scan a local path.
 6. **Deploy it.** Catalog, **Deploy** (or Deployments, New deployment). The wizard picks an engine that fits the model format and the GPU, and shows a scheduler dry run of where it would be placed. The agent downloads the files into the machine's model cache, starts the engine on 127.0.0.1 and the instance turns `ready`.
+
+   ![The deploy wizard: the engine picked from the model format, GPU vendor and driver, launch settings, and a scheduler dry run showing where the model would be placed](screenshots/deployment-wizard.svg)
+
+   *The deploy wizard: engine auto-pick and a placement dry run before anything loads.*
 7. **Create an API key.** API keys, new API key. The `gd-...` key is shown once; only its hash is stored.
 8. **Call it.** The serving API speaks three formats on one port. Replace the host and model name:
 
@@ -329,7 +397,7 @@ The hub (8443) is published directly by Compose; do not proxy it.
    ```
 
    The explicit prefixes (`/openai/v1`, `/anthropic/v1`, `/ollama/api`) always work; the bare `/v1` and `/api` paths are kept for drop-in clients. Point SDKs at `OPENAI_BASE_URL=https://host/openai/v1`, `ANTHROPIC_BASE_URL=https://host/anthropic` or `OLLAMA_HOST=https://host/ollama`. Contract: [`libs/contracts/openapi/serving.md`](../libs/contracts/openapi/serving.md).
-9. **Put any AI gateway in front.** In your gateway, add GPU Deck as an OpenAI-compatible (or Anthropic or Ollama) upstream at the serving API URL with a `gd-` key, and keep users, quotas, rate limits and guardrails there. Restrict the serving API to the gateway's IPs with `GATEWAY_IP_ALLOWLIST` or an in-app IP rule. GPU Deck meters per API key, so give the gateway its own key (or one per tenant) and read usage and cost under Metering and Billing.
+9. **Put any AI gateway in front.** In your gateway, add GPU Deck as an OpenAI-compatible (or Anthropic or Ollama) upstream at the serving API URL with a `gd-` key, and keep users, quotas, rate limits and guardrails there. Restrict the serving API to the gateway's IPs with `GATEWAY_IP_ALLOWLIST` or an in-app IP rule. GPU Deck counts requests and tokens per API key, so give the gateway its own key (or one per tenant) and read its traffic on the key's page under API keys.
 
 Rules (idle unload, high-load grow, time-of-day layouts and the rest) are in the web UI under Rules and Layouts; see [architecture.md](architecture.md) for how swaps work.
 
@@ -381,7 +449,7 @@ In `my-values.yaml` set the hosts and URLs (`ingress.admin.host`, `ingress.servi
 
 There is nothing to provision after the install: the published images are used as they are (the web pods forward `/api` to the admin API service, and the admin ingress also routes `/api` there directly), the API layer and control-plane certificates are issued from the vault when the pods start, and the admin API and hub pods fetch node-agent builds from the matching GitHub release on first use (cached per pod; `agentDownloads.persistentVolumeClaim` shares a cache, and the agent hub's NetworkPolicy allows HTTPS egress for it). The `gpu-deck-web` image needs no rebuild for your host names.
 
-**GPU nodes in the same cluster.** `nodeAgent.enabled=true` runs the agent as a DaemonSet on nodes labelled `gpudeck.sur950.github.io/gpu-node=true`, with the NVIDIA runtime class, host networking and a host-path state directory. All pods share one multi-use enrolment token:
+**GPU nodes in the same cluster.** `nodeAgent.enabled=true` runs the agent as a DaemonSet on nodes labelled `gpudeck.sur950.github.io/gpu-node=true`, with the NVIDIA runtime class, host networking and a host-path state directory. These agents use the direct serving mode over the cluster network (`nodeAgent.servingMode`; the proxy accepts only the API layer's pinned key from private source ranges, and NetworkPolicies apply); set `nodeAgent.caFingerprint` (agents refuse to join without it). All pods share one multi-use enrolment token:
 
 ```bash
 TOKEN=$(gpudeck -o json nodes join-tokens create --cluster-id <id> --max-uses 100 --ttl-minutes 43200 | jq -r .token)
@@ -417,21 +485,44 @@ sudo ./install-agent.sh --hub https://hub:8443 --token gdj_...              # on
 
 `install.sh compose` mounts the bundle's agent builds into the admin API and the hub (`AGENT_DIST_DIR`, with `AGENT_RELEASE_URL` empty so nothing is fetched), so the one-line installer works on the site as it does online; with Helm, copy them into a PVC and set `agentDownloads.persistentVolumeClaim`, `config.AGENT_DIST_DIR=/app/agent-cache` and `config.AGENT_RELEASE_URL=""`. You can also copy `install-agent.sh` and `agent/` to every GPU machine. For models, point `HF_ENDPOINT` and `MODELSCOPE_ENDPOINT` at a site mirror (the control plane pushes them to every agent) or use local model files (Catalog, Add a model, scan a local path). The agent cannot download engine builds from GitHub or PyPI on an isolated network: install the engines your models need on each GPU machine ahead of time and list them in `engine_paths`, and load container-engine images (by the pinned tag and digest) into the machine's container runtime yourself. Egress rules are described in [security-model.md](security-model.md).
 
+### Agent updates in an air-gapped site
+
+Agents update themselves from the control plane (section 8), also offline: put the release's signed manifest `gpudeck-agent-<version>-manifest.json` and `.sig` next to the archives in `AGENT_DIST_DIR` (the bundle copies them when they are in `dist/agent/`) and set `AGENT_RELEASE_PUBLIC_KEYS`. The control plane offers only versions whose manifest verifies, extracts the binary from the local archive after checking it against the manifest, and hands it to each node through the hub (outbound 8443 only). Nothing is fetched from the internet.
+
 ## 8. Upgrades
 
 1. Read the release notes in [CHANGELOG.md](../CHANGELOG.md) for new settings, migrations and protocol changes, and diff your `.env` against the new `.env.example`.
 2. Back up PostgreSQL and the `VAULT_KEYS` / `SECRET_KEY` (see [operations.md](operations.md) section 3).
 3. **Control plane first.** Compose: `export GPUDECK_VERSION=<new>`, `$COMPOSE pull`, `$COMPOSE --profile tools run --rm migrate`, `$COMPOSE up -d`. Helm: `helm upgrade` with `--version <new>` (the pre-upgrade hook runs the migrations before pods roll). The API layer keeps serving from its in-memory routing table while the rest restarts.
-4. **Then the agents**, node by node: re-run the install command with a fresh join token (the hub serves the new release's build, fetched from GitHub or from `AGENT_DIST_DIR` offline), or replace the binary and restart the service. Agents reconnect on their own and replay pending commands. A control plane release works with every agent of the same protocol major; a newer agent against an older hub is not supported. New engine pins arrive as new engine versions; switch a deployment to one when you are ready.
+4. **Then the agents.** With agent updates on (below), the control plane pre-stages the new agent on every node and you click **Update** on a node, or **Rolling update** on a cluster, or let the cluster update itself in its maintenance window. Otherwise, node by node: re-run the install command with a fresh join token (the hub serves the new release's build, fetched from GitHub or from `AGENT_DIST_DIR` offline), or replace the binary and restart the service. Agents reconnect on their own and replay pending commands. A control plane release works with every agent of the same protocol major; a newer agent against an older hub is not supported. New engine pins arrive as new engine versions; switch a deployment to one when you are ready.
 5. Verify `/api/v1/health/ready`, serving `/health` and that every node is online.
 
 Downgrading across a migration is not supported: restore the backup. Versioning and compatibility rules: [RELEASING.md](RELEASING.md).
+
+### Agent updates and the release signing key
+
+Nodes update their agent from the control plane without model downtime: the new binary is downloaded to each node ahead of time and verified, then an update swaps it atomically (keeping the previous one), restarts the agent, which re-adopts its running engines, and checks that it reconnects healthy; if not, the node rolls back by itself. How it works on the node: [node-agent.md](components/node-agent.md#updates).
+
+Updates trust only releases signed with your release signing key (ed25519):
+
+Until the key is set up, a release is published with an unsigned manifest (the release workflow warns and carries on): control planes and nodes ignore it, nodes behind the control plane's version show **Update manually**, and nothing is ever applied automatically.
+
+1. **Create the key once**, on a trusted machine, never in the repository or CI logs:
+   ```bash
+   python3 scripts/agent_release_manifest.py keygen --out agent-release.key   # needs: pip install cryptography
+   ```
+   It prints the public key. If you publish releases from a fork, store the content of `agent-release.key` as the GitHub Actions secret `AGENT_RELEASE_SIGNING_KEY` and the public key as the repository variable `AGENT_RELEASE_PUBLIC_KEY`, then delete the file (keep an offline backup). The release workflow then publishes `gpudeck-agent-<version>-manifest.json` and its `.sig` with every release ([RELEASING.md](RELEASING.md#repository-settings-and-secrets)). Releases you build yourself are signed with `python3 scripts/agent_release_manifest.py manifest <dir> <version>` and `sign` (key in the `AGENT_RELEASE_SIGNING_KEY` environment variable).
+2. **Trust it on the control plane:** `AGENT_RELEASE_PUBLIC_KEYS=<public key>` (a comma list allows a rotation: add the new key, wait until every node has the new policy, then sign with it and drop the old one). The control plane signs the keys into every node's security policy, so nodes pin them the same way they pin the hub and API-layer keys. To use the project's official releases, use the public key published with them.
+3. **Nodes need the update helper**, which the installers add (`gpudeck-agent update install-helper`: a root systemd path unit or launchd daemon that swaps the root-owned binary). Nodes installed before agent updates show **Update manually**: re-run their install command once.
+4. **Choose how updates run** per cluster (cluster page, *Agent updates*, or `PUT /clusters/{id}/agent-update/policy`, or `config.agent_updates` in Terraform): **manual** (default: the Update button and rolling updates) or **automatic** inside a maintenance window (days, hours, time zone): the control plane then updates nodes that have the new version staged, one at a time, and stops at the first node that rolls back.
+
+Kubernetes nodes are never updated in place: they show **Managed by Helm**; upgrade the chart's agent image instead. Settings: `AGENT_UPDATE_TARGET_VERSION` (pin a version; default the newest signed release available), `AGENT_UPDATE_PRESTAGE`, `AGENT_UPDATE_HEALTH_TIMEOUT_SECONDS` ([env.md](../libs/contracts/env.md)). While a node updates it shows **Updating**, its metrics pause for the restart and its offline alert is held back; a rolled-back or failed update raises an alert.
 
 ## 9. When something does not work
 
 [operations.md](operations.md) section 8 has a symptom table. The three most common:
 
 - A node stays `pending` or `offline`: the machine cannot reach `AGENT_HUB_PUBLIC_URL` on 8443, or its clock is wrong (TLS fails).
-- Serving returns 502 `upstream_error`: the API layer cannot reach the agent proxy on 9443, or its client certificate was revoked (restart the API layer to have a new one issued) or `API_LAYER_CLIENT_CERT_PATH` points at a certificate from another CA.
+- Serving returns 502 `upstream_error`: tunnel mode — the node has no open tunnel to this API-layer process (the machine cannot reach the API layer on 8444-8445, or the API layer runs more workers than `AGENT_TUNNEL_LISTENERS`; `curl <api-layer>/health` shows `agent_tunnels`); direct mode — the API layer cannot reach the agent proxy on 9443 (its address is not in the cluster's `proxy_allowed_source_cidrs`, or its certificate was revoked: restart the API layer to have a new one issued, or `API_LAYER_CLIENT_CERT_PATH` points at a certificate from another CA). `gpudeck-agent security audit` and `firewall status` on the node show what it accepts.
 - The install command fails with a checksum error on `ca.pem`: the machine does not reach the hub at `AGENT_HUB_PUBLIC_URL`, or something in between answers instead of it. "No agent build": the control plane cannot reach GitHub (set `AGENT_DIST_DIR` for offline sites).
 - Serving returns 503 `model_not_ready`: the deployment has no ready instance yet; check the deployment's instance state and logs.

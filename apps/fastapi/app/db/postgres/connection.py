@@ -114,7 +114,14 @@ def get_session_maker():
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Dependency: yields an async database session; commits once per request."""
+    """
+    Dependency: yields an async database session; commits once per request.
+
+    Always declare it as ``Depends(get_db, scope="function")`` so the commit happens before the
+    response is sent: with FastAPI's default ("request") scope the client could get a 2xx for
+    a transaction that has not committed yet (or that then fails to commit), and a fast follow-up
+    request would read stale rows (a one-time join token looked unused).
+    """
     session_maker = get_session_maker()
     async with session_maker() as session:
         try:

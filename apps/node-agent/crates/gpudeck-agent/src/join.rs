@@ -88,8 +88,10 @@ pub async fn join(
         }
         None => crate::tls::join_client_config(None)?,
     };
+    // No redirects: the join token is only ever sent to the hub URL given here.
     let client = reqwest::Client::builder()
         .use_preconfigured_tls(tls)
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_secs(30))
         .build()?;
     let url = format!("{hub_url}{HUB_JOIN_PATH}");
@@ -144,12 +146,33 @@ pub async fn join(
         );
     }
 
+    // The signed security policy (hub / API-layer pins, tunnel endpoints) must verify against
+    // the CA just pinned, for this node, before anything is stored.
+    let policy = match &joined.security {
+        Some(signed) => {
+            crate::security::verify(signed, &joined.ca_bundle_pem, joined.node_id)
+                .context("join response security policy")?;
+            Some(signed.clone())
+        }
+        None => {
+            warn!("the hub sent no signed security policy (older control plane): hub and API-layer keys are not pinned");
+            None
+        }
+    };
+
     crate::tls::store_identity(
         &paths,
         &key.serialize_pem(),
         &joined.certificate_pem,
         &joined.ca_bundle_pem,
     )?;
+    match &policy {
+        Some(signed) => crate::state::write_json(&paths.security_policy(), signed, 0o600)?,
+        // A re-join must not keep the pins of a previous identity.
+        None => {
+            let _ = std::fs::remove_file(paths.security_policy());
+        }
+    }
     cfg.hub_url = Some(hub_url);
     cfg.node_id = Some(joined.node_id);
     cfg.ca_fingerprint = Some(ca_fp);
@@ -184,6 +207,7 @@ pub async fn fetch_ca(hub_url: &str) -> Result<String> {
     let tls = crate::tls::join_client_config(None)?;
     let client = reqwest::Client::builder()
         .use_preconfigured_tls(tls)
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_secs(15))
         .build()?;
     let url = format!("{hub_url}/agent/v1/ca");

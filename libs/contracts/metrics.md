@@ -13,6 +13,10 @@ Conventions
 
 ## 1. GPU / device metrics → `metric_samples_gpu`, `metric_rollups_gpu_1m`
 
+![GPUs and infrastructure: utilisation, VRAM, power and temperature per GPU across the fleet, with history](../../docs/screenshots/infra.svg)
+
+*GPU metrics in the web UI: utilisation, VRAM, power and temperature per GPU. The same screens on a real NVIDIA GPU are in [hardware/nvidia.md](../../docs/hardware/nvidia.md#detection).*
+
 Prometheus labels: `node`, `node_id`, `device_id`, `vendor`, `index`, `device_name`.
 
 | Canonical name | Unit | Type | Column | Prometheus | NVIDIA (NVML) | AMD (`amd-smi metric --json`) | Hygon / MetaX / Moore Threads / T-Head | Apple Silicon |
@@ -42,6 +46,10 @@ Static device fields (inventory, `devices` table, not time series): `name` (`nvm
 Vendor CLIs are parsed from recorded fixture outputs (`apps/node-agent/fixtures/<vendor>/`) until hardware is available; the exact field names for Hygon/MetaX/Moore Threads/T-Head must be confirmed against those fixtures and this table updated (open item).
 
 ## 2. Engine / instance metrics → `metric_samples_engine`, `metric_rollups_engine_1m`
+
+![Inference metrics: active sessions, throughput, time to first token, end-to-end latency and KV cache per deployment](../../docs/screenshots/inference.svg)
+
+*Engine metrics in the web UI: sessions, throughput, time to first token, latency and KV cache per deployment.*
 
 Prometheus labels: `node`, `node_id`, `instance_id`, `deployment`, `deployment_id`, `model`, `model_id`, `engine`.
 
@@ -136,11 +144,15 @@ From these the agent builds `EngineSample` fields for `derive_from_proxy=true` e
 | `instance_health` | `health_config` probe result × `failure_threshold`; `unhealthy` on `failure_threshold` consecutive failures; `unknown` while loading or node offline | `instances.health`, `metric_samples_engine.health` |
 | `node_cpu_pct`, `node_memory_used_bytes`, `node_load_avg_1m`, `node_disk_free_bytes{mount}`, `node_cache_used_bytes` | `/proc` / `sysctl` / `statvfs` | `heartbeat.load`, `inventory.system`; Prometheus `gpudeck_node_*` |
 | `node_up` | hub: 1 while the node's agent is connected and heartbeating, else 0 | Prometheus `gpudeck_node_up{node}` (admin/hub exporter) |
+| `node_rtt_ms{source=hub}` | agent hub: round trip of its WebSocket keep-alive ping to the agent (EWMA, jitter, recent min / max / p50 / p95) | Redis `gpu-deck:latency:hub` (live); `node_latency_samples` per minute (`LATENCY_RETENTION_DAYS`); `GET /metrics/latency/live`, `GET /metrics/latency` |
+| `node_rtt_ms{source=api_layer,api_layer_id,region,mode}` | each API layer: one `GET /_health` to the node every `SERVING_RTT_PROBE_SECONDS` over the serving path (tunnel or direct proxy), request headers written → response headers read (EWMA, jitter, recent percentiles) | Redis `gpu-deck:latency:api:<api layer id>` (live, read by replica selection in that process from memory); `node_latency_samples`; same API |
 | `agent_*` (`cpu_pct`, `rss_bytes`, `proxy_active_connections`, `proxy_requests_total`, `proxy_errors_total`, `scrape_errors_total`, `commands_running`) | agent self | `metrics_batch.agent`; Prometheus `gpudeck_agent_*` |
+
+Per-request timing (route, queue, connect, rtt, net, engine, node queue, upstream, ttft, total in ms and the serving API layer `{id, region}`, kept with each request; serving.md §10) is aggregated by `GET /metrics/request-timing`. Request counts per deployment and API-layer region for placement: Redis `gpu-deck:latency:traffic:<deployment id | _all>` (`<region>|<YYYYMMDDHH>` fields, kept `SCHEDULER_TRAFFIC_WINDOW_HOURS` + 2 h).
 
 ## 6. Usage / metering metrics → `usage_events`, `usage_rollups_hourly`
 
-Recorded by the API layer (not the agent) per request; see `openapi/serving.md` §6 for extraction rules. Served by `/metrics/usage` and `/usage/*`; Prometheus `gpudeck_usage_requests_total{api_key,model,format,endpoint,status}`, `gpudeck_usage_tokens_total{kind=input|output|cached|reasoning,...}`, `gpudeck_usage_gpu_seconds_total`, `gpudeck_usage_cost_usd_total`, `gpudeck_usage_latency_seconds` (H), `gpudeck_usage_ttft_seconds` (H).
+Recorded by the API layer (not the agent) per request; see `openapi/serving.md` §6 for extraction rules. Served by `/metrics/usage` (the `/usage/*` metering endpoints are planned for v2); Prometheus `gpudeck_usage_requests_total{api_key,model,format,endpoint,status}`, `gpudeck_usage_tokens_total{kind=input|output|cached|reasoning,...}`, `gpudeck_usage_gpu_seconds_total`, `gpudeck_usage_cost_usd_total`, `gpudeck_usage_latency_seconds` (H), `gpudeck_usage_ttft_seconds` (H).
 
 ## 7. Process-level metrics (every Python process, `/metrics` on its own port)
 
@@ -152,9 +164,9 @@ API layer process (`app/services/serving/metrics.py`): `gpudeck_serving_requests
 
 | Screen | Metrics |
 | --- | --- |
-| Overview tiles | `gpu_utilization_pct` (avg), `gpu_memory_used_bytes`/`total`, `gpu_power_watts` (sum), `active_sessions`, `waiting_sessions`, `requests_delta` (rpm), `generation_tps`, `ttft_ms_p95`, `error_rate_pct`, cost (usage) |
+| Overview tiles | `gpu_utilization_pct` (avg), `gpu_memory_used_bytes`/`total`, `gpu_power_watts` (sum), `active_sessions`, `waiting_sessions`, `requests_delta` (rpm), `generation_tps`, `ttft_ms_p95`, `error_rate_pct`, requests and tokens (usage) |
 | Node / device detail | all §1 for the device; `process_count`; instances on it with `kv_cache_bytes`, `process_vram_bytes` |
 | Model / deployment detail | `active_sessions`, `waiting_sessions`, `prompt_tps`, `generation_tps`, `ttft_ms_*`, `e2e_ms_*`, `tpot_ms_avg`, `kv_cache_usage_pct`, `cached_tokens_delta` vs `computed_tokens`, `errors_delta`, `error_rate_pct`, `prefix_cache_hit_rate`, `spec_accept_rate` |
 | Sessions panel | §3 live snapshot + KV per session sparkline |
 | Rules | thresholds overlaid on `requests_delta`, `waiting_sessions_avg`, `kv_cache_usage_pct_avg`, `error_rate_pct`, idle time |
-| Billing | §6 |
+| API keys (requests, tokens) | §6 |

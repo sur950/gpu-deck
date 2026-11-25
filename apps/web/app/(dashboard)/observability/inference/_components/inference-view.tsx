@@ -10,11 +10,13 @@ import { ErrorState } from '@/components/shared/ErrorState';
 import { RangeBar, ScopeSelect } from '@/components/charts/range-bar';
 import { LiveIndicator } from '@/components/charts/live-indicator';
 import { StatTile } from '@/components/charts/stat-tile';
+import { deploymentEntities } from '@/utils/deployment-label';
 import { asResult, clampSeries, combineSeries, filterSeries, groupSeriesBy, latestValue, sumValues, toSpark } from '@/components/charts/series-utils';
 import { EntityMetricChart, MetricsChartCard } from '@/components/observability/entity-chart';
 import type { ChartEntity } from '@/components/observability/entity-chart';
 import { InstanceTable } from '@/components/observability/instance-table';
 import { SessionsPanel } from '@/components/observability/sessions-panel';
+import { RequestTimingCard } from '@/components/observability/request-timing-card';
 import { MetricsPageSkeleton } from '@/components/observability/page-skeletons';
 import { useDeployments, useInferenceMetrics, useInstances, useInstanceSessions, useSessionMetrics } from '@/hooks/use-metrics';
 import { useNodes } from '@/hooks/use-topology';
@@ -146,11 +148,11 @@ export function InferenceView() {
 
   const entities: ChartEntity[] = useMemo(
     () =>
-      scopedDeployments
-        .filter((d) => !deploymentId || d.id === deploymentId)
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((d) => ({ id: d.id, label: d.name, color: colors.get(d.id) ?? 'rgb(var(--muted-foreground))' })),
-    [scopedDeployments, deploymentId, colors],
+      deploymentEntities(scopedDeployments, metrics.data?.series ?? [], (id) => !deploymentId || id === deploymentId).map((e) => ({
+        ...e,
+        color: colors.get(e.id) ?? 'rgb(var(--muted-foreground))',
+      })),
+    [scopedDeployments, metrics.data, deploymentId, colors],
   );
 
   const header = (
@@ -282,6 +284,7 @@ export function InferenceView() {
           height={220}
           refreshing={refreshing}
         />
+        <RequestTimingCard from={range.from} to={range.to} fromMs={range.fromMs} toMs={range.toMs} step={range.step} deploymentId={deploymentId} nodeId={nodeId} />
         <EntityMetricChart title="KV cache usage" description="Share of KV cache in use, per deployment" result={derived.perDeployment} metric="kv_cache_usage_pct" labelKey="deployment_id" entities={entities} fromMs={range.fromMs} toMs={range.toMs} unit="%" yDomain={[0, 100]} thresholds={[{ value: 90, label: '90%' }]} refreshing={refreshing} />
         <MetricsChartCard
           title="Error rate"

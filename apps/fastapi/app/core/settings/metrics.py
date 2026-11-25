@@ -70,5 +70,6 @@ class MetricsSettings(DomainSettings):
     )
     GRAFANA_URL: Optional[str] = Field(None, description="Grafana link shown in the UI")
     TRACE_INDEX_ENABLED: bool = Field(
-        default=True, description="Write a span index into the traces table"
+        default=False,
+        description="Write a span index into the traces table (v2 request traces; off in v1)",
     )

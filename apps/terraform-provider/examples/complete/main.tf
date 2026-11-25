@@ -4,8 +4,8 @@
 #   export GPUDECK_ENDPOINT=http://localhost:8180 GPUDECK_TOKEN="$(...)"   # or USERNAME/PASSWORD
 #   terraform init && terraform apply -var 'admin_allow_cidrs=["10.0.0.0/8"]'
 #
-# Point it at an empty control plane: it sets a default price plan, adds schedule and idle-unload
-# rules and creates deployments named qwen3-0.6b / nomic-embed.
+# Point it at an empty control plane: it adds schedule and idle-unload rules and creates
+# deployments named qwen3-0.6b / nomic-embed.
 
 terraform {
   required_providers {
@@ -23,19 +23,10 @@ variable "slack_bot_token" {
   default   = null
 }
 
-resource "gpudeck_price_plan" "standard" {
-  name                     = "standard"
-  usd_per_gpu_minute       = 0.03
-  usd_per_1k_input_tokens  = 0.0002
-  usd_per_1k_output_tokens = 0.0006
-  is_default               = true
-}
-
 resource "gpudeck_cluster" "office" {
-  name          = "office"
-  type          = "bare_metal"
-  price_plan_id = gpudeck_price_plan.standard.id
-  labels        = { site = "office" }
+  name   = "office"
+  type   = "bare_metal"
+  labels = { site = "office" }
 }
 
 resource "gpudeck_join_token" "mac" {

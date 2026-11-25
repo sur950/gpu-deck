@@ -10,6 +10,7 @@
 #   helm/gpu-deck-*.tgz      Helm chart
 #   compose/                 infra/docker compose files, scripts, observability configs
 #   agent/                   gpudeck-agent-<version>-<target>.tar.gz per platform (+ SHA256SUMS)
+#                            and gpudeck-agent-<version>-manifest.json(.sig) when present
 #   cli/                     gpudeck CLI wheel + dependency wheels (pip --no-index install)
 #   terraform/mirror/        provider filesystem mirror (linux/darwin, amd64/arm64)
 #   install.sh, install-agent.sh, cosign.pub (when COSIGN_PUBLIC_KEY is set), SHA256SUMS
@@ -100,6 +101,10 @@ if [[ $SKIP_AGENT == 0 ]]; then
     "$ROOT/infra/scripts/cross-compile-agent.sh" --version "$VERSION"
   fi
   cp "$ROOT"/dist/agent/gpudeck-agent-*.tar.gz "$ROOT/dist/agent/SHA256SUMS" "$STAGE/agent/"
+  # Signed release manifest (agent self-update on the site; download it from the release next to
+  # the archives, or sign one with scripts/agent_release_manifest.py).
+  cp "$ROOT"/dist/agent/gpudeck-agent-*-manifest.json* "$STAGE/agent/" 2>/dev/null \
+    || log "no signed agent manifest in dist/agent: nodes on the site update by re-running install-agent.sh"
 fi
 
 # ----- CLI ------------------------------------------------------------------------------------

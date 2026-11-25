@@ -164,57 +164,26 @@ resource "gpudeck_cluster" "c" {
 	)
 }
 
-func TestPricePlanDefaultsStayNull(t *testing.T) {
-	api := newFakeAPI(t)
-	unitTest(t,
-		resource.TestStep{
-			Config: api.providerBlock() + `
-resource "gpudeck_price_plan" "p" {
-  name               = "standard"
-  usd_per_gpu_minute = 0.05
-}`,
-			Check: resource.ComposeAggregateTestCheckFunc(
-				resource.TestCheckResourceAttr("gpudeck_price_plan.p", "usd_per_gpu_minute", "0.05"),
-				resource.TestCheckNoResourceAttr("gpudeck_price_plan.p", "usd_per_1k_input_tokens"),
-				resource.TestCheckNoResourceAttr("gpudeck_price_plan.p", "is_default"),
-				resource.TestCheckResourceAttr("gpudeck_price_plan.p", "currency", "USD"),
-			),
-		},
-		resource.TestStep{
-			Config: api.providerBlock() + `
-resource "gpudeck_price_plan" "p" {
-  name                    = "standard"
-  usd_per_1k_input_tokens = 0.001
-}`,
-			Check: func(*terraform.State) error {
-				body := api.lastBody("PATCH price-plans")
-				if body["usd_per_gpu_minute"] != float64(0) || body["usd_per_1k_input_tokens"] != 0.001 {
-					return fmt.Errorf("unexpected PATCH body %v", body)
-				}
-				return nil
-			},
-		},
-	)
-}
-
-func TestPricePlanDriftDetected(t *testing.T) {
+func TestDefaultedFieldDriftDetected(t *testing.T) {
 	api := newFakeAPI(t)
 	cfg := api.providerBlock() + `
-resource "gpudeck_price_plan" "p" {
-  name = "standard"
+resource "gpudeck_rule" "idle" {
+  name   = "idle"
+  type   = "idle_unload"
+  params = jsonencode({ idle_minutes = 30 })
 }`
 	unitTest(t,
 		resource.TestStep{Config: cfg},
 		resource.TestStep{
 			PreConfig: func() {
-				api.mutate("price-plans", api.firstID("price-plans"), func(o map[string]any) {
-					o["usd_per_gpu_minute"] = 9.0
+				api.mutate("rules", api.firstID("rules"), func(o map[string]any) {
+					o["cooldown_seconds"] = 9
 				})
 			},
 			Config: cfg,
 			Check: func(*terraform.State) error {
-				if api.lastBody("PATCH price-plans")["usd_per_gpu_minute"] != float64(0) {
-					return fmt.Errorf("drifted price not reset to the default")
+				if api.lastBody("PATCH rules")["cooldown_seconds"] != float64(300) {
+					return fmt.Errorf("drifted cooldown not reset to the default")
 				}
 				return nil
 			},

@@ -177,6 +177,15 @@ async def with_activity(
     return items
 
 
+async def _with_agent_update(
+    session: AsyncSession, rows: Sequence[Nodes], items: List[NodeResponse]
+) -> List[NodeResponse]:
+    """Fill ``agent_update`` (agent protocol §14; never raises)."""
+    from app.services.agent_updates.service import AgentUpdateService
+
+    return await AgentUpdateService(session).decorate(rows, items)
+
+
 def cert_response(row) -> NodeCertificateResponse:
     item = NodeCertificateResponse.model_validate(row)
     item.is_active = row.revoked_at is None and row.not_after > datetime.now(timezone.utc)
@@ -217,7 +226,9 @@ class NodeService:
         self.pki = PkiService.from_session(session)
 
     @staticmethod
-    async def as_dependency(request: Request, db: AsyncSession = Depends(get_db)) -> "NodeService":
+    async def as_dependency(
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
+    ) -> "NodeService":
         return NodeService(db)
 
     async def _get(self, node_id: uuid.UUID) -> Nodes:
@@ -246,14 +257,15 @@ class NodeService:
         )
         counts = await self.nodes.counts_for([r.id for r in rows])
         items = [node_response(r, counts.get(r.id)) for r in rows]
-        return await with_activity(self.session, rows, items), total
+        items = await with_activity(self.session, rows, items)
+        return await _with_agent_update(self.session, rows, items), total
 
     async def get(self, node_id: uuid.UUID) -> NodeResponse:
         node = await self._get(node_id)
         counts = await self.nodes.counts_for([node.id])
-        return (
-            await with_activity(self.session, [node], [node_response(node, counts.get(node.id))])
-        )[0]
+        item = node_response(node, counts.get(node.id))
+        items = await with_activity(self.session, [node], [item])
+        return (await _with_agent_update(self.session, [node], items))[0]
 
     async def update(
         self, node_id: uuid.UUID, body: NodeUpdate, actor_id: Optional[uuid.UUID]
@@ -647,7 +659,7 @@ class NodeJoinService:
 
     @staticmethod
     async def as_dependency(
-        request: Request, db: AsyncSession = Depends(get_db)
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
     ) -> "NodeJoinService":
         return NodeJoinService(db)
 
@@ -737,6 +749,11 @@ class NodeJoinService:
             metadata=token_use,
         )
         logger.info(f"node joined id={node.id} name={name} cluster={cluster.id} from={client_ip}")
+        # Signed node security policy (protocol.md §13): the agent pins the hub and API-layer
+        # keys and learns its tunnel endpoints before it ever connects.
+        from app.services.agent_hub.security_policy import build_signed_policy
+
+        security = await build_signed_policy(self.session, node, self.pki)
         return {
             "node_id": str(node.id),
             "node_name": node.name,
@@ -751,6 +768,7 @@ class NodeJoinService:
                 "metrics_seconds": settings.METRICS_INTERVAL_SECONDS,
                 "inventory_seconds": settings.INVENTORY_INTERVAL_SECONDS,
             },
+            "security": security,
         }
 
 

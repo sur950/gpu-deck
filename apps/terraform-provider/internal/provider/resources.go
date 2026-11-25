@@ -95,8 +95,7 @@ var clusterDef = resourceDef{
 		descriptionField(),
 		{Name: "region", Kind: kString, Optional: true, Nullable: true, Description: "Region or site label."},
 		uuidOpt("credential_id", "Vault credential used to provision machines (cloud / Kubernetes)."),
-		uuidOpt("price_plan_id", "Price plan for usage on this cluster (nodes may override)."),
-		jsonOpt("config", "Provider settings: kubernetes {namespace, kubeconfig_credential_id}, cloud {vpc, subnet, instance_types, ssh_key_credential_id}."),
+		jsonOpt("config", "Provider settings: kubernetes {namespace, kubeconfig_credential_id}, cloud {vpc, subnet, instance_types, ssh_key_credential_id}; node_security {proxy_allowed_source_cidrs, ssh_default_allowed_cidrs}; agent_updates {mode = manual | auto, window = {days = [mon..sun], start = HH:MM, end = HH:MM, timezone}} (agent self-update: auto runs a rolling update inside the maintenance window)."),
 		{Name: "egress_allowlist", Kind: kStringList, Optional: true, Description: "host:port destinations nodes may reach besides the control plane."},
 		{Name: "labels", Kind: kStringMap, Optional: true, Description: "Labels."},
 		{Name: "status", Kind: kString, Optional: true, Computed: true, UpdateOnly: true, Enum: enumClusterStatus, Description: "active or disabled."},
@@ -114,42 +113,6 @@ var clusterDef = resourceDef{
 	},
 	Delete: func(ctx context.Context, api *client.API, id uuid.UUID) (*http.Response, error) {
 		return api.DeleteCluster(ctx, id, nil)
-	},
-}
-
-// ----- gpudeck_price_plan --------------------------------------------------------------------
-
-func priceField(name, desc string) field {
-	return field{Name: name, Kind: kFloat, Optional: true, Default: 0, Description: desc}
-}
-
-var pricePlanDef = resourceDef{
-	Name:        "price_plan",
-	Description: "USD prices per GPU minute and per 1k tokens, attached to clusters or nodes.",
-	Fields: []field{
-		idField(),
-		nameField("Plan name (unique)."),
-		descriptionField(),
-		priceField("usd_per_gpu_minute", "USD per GPU minute of instance uptime."),
-		priceField("usd_per_1k_input_tokens", "USD per 1k input tokens."),
-		priceField("usd_per_1k_output_tokens", "USD per 1k output tokens."),
-		priceField("usd_per_1k_cached_tokens", "USD per 1k cached input tokens."),
-		{Name: "is_default", Kind: kBool, Optional: true, Default: false, Description: "Use this plan where no cluster/node plan is set."},
-		roString("currency", "Always USD."),
-		createdAtField(),
-		updatedAtField(),
-	},
-	Create: func(ctx context.Context, api *client.API, body io.Reader) (*http.Response, error) {
-		return api.CreatePricePlanWithBody(ctx, nil, client.ContentJSON, body)
-	},
-	Read: func(ctx context.Context, api *client.API, id uuid.UUID) (*http.Response, error) {
-		return api.GetPricePlan(ctx, id)
-	},
-	Update: func(ctx context.Context, api *client.API, id uuid.UUID, body io.Reader) (*http.Response, error) {
-		return api.UpdatePricePlanWithBody(ctx, id, nil, client.ContentJSON, body)
-	},
-	Delete: func(ctx context.Context, api *client.API, id uuid.UUID) (*http.Response, error) {
-		return api.DeletePricePlan(ctx, id, nil)
 	},
 }
 
@@ -476,7 +439,6 @@ var layoutDef = resourceDef{
 // ----- constructors used by provider.Resources -------------------------------------------------
 
 func NewClusterResource() resource.Resource      { return newGeneric(clusterDef)() }
-func NewPricePlanResource() resource.Resource    { return newGeneric(pricePlanDef)() }
 func NewJoinTokenResource() resource.Resource    { return newGeneric(joinTokenDef)() }
 func NewModelResource() resource.Resource        { return newGeneric(modelDef)() }
 func NewDeploymentResource() resource.Resource   { return newGeneric(deploymentDef)() }

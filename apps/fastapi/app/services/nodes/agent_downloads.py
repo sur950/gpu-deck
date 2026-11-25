@@ -52,6 +52,8 @@ from starlette.responses import FileResponse
 logger = get_logger(__name__)
 
 _SAFE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$")
+# One path component built from a version/target (e.g. a release asset name).
+_SAFE_PART = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,299}$")
 _SEMVER = re.compile(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$")
 BINARY_NAMES = ("gpudeck-agent", "gpudeck-agent.exe")
 ARCHIVE_SUFFIXES = (".tar.gz", ".tgz", ".zip")
@@ -217,8 +219,27 @@ def _make(version: str, target: str, file: Path, source: str) -> Artifact:
     )
 
 
+def _confined(root: Path, *parts: str) -> Path:
+    """
+    ``root/<parts...>`` resolved, guaranteed to stay inside ``root``.
+
+    Every part must be a single safe path component (``_SAFE_PART``: no separators,
+    no leading dot, so never ``.``/``..``); the joined path is then resolved
+    (symlinks included) and must still start with the resolved root. Every
+    filesystem path built from a requested version/target goes through here.
+    """
+    for part in parts:
+        if not isinstance(part, str) or not _SAFE_PART.fullmatch(part):
+            raise ValidationError("invalid version or target")
+    base = os.path.realpath(root)
+    full = os.path.realpath(os.path.join(base, *parts))
+    if not full.startswith(base.rstrip(os.sep) + os.sep):
+        raise ValidationError("artifact outside the dist directory")
+    return Path(full)
+
+
 def _nested(version: str, target: str) -> Optional[Artifact]:
-    folder = dist_dir() / version / target
+    folder = _confined(dist_dir(), version, target)
     if not folder.is_dir():
         return None
     file = _pick_file(folder)
@@ -226,7 +247,7 @@ def _nested(version: str, target: str) -> Optional[Artifact]:
 
 
 def _flat(root: Path, version: str, target: str, source: str) -> Optional[Artifact]:
-    file = root / release_asset_name(version, target)
+    file = _confined(root, release_asset_name(version, target))
     return _make(version, target, file, source) if file.is_file() else None
 
 
@@ -244,7 +265,7 @@ def _flat_entries(root: Path) -> List[Tuple[str, str]]:
     out = []
     for f in root.iterdir():
         m = _FLAT.match(f.name)
-        if f.is_file() and m and _SAFE.match(m["version"]):
+        if f.is_file() and m and _SAFE.fullmatch(m["version"]):
             out.append((m["version"], m["target"]))
     return out
 
@@ -255,10 +276,10 @@ def list_artifacts() -> List[Artifact]:
     root = dist_dir()
     if root.is_dir():
         for vdir in (d for d in root.iterdir() if d.is_dir()):
-            if not _SAFE.match(vdir.name) or vdir.name == "latest":
+            if not _SAFE.fullmatch(vdir.name) or vdir.name == "latest":
                 continue
             for tdir in (d for d in vdir.iterdir() if d.is_dir()):
-                if _SAFE.match(tdir.name):
+                if _SAFE.fullmatch(tdir.name):
                     keys.append((vdir.name, tdir.name))
     keys += _flat_entries(root) + _flat_entries(cache_dir())
     out: List[Artifact] = []
@@ -268,7 +289,10 @@ def list_artifacts() -> List[Artifact]:
         key=lambda k: (_version_key(k[0]), [-ord(c) for c in k[1]]),
         reverse=True,
     ):
-        art = _artifact(version, target)
+        try:
+            art = _artifact(version, target)
+        except ValidationError:  # e.g. a symlink pointing outside the dist directory
+            continue
         if art is not None and (version, target) not in seen:
             seen.add((version, target))
             out.append(art)
@@ -281,7 +305,7 @@ def latest_version() -> Optional[str]:
 
 
 def _check_names(version: str, target: str) -> None:
-    if not _SAFE.match(version) or not _SAFE.match(target):
+    if not _SAFE.fullmatch(version) or not _SAFE.fullmatch(target):
         raise ValidationError("invalid version or target")
 
 
@@ -329,7 +353,7 @@ def _parse_sums(text: str) -> Dict[str, str]:
 
 async def release_checksums(version: str) -> Optional[Dict[str, str]]:
     """``SHA256SUMS.txt`` of the release ``v<version>`` (cached); None when unreachable."""
-    if not release_enabled() or not _SEMVER.match(version):
+    if not release_enabled() or not _SEMVER.fullmatch(version):
         return None
     now = time.monotonic()
     hit = _sums_cache.get(version)
@@ -357,7 +381,7 @@ async def fetch_release_build(version: str, target: str) -> Artifact:
     _check_names(version, target)
     if not release_enabled():
         raise ResourceNotFoundError(resource_type="Agent build")
-    if target not in RELEASE_TARGETS or not _SEMVER.match(version):
+    if target not in RELEASE_TARGETS or not _SEMVER.fullmatch(version):
         raise ResourceNotFoundError(resource_type="Agent build")
     sums = await release_checksums(version)
     if sums is None:
@@ -370,13 +394,15 @@ async def fetch_release_build(version: str, target: str) -> Artifact:
     if not want:
         raise ResourceNotFoundError(resource_type="Agent build")
     folder = cache_dir()
-    dest = folder / name
+    folder.mkdir(parents=True, exist_ok=True)
+    dest = _confined(folder, name)
+    folder = dest.parent
+    sidecar = folder / f"{dest.name}.sha256"
     lock = _fetch_locks.setdefault(name, asyncio.Lock())
     async with lock:
         if dest.is_file() and file_sha256(dest) == want:
             return _make(version, target, dest, "cache")
-        folder.mkdir(parents=True, exist_ok=True)
-        fd, tmp_name = tempfile.mkstemp(prefix=f".{name}.", suffix=".part", dir=folder)
+        fd, tmp_name = tempfile.mkstemp(prefix=".gpudeck-agent-", suffix=".part", dir=folder)
         tmp = Path(tmp_name)
         url = f"{_release_base()}/v{version}/{name}"
         digest = hashlib.sha256()
@@ -398,7 +424,7 @@ async def fetch_release_build(version: str, target: str) -> Artifact:
                 raise ExternalServiceError(f"{name}: sha256 {got} does not match the release")
             os.chmod(tmp, 0o644)
             os.replace(tmp, dest)
-            (folder / f"{name}.sha256").write_text(f"{want}  {name}\n")
+            sidecar.write_text(f"{want}  {name}\n")
         except ExternalServiceError:
             tmp.unlink(missing_ok=True)
             raise
@@ -541,11 +567,27 @@ def install_script(
     name: Optional[str] = None,
     base_url: Optional[str] = None,
     ca_pem: Optional[str] = None,
+    serving_mode: str = "tunnel",
+    firewall: bool = True,
 ) -> str:
-    """POSIX sh installer: download + verify sha256, install, join, run as a service."""
+    """
+    POSIX sh installer: download + verify sha256, install, join, run as a service, then apply
+    and verify the host firewall (agent protocol §13).
+
+    - ``serving_mode``: ``tunnel`` (default: the agent dials out, the machine opens no port) or
+      ``direct`` (the API layer dials the mTLS proxy; private networks). Env override
+      ``GPUDECK_SERVING_MODE``.
+    - ``firewall``: program nftables / pf for the agent's ports (default); the SSH port of the
+      session running the installer and every port sshd listens on stay open. Opt out with
+      ``firewall=0`` on the install URL or ``GPUDECK_FIREWALL=0``.
+    - Downloads from the hub are verified against the internal CA only (no fallback to the
+      system trust store unless the builds come from a different download host).
+    """
     q = shlex.quote
     base = (base_url or download_base_url()).rstrip("/")
     ca_block = (ca_pem or "").strip()
+    mode = serving_mode if serving_mode in ("tunnel", "direct") else "tunnel"
+    strict_ca = bool(ca_block) and base == hub_agent_prefix() and hub_uses_internal_ca()
     lines = [
         "#!/bin/sh",
         "# GPU Deck node agent installer (generated; contains a join token).",
@@ -557,6 +599,13 @@ def install_script(
         f"VERSION={q(version or 'latest')}",
         f"NODE_NAME={q(name or '')}",
         f"BASE_URL={q(base)}",
+        f'SERVING_MODE="${{GPUDECK_SERVING_MODE:-{mode}}}"',
+        f'FIREWALL="${{GPUDECK_FIREWALL:-{1 if firewall else 0}}}"',
+        f"STRICT_CA={1 if strict_ca else 0}",
+        'case "$SERVING_MODE" in tunnel|direct) ;; *) echo "GPUDECK_SERVING_MODE must be'
+        ' tunnel or direct" >&2; exit 1 ;; esac',
+        "# The port of the SSH session running this installer (never blocked by the firewall).",
+        'SSH_PORT="$(echo "${SSH_CONNECTION:-}" | awk \'{print $4}\')"',
         'SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"',
         'OS="$(uname -s)"; ARCH="$(uname -m)"',
         "# macOS without root: per-user install under ~/.gpudeck + a user LaunchAgent (no sudo).",
@@ -581,9 +630,11 @@ def install_script(
         "GPUDECK_CA",
         "# Retries for flaky / high-latency links (SSH tunnels, cross-region); no overall timeout.",
         'CURL="curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 30"',
-        "fetch() {  # internal CA first, then the system trust store (custom download host)",
+        "fetch() {  # internal CA; the system trust store only for a separate download host",
         '  if [ -s "$TMP/ca.pem" ] && $CURL --cacert "$TMP/ca.pem"'
         ' -H "X-GPUDeck-Join-Token: $TOKEN" "$1" -o "$2" 2>/dev/null; then return 0; fi',
+        '  [ "$STRICT_CA" = "1" ] && { echo "TLS to the hub failed against its pinned CA" >&2;'
+        " return 1; }",
         '  $CURL -H "X-GPUDeck-Join-Token: $TOKEN" "$1" -o "$2"',
         "}",
         "TARGET=''",
@@ -608,6 +659,23 @@ def install_script(
         'JOIN="--hub $HUB_URL --token $TOKEN"',
         '[ -n "$NODE_NAME" ] && JOIN="$JOIN --name $NODE_NAME"',
         '[ -n "$CA_FINGERPRINT" ] && JOIN="$JOIN --ca-fingerprint $CA_FINGERPRINT"',
+        'JOIN="$JOIN --serving-mode $SERVING_MODE"',
+        '[ "$FIREWALL" = "1" ] || JOIN="$JOIN --no-firewall"',
+        "firewall() {  # apply + verify the host firewall; the operator's SSH ports stay open",
+        '  [ "$FIREWALL" = "1" ] || { echo "host firewall: skipped (GPUDECK_FIREWALL=0)";'
+        " return 0; }",
+        '  if [ "$OS" = "Linux" ] && ! command -v nft >/dev/null 2>&1; then',
+        '    echo "host firewall: nftables (nft) is not installed; skipped. Install nftables'
+        ' and run: sudo $BIN --config $CONF firewall apply" >&2; return 0',
+        "  fi",
+        '  PRESERVE=""; [ -n "$SSH_PORT" ] && PRESERVE="--preserve-port $SSH_PORT"',
+        "  # shellcheck disable=SC2086",
+        '  $SUDO "$BIN" --config "$CONF" firewall apply $PRESERVE || {',
+        '    echo "host firewall could not be applied; fix it or re-run with GPUDECK_FIREWALL=0"'
+        " >&2; exit 1; }",
+        '  $SUDO "$BIN" --config "$CONF" firewall status >/dev/null || {',
+        '    echo "host firewall verification failed: $BIN firewall status" >&2; exit 1; }',
+        "}",
         'if [ "$OS" = "Linux" ]; then',
         "  CONF=/etc/gpudeck/agent.toml; STATE=/var/lib/gpudeck",
         '  $SUDO useradd --system --home-dir "$STATE" --shell /usr/sbin/nologin gpudeck'
@@ -625,6 +693,10 @@ def install_script(
         "  # shellcheck disable=SC2086",
         '  $SUDO "$BIN" --config "$CONF" join $JOIN --state-dir "$STATE"',
         '  $SUDO chown -R gpudeck:gpudeck "$STATE"',
+        "  firewall",
+        "  # The agent keeps the firewall current (policy, SSH instances): CAP_NET_ADMIN only.",
+        '  CAPS=""; [ "$FIREWALL" = "1" ] && CAPS="AmbientCapabilities=CAP_NET_ADMIN',
+        'CapabilityBoundingSet=CAP_NET_ADMIN"',
         "  $SUDO tee /etc/systemd/system/gpudeck-agent.service >/dev/null <<UNIT",
         "[Unit]",
         "Description=GPU Deck node agent",
@@ -649,6 +721,7 @@ def install_script(
         # Engines (vLLM / torch inductor, triton) write to /tmp; strict makes it read-only. A
         # private /tmp that outlives agent restarts (PrivateTmp is wiped on every restart).
         "BindPaths=$STATE/tmp:/tmp",
+        "$CAPS",
         "",
         "[Install]",
         "WantedBy=multi-user.target",
@@ -658,6 +731,10 @@ def install_script(
         "  # restart, not start: a re-install (new binary / identity) replaces a running",
         "  # agent; engines keep running and are re-adopted.",
         "  $SUDO systemctl restart gpudeck-agent",
+        "  # Self-update helper (agent protocol 14): a root path unit that applies staged,",
+        "  # signature-verified releases to the root-owned binary when the agent asks.",
+        '  $SUDO "$BIN" --config "$CONF" update install-helper || echo "update helper not'
+        ' installed: the control plane cannot update this agent (re-run the installer)" >&2',
         "else",
         '  LABEL="io.github.sur950.gpudeck-agent"',
         '  PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"',
@@ -673,6 +750,34 @@ def install_script(
         "  fi",
         "  # shellcheck disable=SC2086",
         '  "$BIN" --config "$CONF" join $JOIN --state-dir "$STATE"',
+        '  if [ "$USER_MODE" = "1" ]; then',
+        '    echo "host firewall: skipped (installed without sudo; pf needs root).'
+        ' Tunnel mode opens no port."',
+        "  else",
+        "    firewall",
+        "    # pf anchors do not survive a reboot: a root LaunchDaemon re-applies the rules.",
+        '    FWLABEL="io.github.sur950.gpudeck-firewall"',
+        '    if [ "$FIREWALL" = "1" ]; then',
+        '      $SUDO tee "/Library/LaunchDaemons/$FWLABEL.plist" >/dev/null <<FWPLIST',
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"'
+        ' "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
+        '<plist version="1.0"><dict>',
+        "  <key>Label</key><string>$FWLABEL</string>",
+        "  <key>ProgramArguments</key><array><string>$BIN</string><string>--config</string>"
+        "<string>$CONF</string><string>firewall</string><string>apply</string></array>",
+        "  <key>RunAtLoad</key><true/>",
+        "</dict></plist>",
+        "FWPLIST",
+        '      $SUDO launchctl bootout "system/$FWLABEL" 2>/dev/null || true',
+        '      $SUDO launchctl bootstrap system "/Library/LaunchDaemons/$FWLABEL.plist" || true',
+        "    fi",
+        "    # Self-update helper: a root LaunchDaemon that applies staged, signature-verified",
+        "    # releases to the root-owned binary and restarts this user's agent job.",
+        '    $SUDO "$BIN" --config "$CONF" update install-helper --restart'
+        ' "launchd:gui/$(id -u)/$LABEL" || echo "update helper not installed: the control plane'
+        ' cannot update this agent (re-run the installer)" >&2',
+        "  fi",
         '  mkdir -p "$HOME/Library/LaunchAgents"',
         "  # launchd starts agents with a minimal PATH: keep the installer's PATH so engines",
         "  # (llama-server, mlx_lm.server) and the container CLI (docker) resolve.",
@@ -697,13 +802,21 @@ def install_script(
         '  launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true',
         '  launchctl bootstrap "gui/$(id -u)" "$PLIST"',
         "fi",
-        'echo "gpudeck-agent installed and joined; it appears under Fleet > Nodes shortly."',
+        'echo "gpudeck-agent installed and joined (serving mode $SERVING_MODE); it appears under'
+        ' Fleet > Nodes shortly."',
+        'if [ "$SERVING_MODE" = "tunnel" ]; then echo "This machine needs no inbound port: the'
+        ' agent dials out to the control plane."; fi',
         "",
     ]
     return "\n".join(lines)
 
 
-def install_command(token: str, ca_pem: Optional[str] = None) -> str:
+def install_command(
+    token: str,
+    ca_pem: Optional[str] = None,
+    serving_mode: str = "tunnel",
+    firewall: bool = True,
+) -> str:
     """
     One-liner shown in the join dialog. By default it talks only to the hub.
 
@@ -713,7 +826,12 @@ def install_command(token: str, ca_pem: Optional[str] = None) -> str:
     a custom ``AGENT_DOWNLOAD_BASE_URL``, is fetched with the system trust store.
     """
     base = download_base_url()
-    script = f"{base}/install.sh"
+    params = []
+    if serving_mode == "direct":
+        params.append("mode=direct")
+    if not firewall:
+        params.append("firewall=0")
+    script = f"{base}/install.sh" + (f"?{'&'.join(params)}" if params else "")
     header = f"X-GPUDeck-Join-Token: {token}"
     if not ca_pem or not hub_uses_internal_ca() or base != hub_agent_prefix():
         return f"curl -fsSL -H '{header}' '{script}' | sh"
@@ -803,6 +921,10 @@ async def install_script_response(request, session, version: Optional[str] = Non
         raise AuthenticationError("a valid, unused join token is required")
     row = await JoinTokenRepository(session).get_by_hash(hash_token(token))
     ca = await PkiService.from_session(session).ensure_ca()
+    mode = request.query_params.get("mode", "tunnel")
+    if mode not in ("tunnel", "direct"):
+        raise ValidationError("mode must be tunnel or direct")
+    firewall = request.query_params.get("firewall", "1") not in ("0", "false", "off")
     script = install_script(
         token,
         hub_url=settings.AGENT_HUB_PUBLIC_URL,
@@ -810,6 +932,8 @@ async def install_script_response(request, session, version: Optional[str] = Non
         version=version,
         name=row.node_name_hint if row is not None else None,
         ca_pem=ca.cert_pem,
+        serving_mode=mode,
+        firewall=firewall,
     )
     return PlainTextResponse(
         script, media_type="text/x-shellscript", headers={"Cache-Control": "no-store"}

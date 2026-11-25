@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: APP_TITLE,
     short_name: APP_NAME,
-    description: 'GPU control plane: clusters, models, rules, metering and billing for your own hardware',
+    description: 'GPU control plane: clusters, models, rules and observability for your own hardware',
     start_url: '/dashboard',
     display: 'standalone',
     background_color: '#0E0F12',

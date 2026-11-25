@@ -95,7 +95,9 @@ class SwapService:
         self.state = ClusterStateRepository(session)
 
     @staticmethod
-    async def as_dependency(request: Request, db: AsyncSession = Depends(get_db)) -> "SwapService":
+    async def as_dependency(
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
+    ) -> "SwapService":
         return SwapService(db)
 
     # ------------------------------------------------------------------ reads

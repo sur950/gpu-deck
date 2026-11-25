@@ -118,7 +118,6 @@ function seedAudit(): void {
   // Security settings.
   recordAudit({ eventType: 'ip_rule.created', resourceType: 'ip_rule', resourceId: uuid('ip:admin:office'), resourceName: '192.168.1.0/24', at: t(19, 4), after: { scope: 'admin', action: 'allow', cidr: '192.168.1.0/24' } });
   recordAudit({ eventType: 'ip_rule.created', resourceType: 'ip_rule', resourceId: uuid('ip:admin:block-scanner'), resourceName: '45.83.64.0/24', at: t(9, 1), after: { scope: 'admin', action: 'block', cidr: '45.83.64.0/24' }, message: 'Blocked after repeated failed sign-ins' });
-  recordAudit({ eventType: 'price_plan.updated', resourceType: 'price_plan', resourceId: uuid('price-plan:l40s'), resourceName: 'L40S on-prem', at: t(8, 6), before: { usd_per_gpu_minute: 0.01 }, after: { usd_per_gpu_minute: 0.012 } });
   recordAudit({ eventType: 'alert_channel.updated', resourceType: 'alert_channel', resourceId: uuid('channel:email-oncall'), resourceName: 'Email on-call', at: t(9, 2), before: { min_severity: 'info' }, after: { min_severity: 'warning', event_filter: ['swap.*', 'heal.*', 'rule.error'] } });
 
   // Periodic system noise (partition jobs, cert rotation).

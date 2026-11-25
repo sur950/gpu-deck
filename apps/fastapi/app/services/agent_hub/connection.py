@@ -353,7 +353,18 @@ class AgentConnection:
                 "boot_id": hello.get("boot_id"),
                 "agent_started_at": hello.get("started_at"),
                 "cache_used_bytes": cache.get("used_bytes"),
+                # protocol.md §13: tunnel = reached over the agent's outbound tunnel (no
+                # inbound port); direct (or absent, older agents) = dial proxy_address:port.
+                "serving_mode": proxy.get("mode") or "direct",
+                "proxy_bind": proxy.get("bind"),
             }
+            # protocol.md §14: self-update state. An agent that cannot update itself (no
+            # stage_update command) has none; a newer one may omit it from its very first hello.
+            commands = (hello.get("capabilities") or {}).get("commands") or []
+            if hello.get("agent_update") is not None:
+                metadata_patch["agent_update"] = hello["agent_update"]
+            elif "stage_update" not in commands:
+                metadata_patch["agent_update"] = None
             if node.cert_fingerprint and node.cert_fingerprint != self.fingerprint:
                 # Rotation completed: revoke the previous cert after a grace period.
                 metadata_patch["pending_cert_revocation"] = {

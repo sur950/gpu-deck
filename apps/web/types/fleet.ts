@@ -56,7 +56,6 @@ export type DeviceVendor = S['device_vendor'];
 export type DeviceHealth = S['device_health'];
 export type DeviceSliceStatus = S['device_slice_status'];
 
-export type PricePlan = S['PricePlan'];
 export type Credential = S['Credential'];
 export type CredentialType = S['credential_type'];
 

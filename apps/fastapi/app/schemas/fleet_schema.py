@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 
+from app.schemas.agent_update_schema import AgentUpdatePolicy, NodeAgentUpdate
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 ClusterType = Literal[
@@ -105,6 +106,57 @@ def _egress_list(value: Optional[List[str]]) -> Optional[List[str]]:
     return [validate_egress_entry(v) for v in value]
 
 
+NODE_SECURITY_KEYS = {"proxy_allowed_source_cidrs", "ssh_default_allowed_cidrs"}
+
+
+def _node_security(config: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """
+    ``config.node_security`` (protocol.md §13, signed into every node's security policy):
+    ``proxy_allowed_source_cidrs`` (direct mode: the API layer's egress addresses) and
+    ``ssh_default_allowed_cidrs`` (SSH instances without their own). CIDRs only.
+    """
+    if config is None or "node_security" not in config:
+        return config
+    sec = config["node_security"]
+    if sec is None:
+        return config
+    if not isinstance(sec, dict):
+        raise ValueError("config.node_security must be an object")
+    unknown = set(sec) - NODE_SECURITY_KEYS
+    if unknown:
+        raise ValueError(f"config.node_security: unknown keys {sorted(unknown)}")
+    out: Dict[str, Any] = {}
+    for key in NODE_SECURITY_KEYS & set(sec):
+        values = sec[key] or []
+        if not isinstance(values, list) or len(values) > 256:
+            raise ValueError(f"config.node_security.{key}: a list of at most 256 CIDRs")
+        cleaned = []
+        for v in values:
+            try:
+                cleaned.append(str(ipaddress.ip_network(str(v).strip(), strict=False)))
+            except ValueError:
+                raise ValueError(f"config.node_security.{key}: invalid CIDR {v!r}")
+        out[key] = cleaned
+    return {**config, "node_security": out}
+
+
+def _agent_updates(config: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """``config.agent_updates`` (agent protocol §14): ``{"mode": "manual" | "auto", "window":
+    {"days", "start", "end", "timezone"}}``, normalised; ``null`` removes it."""
+    if config is None or "agent_updates" not in config:
+        return config
+    raw = config["agent_updates"]
+    if raw is None:
+        return {k: v for k, v in config.items() if k != "agent_updates"}
+    if not isinstance(raw, dict):
+        raise ValueError("config.agent_updates must be an object")
+    try:
+        policy = AgentUpdatePolicy.model_validate(raw)
+    except ValueError as exc:
+        raise ValueError(f"config.agent_updates: {exc}")
+    return {**config, "agent_updates": policy.model_dump(mode="json", exclude_none=True)}
+
+
 class ClusterCreate(_Request):
     name: str = Field(min_length=1, max_length=255)
     type: ClusterType
@@ -120,6 +172,11 @@ class ClusterCreate(_Request):
     @classmethod
     def _egress(cls, value):
         return _egress_list(value)
+
+    @field_validator("config")
+    @classmethod
+    def _config(cls, value):
+        return _agent_updates(_node_security(value))
 
 
 class ClusterUpdate(_Request):
@@ -138,6 +195,11 @@ class ClusterUpdate(_Request):
     @classmethod
     def _egress(cls, value):
         return _egress_list(value)
+
+    @field_validator("config")
+    @classmethod
+    def _config(cls, value):
+        return _agent_updates(_node_security(value))
 
 
 class ClusterResponse(_Response):
@@ -230,6 +292,9 @@ class NodeResponse(_Response):
         False,
         description="Agent gone: offline / removed or heartbeat older than twice the "
         "offline threshold",
+    )
+    agent_update: Optional[NodeAgentUpdate] = Field(
+        None, description="Agent self-update status (agent protocol §14)"
     )
     created_at: datetime
     updated_at: Optional[datetime] = None

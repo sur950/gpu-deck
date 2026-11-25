@@ -99,7 +99,7 @@ async def get_current_admin(
     request: Request,
     response: Response,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> AdminUsers:
     """Authenticated admin or 401 (503 with Retry-After when Postgres/Redis are down)."""
     token = credentials.credentials if credentials else CookieService.get_session_token(request)
@@ -123,7 +123,7 @@ async def get_optional_admin(
     request: Request,
     response: Response,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> Optional[AdminUsers]:
     """Like get_current_admin but returns None instead of raising 401."""
     token = credentials.credentials if credentials else CookieService.get_session_token(request)

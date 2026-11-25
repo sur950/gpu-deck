@@ -3,7 +3,8 @@
 # GPU Deck node agent on Kubernetes GPU nodes (systemd/launchd elsewhere). Every pod joins with
 # the same multi-use enrolment token on first start (state persisted under stateDir on the
 # host, so a restarted pod keeps its identity), supervises the engines and serves the mTLS proxy
-# on the node IP (hostNetwork). Native engines (llama.cpp, whisper.cpp, sd.cpp) are downloaded
+# on the node IP (hostNetwork, nodeAgent.servingMode direct: reached over the cluster network;
+# only the API layer's pinned key and private source ranges are accepted). Native engines (llama.cpp, whisper.cpp, sd.cpp) are downloaded
 # into stateDir; container engines (vLLM, SGLang, TensorRT-LLM) need containerRuntime.enabled:
 # the agent then starts them as sibling containers through the node's Docker-compatible socket,
 # with the same host paths for the model cache.
@@ -110,6 +111,10 @@ spec:
             {{- end }}
             - name: GPUDECK_AGENT_PROXY_PORT
               value: {{ $na.proxyPort | quote }}
+            - name: GPUDECK_AGENT_SERVING_MODE
+              value: {{ $na.servingMode | default "direct" | quote }}
+            - name: GPUDECK_AGENT_FIREWALL
+              value: {{ $na.firewall | default "off" | quote }}
             - name: GPUDECK_AGENT_EGRESS_LOCK
               value: {{ $na.egressLock | quote }}
             {{- with $na.caFingerprint }}
@@ -128,6 +133,7 @@ spec:
             - name: {{ $k }}
               value: {{ $v | quote }}
             {{- end }}
+          {{- if eq ($na.servingMode | default "direct") "direct" }}
           ports:
             - name: proxy
               containerPort: {{ $na.proxyPort }}
@@ -140,6 +146,15 @@ spec:
               port: proxy
             initialDelaySeconds: 15
             periodSeconds: 20
+          {{- else }}
+          # Tunnel mode: nothing listens on the node.
+          readinessProbe:
+            exec:
+              command: ["gpudeck-agent", "status"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 20
+          {{- end }}
           livenessProbe:
             exec:
               command: ["gpudeck-agent", "status"]

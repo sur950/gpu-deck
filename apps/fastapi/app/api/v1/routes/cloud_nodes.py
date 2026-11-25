@@ -10,7 +10,8 @@ POST   /cloud/nodes/{cloud_node_id}/stop             drain node, stop VM
 POST   /cloud/nodes/{cloud_node_id}/start            start a stopped VM
 POST   /cloud/nodes/{cloud_node_id}/terminate        drain node, terminate VM, remove node
 POST   /cloud/nodes/{cloud_node_id}/refresh          run one lifecycle step now
-POST   /cloud/nodes/{cloud_node_id}/apply-price-plan create/attach the list-price plan
+
+The list-price plan route (apply-price-plan) is v2: app/api/v1/routes_v2/cloud_price_plans.py.
 """
 
 import uuid
@@ -178,19 +179,3 @@ async def refresh_cloud_node(
     service: CloudService = Depends(CloudService.as_dependency),
 ):
     return success_response(data=await service.refresh(cloud_node_id))
-
-
-@router.post(
-    "/cloud/nodes/{cloud_node_id}/apply-price-plan",
-    summary="Create/attach a price plan from the provider list price",
-)
-@handle_exceptions
-async def apply_cloud_price_plan(
-    request: Request,
-    cloud_node_id: uuid.UUID,
-    admin=Depends(get_current_admin),
-    service: CloudService = Depends(CloudService.as_dependency),
-):
-    return success_response(
-        data=await service.apply_price_plan(cloud_node_id, getattr(admin, "id", None))
-    )

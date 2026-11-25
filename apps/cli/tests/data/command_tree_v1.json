@@ -250,6 +250,24 @@
   "arguments": 0,
   "options": []
  },
+ "batches cancel": {
+  "arguments": 1,
+  "options": []
+ },
+ "batches get": {
+  "arguments": 1,
+  "options": []
+ },
+ "batches list": {
+  "arguments": 0,
+  "options": [
+   "--all",
+   "--api-key-id",
+   "--page",
+   "--page-size",
+   "--status"
+  ]
+ },
  "benchmark-runs apply": {
   "arguments": 1,
   "options": [
@@ -341,52 +359,6 @@
    "--name",
    "--set"
   ]
- },
- "billing estimate": {
-  "arguments": 0,
-  "options": [
-   "--cluster-id",
-   "--period-end",
-   "--period-start"
-  ]
- },
- "billing reports create": {
-  "arguments": 0,
-  "options": [
-   "--file",
-   "--group-by",
-   "--name",
-   "--period-end",
-   "--period-start",
-   "--set"
-  ]
- },
- "billing reports delete": {
-  "arguments": 1,
-  "options": []
- },
- "billing reports export": {
-  "arguments": 1,
-  "options": []
- },
- "billing reports get": {
-  "arguments": 1,
-  "options": []
- },
- "billing reports list": {
-  "arguments": 0,
-  "options": [
-   "--all",
-   "--page",
-   "--page-size",
-   "--search",
-   "--sort",
-   "--status"
-  ]
- },
- "billing reports regenerate": {
-  "arguments": 1,
-  "options": []
  },
  "cache delete": {
   "arguments": 1,
@@ -484,10 +456,6 @@
    "--source",
    "--type"
   ]
- },
- "cloud nodes apply-price-plan": {
-  "arguments": 1,
-  "options": []
  },
  "cloud nodes create": {
   "arguments": 0,
@@ -1310,75 +1278,6 @@
    "--source"
   ]
  },
- "metering batches cancel": {
-  "arguments": 1,
-  "options": []
- },
- "metering batches get": {
-  "arguments": 1,
-  "options": []
- },
- "metering batches list": {
-  "arguments": 0,
-  "options": [
-   "--all",
-   "--api-key-id",
-   "--page",
-   "--page-size",
-   "--status"
-  ]
- },
- "metering usage export": {
-  "arguments": 0,
-  "options": [
-   "--api-key-id",
-   "--cluster-id",
-   "--deployment-id",
-   "--format",
-   "--from",
-   "--group-by",
-   "--mode",
-   "--model-id",
-   "--node-id",
-   "--status",
-   "--to"
-  ]
- },
- "metering usage list": {
-  "arguments": 0,
-  "options": [
-   "--all",
-   "--api-key-id",
-   "--cluster-id",
-   "--deployment-id",
-   "--endpoint",
-   "--format",
-   "--from",
-   "--model-id",
-   "--node-id",
-   "--page",
-   "--page-size",
-   "--request-id",
-   "--sort",
-   "--status",
-   "--to"
-  ]
- },
- "metering usage summary": {
-  "arguments": 0,
-  "options": [
-   "--api-key-id",
-   "--cluster-id",
-   "--deployment-id",
-   "--format",
-   "--from",
-   "--group-by",
-   "--model-id",
-   "--node-id",
-   "--status",
-   "--to"
-  ]
- },
  "metrics catalog": {
   "arguments": 0,
   "options": []
@@ -1745,52 +1644,6 @@
    "--set"
   ]
  },
- "price-plans create": {
-  "arguments": 0,
-  "options": [
-   "--description",
-   "--file",
-   "--is-default",
-   "--name",
-   "--set",
-   "--usd-per-1k-cached-tokens",
-   "--usd-per-1k-input-tokens",
-   "--usd-per-1k-output-tokens",
-   "--usd-per-gpu-minute"
-  ]
- },
- "price-plans delete": {
-  "arguments": 1,
-  "options": []
- },
- "price-plans get": {
-  "arguments": 1,
-  "options": []
- },
- "price-plans list": {
-  "arguments": 0,
-  "options": [
-   "--all",
-   "--page",
-   "--page-size",
-   "--search",
-   "--sort"
-  ]
- },
- "price-plans update": {
-  "arguments": 1,
-  "options": [
-   "--description",
-   "--file",
-   "--is-default",
-   "--name",
-   "--set",
-   "--usd-per-1k-cached-tokens",
-   "--usd-per-1k-input-tokens",
-   "--usd-per-1k-output-tokens",
-   "--usd-per-gpu-minute"
-  ]
- },
  "rule-runs get": {
   "arguments": 1,
   "options": []
@@ -1959,31 +1812,6 @@
   "options": [
    "--cluster-id",
    "--include-stopped"
-  ]
- },
- "traces get": {
-  "arguments": 1,
-  "options": []
- },
- "traces list": {
-  "arguments": 0,
-  "options": [
-   "--all",
-   "--api-key-id",
-   "--deployment-id",
-   "--error",
-   "--format",
-   "--from",
-   "--instance-id",
-   "--min-duration-ms",
-   "--model-id",
-   "--node-id",
-   "--page",
-   "--page-size",
-   "--request-id",
-   "--service",
-   "--status-code",
-   "--to"
   ]
  },
  "vault create": {

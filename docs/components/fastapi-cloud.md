@@ -4,11 +4,16 @@ GPU Deck creates GPU VMs on **AWS, Azure, GCP and DigitalOcean**; each VM instal
 agent from cloud-init and joins its cluster as an ordinary node. API: the `Cloud` tag in
 `libs/contracts/openapi/admin.yaml` (`/cloud/providers/**`, `/cloud/nodes/**`).
 
-> **Verification status:** no cloud account was available while building this. Every provider
-> is tested against mocked / recorded provider APIs only (`tests/unit/test_cloud_providers.py`:
+> [!WARNING]
+> **Not run against a real account yet.** Every provider is tested against mocked / recorded
+> provider APIs only (`tests/unit/test_cloud_providers.py`:
 > moto for AWS, recorded ARM / Compute REST payloads replayed through the real Azure and Google
 > SDK clients, recorded DigitalOcean API v2 payloads). `GET /cloud/providers` reports
 > `verified_live: false`. Run one real provision per provider before relying on it.
+
+![Provisioning a cloud GPU VM: pick the cluster and region, then a GPU instance type at its list price](../screenshots/cloud-provision.svg)
+
+*Provisioning a GPU VM: region and instance type at list price; the VM joins its cluster on boot.*
 
 ## Layout
 
@@ -19,7 +24,7 @@ agent from cloud-init and joins its cluster as an ordinary node. API: the `Cloud
 | `credentials.py` | vault credential → provider client (`VaultService.get_secret`, never logged) |
 | `catalog.py` | provider descriptions, Redis-cached regions / GPU instance types / quotas |
 | `user_data.py` | the bash bootstrap (cloud-init user-data, Azure custom data, GCP startup-script) |
-| `lifecycle.py` | state machine, drain → stop/terminate, idle auto-terminate, price plan |
+| `lifecycle.py` | state machine, drain → stop/terminate, idle auto-terminate |
 | `service.py` | API-facing validation, provisioning, actions |
 | `app/workers/tasks/cloud_tasks.py` | `cloud.reconcile` job + `cloud_tasks.advance` Celery task (queue `cloud`) |
 | migration `650_cloud_instances` | `cloud_instances` table (+ `cloud_provider`, `cloud_instance_status` enums) |
@@ -62,12 +67,13 @@ agent from cloud-init and joins its cluster as an ordinary node. API: the `Cloud
 
 ### Network rules
 
-The VM only needs **outbound** HTTPS to the agent hub (`AGENT_HUB_PUBLIC_URL`, 8443: downloads,
-join, WebSocket) and to model sources. **Inbound tcp/9443** (the agent's mTLS proxy) must be
-allowed from the API layer only — security group (AWS), NSG on the subnet/NIC (Azure), a
-firewall rule targeting the network tag `gpu-deck-node` (GCP), a cloud firewall on the VPC
-(DigitalOcean). Nothing else needs to be open; no SSH is required (Azure gets a throwaway
-public key whose private half is discarded, GCP blocks project SSH keys).
+The VM only needs **outbound** connections: HTTPS to the agent hub (`AGENT_HUB_PUBLIC_URL`, 8443:
+downloads, join, WebSocket), the API layer's tunnel ports (8444 upward, the agent's serving
+tunnel; agent protocol §13) and model sources. **No inbound port** is needed: the bootstrap joins
+in the default tunnel serving mode and applies the agent's host firewall. Keep the security group
+(AWS), NSG (Azure), firewall rule for the network tag `gpu-deck-node` (GCP) or VPC cloud firewall
+(DigitalOcean) closed inbound; no SSH is required (Azure gets a throwaway public key whose private
+half is discarded, GCP blocks project SSH keys).
 
 ## Bootstrap (cloud-init)
 
@@ -101,8 +107,7 @@ any failure ─▶ error (last_error {code, message, provider_code, stage}, aler
   plus a conditional status claim make it single-shot; provider creates are idempotent anyway
   (AWS `ClientToken`, GCP `requestId`, Azure resource name, DigitalOcean tag lookup).
 - Join detection: the VM's join token row gets `used_by_node_id` → the row links `node_id`, the
-  node gets `cloud_instance_id` / `cloud_instance_type` and `metadata.cloud` +
-  `metadata.price_plan_suggestion`.
+  node gets `cloud_instance_id` / `cloud_instance_type` and `metadata.cloud`.
 - Terminate/stop drain the node first through `NodeService.drain(move_instances=true)` (the
   swap manager moves instances); `force=true` skips it. Then the VM is terminated and the node is
   removed with `NodeService.remove(force=True)`.
@@ -118,15 +123,14 @@ any failure ─▶ error (last_error {code, message, provider_code, stage}, aler
 - **Per-cluster cap:** `config.cloud.max_nodes` (default `CLOUD_MAX_NODES_PER_CLUSTER`) counts
   live cloud VMs plus other nodes → `409 CLOUD_MAX_NODES`.
 
-## Billing
+## List prices
 
 Instance types carry the provider's on-demand list price per hour when the API exposes one
 (AWS Pricing API Linux on-demand, Azure Retail Prices pay-as-you-go Linux, DigitalOcean
 `price_hourly`; GCP: `null`). It is stored on the row (`price_per_hour_usd`, `price_source`) and
-as `nodes.metadata.price_plan_suggestion` (`usd_per_gpu_minute = price / 60 / gpu_count`).
-`POST /cloud/nodes/{id}/apply-price-plan` (or `apply_price_plan: true` at provision time)
-creates/reuses the plan `cloud <provider> <region> <type>` and sets `nodes.price_plan_id`, which
-billing already uses.
+shown when you pick a type and on the VM page. Turning the list price into a price plan for the
+node (`apply_price_plan`, `nodes.metadata.price_plan_suggestion`) belongs to billing, which is
+planned for v2: v1 does not mount `POST /cloud/nodes/{id}/apply-price-plan`.
 
 ## Errors
 
@@ -164,6 +168,7 @@ not through this module: `apps/node-agent/packaging/kubernetes/daemonset.yaml`.
    `runtimeClassName: nvidia` where the NVIDIA runtime is not the default, and apply the
    manifest. The agent joins on first start (`GPUDECK_AGENT_JOIN_TOKEN`), keeps its identity on
    the host path and exposes the :9443 mTLS proxy on the node IP (`hostNetwork`).
-4. Network: the node security group must allow tcp/9443 from the API layer; pods need outbound
-   8443 to the hub. Node scaling (Cluster Autoscaler / Karpenter) stays with EKS; scaled-in
+4. Network: in-cluster agents run in direct mode, so the node security group must allow tcp/9443
+   from the API layer only (the agent also accepts only the API layer's pinned key from private
+   source ranges); pods need outbound 8443 to the hub. Node scaling (Cluster Autoscaler / Karpenter) stays with EKS; scaled-in
    nodes go offline in GPU Deck and are removed with `DELETE /nodes/{id}?force=true`.

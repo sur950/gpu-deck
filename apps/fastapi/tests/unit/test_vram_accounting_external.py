@@ -157,7 +157,12 @@ def test_ensure_managed_guards_external_rows():
 def test_hello_ack_advertises_optional_features():
     from app.services.agent_hub.protocol import HUB_FEATURES, validate_payload
 
-    assert set(HUB_FEATURES) == {"observed_engines", "gpu_processes"}
+    assert set(HUB_FEATURES) == {
+        "observed_engines",
+        "gpu_processes",
+        "secure_transport",
+        "agent_updates",
+    }
     validate_payload(
         "hello_ack",
         {

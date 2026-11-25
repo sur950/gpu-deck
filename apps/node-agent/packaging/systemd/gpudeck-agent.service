@@ -1,6 +1,7 @@
 # GPU Deck node agent (Linux). Install: binary at /usr/local/bin/gpudeck-agent, user `gpudeck`
 # (member of the GPU device groups, e.g. `video`, `render`), config /etc/gpudeck/agent.toml,
 # then: gpudeck-agent join --url https://<hub>:8443 --token gdj_... --ca-fingerprint <sha256>
+#       sudo gpudeck-agent firewall apply   # agent ports closed to everyone but the API layer
 [Unit]
 Description=GPU Deck node agent
 Documentation=https://github.com/sur950/gpu-deck
@@ -45,9 +46,11 @@ DeviceAllow=/dev/kfd rw
 DeviceAllow=char-drm rw
 DeviceAllow=/dev/mtgpu rw
 DeviceAllow=/dev/mxcd rw
-# The egress lock (`run --apply-egress-lock`) needs CAP_NET_ADMIN; grant it only when used:
-# AmbientCapabilities=CAP_NET_ADMIN
-# CapabilityBoundingSet=CAP_NET_ADMIN
+# Host firewall for the agent's ports (nftables, kept current by the agent: policy changes,
+# SSH-instance CIDRs) and the optional egress lock need CAP_NET_ADMIN, and nothing else.
+# Remove both lines together with `firewall = "off"` in agent.toml to opt out.
+AmbientCapabilities=CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_ADMIN
 
 [Install]
 WantedBy=multi-user.target

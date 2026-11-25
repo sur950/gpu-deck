@@ -10,6 +10,21 @@ Load balancing (``traffic.strategy``): ``least_sessions`` (default; live
 ``active_sessions`` from the hub plus our own in-flight count), ``round_robin``
 and ``weighted`` (traffic weight). Weight 0, ``accepting=false``,
 ``state != ready``, ``health != healthy`` and ejected instances are skipped.
+
+Latency-aware selection (``least_sessions`` with ``SERVING_LATENCY_ROUTING``, the default):
+every candidate gets an expected latency
+
+    expected = rtt + SERVING_LATENCY_LOAD_PENALTY_MS * sessions / capacity / (weight / 100)
+
+where ``rtt`` is this API layer's smoothed round trip to the replica's node
+(``app.services.serving.latency``; a node not measured yet counts as the farthest measured
+one), ``sessions`` = live active + waiting sessions + our in-flight requests and
+``capacity`` = the replica's ``max_concurrent`` (else ``SERVING_LATENCY_DEFAULT_CAPACITY``).
+Replicas within ``SERVING_LATENCY_TOLERANCE_MS`` of the best share the traffic: the least
+loaded of them wins, ties broken at random in proportion to weight. The nearest replica
+takes the traffic until its load penalty outweighs the extra RTT of the next one, then the
+traffic spills over. Without any RTT measurement the classic least-sessions rule applies
+unchanged; failover re-runs the same selection without the replicas already tried.
 """
 
 from __future__ import annotations
@@ -24,6 +39,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set
 from app.core.logger import get_logger
 from app.core.settings import settings
 from app.services.serving.errors import ServingError
+from app.services.serving.latency import rtt_ms as latency_rtt_ms
 
 logger = get_logger(__name__)
 
@@ -380,8 +396,49 @@ class RoutingTable:
             sessions = i.active_sessions + i.waiting_sessions + inflight.get(i.instance_id, 0)
             return (sessions + 1) / max(i.weight, 1)
 
+        if settings.SERVING_LATENCY_ROUTING and len(cands) > 1:
+            nearest = self._pick_nearest(cands, inflight, load)
+            if nearest is not None:
+                return nearest
         best = min(cands, key=load)
         return best
+
+    def rtt_of(self, node_id: str) -> Optional[float]:
+        """This API layer's smoothed RTT to a node in ms (None = not measured)."""
+        return latency_rtt_ms(node_id)
+
+    def expected_latency_ms(self, inst: Instance, rtt: float, inflight: Dict[str, int]) -> float:
+        sessions = inst.active_sessions + inst.waiting_sessions + inflight.get(inst.instance_id, 0)
+        capacity = inst.max_concurrent or settings.SERVING_LATENCY_DEFAULT_CAPACITY
+        share = max(inst.weight, 1) / 100.0
+        penalty = float(settings.SERVING_LATENCY_LOAD_PENALTY_MS) * sessions
+        return rtt + penalty / max(int(capacity or 1), 1) / share
+
+    def _pick_nearest(
+        self, cands: List[Instance], inflight: Dict[str, int], load
+    ) -> Optional[Instance]:
+        """Lowest expected latency (RTT + load penalty) within the tolerance band; None
+        when no candidate's node has an RTT measurement."""
+        rtts = {i.instance_id: self.rtt_of(i.node_id) for i in cands}
+        known = [v for v in rtts.values() if v is not None]
+        if not known:
+            return None
+        worst = max(known)
+        scored = []
+        for inst in cands:
+            rtt = rtts[inst.instance_id]
+            scored.append(
+                (self.expected_latency_ms(inst, worst if rtt is None else rtt, inflight), inst)
+            )
+        best = min(score for score, _ in scored)
+        band = [i for score, i in scored if score <= best + settings.SERVING_LATENCY_TOLERANCE_MS]
+        if len(band) == 1:
+            return band[0]
+        lightest = min(load(i) for i in band)
+        ties = [i for i in band if load(i) <= lightest + 1e-9]
+        if len(ties) == 1:
+            return ties[0]
+        return random.choices(ties, weights=[max(i.weight, 1) for i in ties])[0]
 
     def resolve(self, requested: str, endpoint: str, inflight: Dict[str, int]) -> RouteTarget:
         """Resolve a model name for an endpoint to one instance, or raise ServingError."""

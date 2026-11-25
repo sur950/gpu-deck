@@ -184,7 +184,7 @@ async def list_metric_names(request: Request, admin=Depends(get_current_admin)):
 async def get_prometheus_exposition(
     request: Request,
     authorization: Optional[str] = Header(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     if not check_scrape_token(authorization, settings.PROMETHEUS_SCRAPE_TOKEN):
         credentials = None

@@ -84,7 +84,7 @@ class PricePlanService:
 
     @staticmethod
     async def as_dependency(
-        request: Request, db: AsyncSession = Depends(get_db)
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
     ) -> "PricePlanService":
         return PricePlanService(PricePlanRepository(db))
 
@@ -351,7 +351,7 @@ class BillingService:
 
     @staticmethod
     async def as_dependency(
-        request: Request, db: AsyncSession = Depends(get_db)
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
     ) -> "BillingService":
         return BillingService(db)
 

@@ -175,6 +175,23 @@ Legend: **R** required (no default), process column = which processes read it (`
 | `NODE_CERT_OLD_REVOKE_AFTER_SECONDS` | `600` | A H J | Revoke the previous cert this long after the new one connects |
 | `JOIN_RATE_LIMIT` | `10/minute` | A H J | Rate limit on /agent/v1/join |
 | `COMMAND_MIN_AGENT_VERSIONS` | *(empty)* | A H J | Comma list command=semver of the minimum agent version per command (e.g. run_benchmark=1.1.0); unsupported commands are rejected before sending |
+| `AGENT_TUNNEL_PUBLIC_URLS` | *(empty)* | A H J | `host:port` list (comma separated) agents dial for the outbound serving tunnel (serving mode `tunnel`, agent protocol §13), one per API-layer worker; empty = the `AGENT_HUB_PUBLIC_URL` host on `AGENT_TUNNEL_PORT` .. `+ AGENT_TUNNEL_LISTENERS - 1`. Signed into every node's security policy |
+| `AGENT_TUNNEL_CONNECTIONS` | `2` | A H J | Tunnel connections each agent keeps per endpoint |
+| `AGENT_TUNNEL_IDLE_TIMEOUT_SECONDS` | `60` | A H J | An agent redials a tunnel on which no request or keep-alive probe arrived for this long |
+| `NODE_PROXY_ALLOWED_SOURCE_CIDRS` | *(empty)* | A H J | Direct serving mode: source CIDRs (the API layer's egress addresses) the node proxy accepts; connections from anywhere else are closed before TLS. Empty = private ranges only. Per cluster: `clusters.config.node_security.proxy_allowed_source_cidrs` |
+| `SSH_INSTANCE_DEFAULT_ALLOWED_CIDRS` | *(empty)* | A H J | Source CIDRs of SSH instances started without their own; empty = such instances accept nobody. Per cluster: `clusters.config.node_security.ssh_default_allowed_cidrs` |
+| `NODE_INGRESS_REPORT_SECONDS` | `60` | A H J | Agents sum rejected inbound attempts per interval into one `ingress_rejected` event |
+| `NODE_INGRESS_ALERT_THRESHOLD` | `20` | A H J | Rejected attempts per interval that make the event critical and raise a `node.ingress_rejected` alert |
+| `AGENT_HUB_EXTRA_SPKI_PINS` | *(empty)* | A H J | Extra hub key pins (SubjectPublicKeyInfo sha256 hex, comma separated) to pre-publish before replacing `AGENT_HUB_TLS_CERT_FILE` with a new key |
+| `API_LAYER_EXTRA_SPKI_PINS` | *(empty)* | A H J | Extra API-layer key pins to pre-publish before replacing `API_LAYER_CLIENT_CERT_PATH` with a new key |
+| `SERVICE_KEY_ROTATION_GRACE_HOURS` | `24` | A H J | After `python -m app.services.pki.cli rotate-key` the previous hub / API-layer key stays pinned this long |
+| `AGENT_RELEASE_PUBLIC_KEYS` | *(empty)* | A H J | Agent self-update (agent protocol §14): comma list of release signing public keys (base64 of the 32-byte ed25519 key) agent release manifests must be signed with; signed into every node's security policy. Empty = agent updates are off (update nodes by re-running the installer). See DEPLOYMENT.md, release signing |
+| `AGENT_UPDATE_TARGET_VERSION` | *(empty)* | A H J | Version nodes are moved to; empty = the newest signed release available (`AGENT_DIST_DIR` / `AGENT_CACHE_DIR`, else this control plane's own version from `AGENT_RELEASE_URL`) |
+| `AGENT_UPDATE_PRESTAGE` | `true` | A H J | Download the target version to every node that can update itself in the background, ahead of any update (the update itself downloads nothing) |
+| `AGENT_UPDATE_STAGE_CONCURRENCY` | `4` | A H J | Nodes downloading a staged update at the same time |
+| `AGENT_UPDATE_HEALTH_TIMEOUT_SECONDS` | `120` | A H J | The updated agent must reconnect and report healthy within this, or the node rolls back to the previous binary (30-900) |
+| `AGENT_UPDATE_TICK_SECONDS` | `10` | A H J | How often the scheduler advances updates, rolling updates and maintenance windows |
+| `AGENT_UPDATE_TOKEN_TTL_SECONDS` | `3600` | A H J | Lifetime of the per-node download token sent with `stage_update` |
 
 ## 9. Rules, swaps, HA
 
@@ -203,7 +220,7 @@ Legend: **R** required (no default), process column = which processes read it (`
 | `METRICS_RAW_RETENTION_HOURS` | `48` | J | `metric_samples_*` partitions |
 | `METRICS_ROLLUP_RETENTION_DAYS` | `90` | J | `metric_rollups_*_1m` |
 | `LOGS_RETENTION_DAYS` | `14` | J | `log_chunks` |
-| `TRACES_RETENTION_DAYS` | `7` | J | `traces` |
+| `TRACES_RETENTION_DAYS` | `7` | J | `traces` (request traces are v2; not read by the v1 UI or API) |
 | `USAGE_EVENTS_RETENTION_DAYS` | `400` | J | `usage_events` |
 | `AUDIT_RETENTION_DAYS` | `365` | J | `audit_logs` row deletes (0 = keep forever) |
 | `ALERT_EVENTS_RETENTION_DAYS` | `90` | J | |
@@ -215,7 +232,7 @@ Legend: **R** required (no default), process column = which processes read it (`
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | *(empty)* | A L J | Empty = tracing to DB index only |
 | `OTEL_SERVICE_NAME` | per process (`gpudeck-admin-api` …) | A L J | |
 | `OTEL_TRACES_SAMPLER` / `OTEL_TRACES_SAMPLER_ARG` | `always_on` / `0.1` | A L J | |
-| `OTEL_UI_URL` | *(empty)* | A W | Deep link template `{trace_id}` |
+| `OTEL_UI_URL` | *(empty)* | A W | Deep link template `{trace_id}` (v2, for the traces page; not used by the v1 UI) |
 | `GRAFANA_URL` | *(empty)* | A W | Link in the UI |
 | `AUDIT_EXPORT_MAX_ROWS` | `50000` | A J | Upper bound of rows in one CSV export |
 | `AUDIT_QUEUE` | `audit` | A J | Celery queue for audit writes |
@@ -224,7 +241,7 @@ Legend: **R** required (no default), process column = which processes read it (`
 | `LOGS_QUERY_MAX_LIMIT` | `1000` | A H J | Max rows per /logs page |
 | `LIVE_EVENTS_REPLAY_SECONDS` | `60` | A H J | Replay window honoured for Last-Event-ID on /live/events |
 | `LIVE_HEARTBEAT_SECONDS` | `15` | A H J | SSE heartbeat cadence |
-| `TRACE_INDEX_ENABLED` | `true` | A H J | Write a span index into the traces table |
+| `TRACE_INDEX_ENABLED` | `false` | A H J | Write a span index into the traces table (v2 request traces; nothing in the v1 UI or API reads it) |
 | `SERVING_ACCESS_LOG_SAMPLE_RATE` | `0.01` | A L J | Serving API: fraction of requests that get an INFO access-log line (the rest log at DEBUG; 5xx always log at WARNING) |
 | `METRICS_ENABLED` | `true` | A L J | Expose Prometheus /metrics |
 | `WORKER_METRICS_PORT` | `9464` | J | Prometheus listener of the Celery worker (`celery_tasks_total{task,state}`); 0 = off. Prefork pools need `PROMETHEUS_MULTIPROC_DIR` |
@@ -233,6 +250,7 @@ Legend: **R** required (no default), process column = which processes read it (`
 | `OTEL_CONSOLE_EXPORT` | `false` | A L J | Print spans to stdout when no OTLP endpoint is set |
 | `HEALTH_CHECK_ENABLED` | `true` | A L J | Enable health checks |
 | `HEALTH_CHECK_INTERVAL_SECONDS` | `30` | A L J | Health check interval |
+| `LATENCY_RETENTION_DAYS` | `14` | J | Days of per-minute RTT history kept in `node_latency_samples` |
 
 ## 11. Serving API layer
 
@@ -278,11 +296,26 @@ Legend: **R** required (no default), process column = which processes read it (`
 | `SERVING_UPSTREAM_PREWARM` | `true` | L | Open connections to a node proxy as soon as it serves an instance and keep idle pools warm |
 | `SERVING_UPSTREAM_WARM_CONNECTIONS` | `2` | L | Connections opened per node proxy when it is first routed |
 | `SERVING_UPSTREAM_KEEPWARM_SECONDS` | `20` | L | Interval of the GET /_health ping that keeps each routed node's pool warm (0 = off; keep it below the agent's 30 s HTTP/2 keep-alive ping) |
+| `AGENT_TUNNEL_ENABLED` | `true` | L | Run the outbound-tunnel listener agents dial in serving mode `tunnel` (agent protocol §13) |
+| `AGENT_TUNNEL_BIND` | `0.0.0.0` | L | Bind address of the agent tunnel listener |
+| `AGENT_TUNNEL_PORT` | `8444` | L H | Agent tunnel listener port (TLS 1.3, node client certificate required, ALPN h2) |
+| `AGENT_TUNNEL_LISTENERS` | `1` | L H | Tunnel ports per API-layer host (`AGENT_TUNNEL_PORT` upward), one per worker process: set it to the gunicorn `WORKERS` count; the hub lists every port |
+| `AGENT_TUNNEL_KEEPALIVE_SECONDS` | `10.0` | L | Keep-alive probe interval per tunnel connection (also detects dead ones) |
+| `AGENT_TUNNEL_MAX_PENDING_HANDSHAKES` | `256` | L | Concurrent unauthenticated tunnel handshakes accepted |
 | `SERVING_DEV_ENGINE_URL` | *(empty)* | L | Direct engine base URL for local testing (e.g. http://127.0.0.1:11434); requests go to {url}/{engine_path} without a node-agent proxy |
 | `SERVING_DEV_ENGINE_MODELS` | `*` | L | Comma-separated serving names the dev engine answers to ('*' = any) |
 | `SERVING_DEV_ENGINE_FORMATS` | `openai` | L | Formats the dev engine speaks natively (openai,ollama) |
 | `SERVING_DEV_ENGINE_FAMILY` | *(empty)* | L | Model family hint for the dev engine (thinking tag handling) |
 | `SERVING_DEV_ENGINE_TYPE` | `chat` | L | Model type of the dev engine model(s) |
+| `API_LAYER_ID` | *(empty)* | L | Stable id of this API layer in RTT reports, request logs and `Server-Timing` (empty = the host name) |
+| `API_LAYER_REGION` | `default` | L | Region label of this API layer (e.g. `eu-west`); RTT, request counts per region and traffic-aware placement are grouped by it. Give every API layer of one region the same label |
+| `SERVING_RTT_PROBE_SECONDS` | `10.0` | A L J | How often the API layer measures its round trip to every connected node: one `GET /_health` over the path requests use (warm HTTP/2 connection or agent tunnel); 0 = off (no latency-aware routing) |
+| `SERVING_RTT_EWMA_ALPHA` | `0.3` | L H | Weight of the newest RTT sample in the smoothed value (0-1), API layer and agent hub |
+| `SERVING_LATENCY_ROUTING` | `true` | L | `least_sessions` picks the replica with the lowest expected latency (measured RTT + load penalty); off = load only |
+| `SERVING_LATENCY_TOLERANCE_MS` | `5.0` | L | Replicas whose expected latency is within this many ms of the best share the traffic (least loaded first, then weighted random) |
+| `SERVING_LATENCY_LOAD_PENALTY_MS` | `200.0` | L | Expected extra latency (ms) of a replica running at its full concurrency; scaled by its sessions / capacity and divided by weight/100. Lower = stay on the nearest replica longer |
+| `SERVING_LATENCY_DEFAULT_CAPACITY` | `8` | L | Concurrency per replica assumed by the load penalty when the deployment sets no `max_concurrent_per_instance` |
+| `SERVING_SERVER_TIMING` | `generic` | L | `Server-Timing` on serving responses: `off`, `generic` (phase durations only, nothing that names a host) or `detailed` (adds the API-layer region and the node name; trusted callers only) |
 
 ## 12. Alerts and billing
 
@@ -293,8 +326,8 @@ Legend: **R** required (no default), process column = which processes read it (`
 | `SLACK_DEFAULT_WEBHOOK_CREDENTIAL` | *(empty)* | J | Vault credential name used when a Slack channel has no credential_id |
 | `WEBHOOK_SIGNING_SECRET_CREDENTIAL` | *(empty)* | J | HMAC-SHA256 `X-GPUDeck-Signature` for webhook channels |
 | `ALERT_SEND_TIMEOUT_SECONDS` / `ALERT_MAX_ATTEMPTS` | `10` / `3` | J | |
-| `BILLING_CURRENCY` | `USD` | A J | Display only; prices are USD |
-| `BILLING_MONTHLY_REPORT_DAY` | `1` | J | Auto-generate last month's report on this day (0 = off) |
+| `BILLING_CURRENCY` | `USD` | A J | Display only; prices are USD (v2, not used by the v1 UI/API) |
+| `BILLING_MONTHLY_REPORT_DAY` | `1` | J | Auto-generate last month's report on this day (0 = off; v2, the v1 UI/API do not show reports) |
 | `ALERT_RETRY_BACKOFF_SECONDS` | `30` | A J | Base backoff between delivery attempts (doubles per attempt) |
 
 ## 13. Node agent (`agent.toml` keys, overridable by env `GPUDECK_AGENT_<KEY>`)
@@ -308,7 +341,13 @@ Legend: **R** required (no default), process column = which processes read it (`
 | `cache_limit_bytes` | 70 % of the cache volume | |
 | `proxy_port` / `proxy_address` | `9443` / auto | |
 | `proxy_advertise_port` | unset (= `proxy_port`) | Port the control plane dials when the proxy sits behind a port forward |
-| `proxy_bind` / `GPUDECK_AGENT_PROXY_BIND` | `auto` | Proxy listen address. `auto`: `proxy_address` when it is an IP of this host or loopback (e.g. `127.0.0.1` behind an SSH tunnel), else `0.0.0.0` (a warning names any public address it listens on; firewall the port to the API layer) |
+| `proxy_bind` / `GPUDECK_AGENT_PROXY_BIND` | `auto` | Direct-mode proxy listen address. `auto`: `proxy_address` when it is an IP of this host or loopback (e.g. `127.0.0.1` behind an SSH tunnel), else the first private address (RFC 1918, CGNAT, ULA), else loopback; every interface (`0.0.0.0`) only when set explicitly |
+| `serving_mode` / `GPUDECK_AGENT_SERVING_MODE` | `tunnel` | `tunnel`: the agent dials out to the API layer and serves requests over that connection; the machine listens on no port. `direct`: the API layer dials the mTLS proxy on `proxy_port` (private networks). Local opt-in only (agent protocol §13) |
+| `firewall` / `GPUDECK_AGENT_FIREWALL` | `auto` | Host firewall for the agent's ports (nftables / pf): `auto` programs it when the agent may (root or `CAP_NET_ADMIN`, granted by the systemd unit) and keeps it current; `off` never touches it (`gpudeck-agent firewall apply` still works by hand) |
+| `firewall_preserve_ports` / `GPUDECK_AGENT_FIREWALL_PRESERVE_PORTS` | `[22]` | TCP ports the firewall always accepts; `firewall apply` adds the ports sshd listens on and the port of the SSH session running it |
+| `firewall_egress_lock` / `GPUDECK_AGENT_FIREWALL_EGRESS_LOCK` | `false` | Also lock egress (outbound only to the hub, tunnel endpoints, model sources, allow-list; inbound default deny). Same as `run --apply-egress-lock` / `firewall apply --egress-lock` |
+| `ssh_bind` / `GPUDECK_AGENT_SSH_BIND` | private address | SSH-instance forwarder address; a public or every-interface address is only used when named here |
+| `GPUDECK_AGENT_INSECURE_SKIP_CA_PIN` | — | `1` lets the automatic join of `run` proceed without `ca_fingerprint` (trusted networks only) |
 | `labels` | `{}` | |
 | `log_level` | `info` | |
 | `engine_paths.<engine>` | auto-detect (`llama-server` on PATH, `~/.venv/bin/mlx_lm.server`, …) | Preinstalled engine binaries |
@@ -316,7 +355,9 @@ Legend: **R** required (no default), process column = which processes read it (`
 | `prom_port` / `GPUDECK_AGENT_PROM_PORT` | `9100` | Loopback Prometheus endpoint |
 | `max_concurrent_commands` / `max_concurrent_downloads` | `4` / `2` | |
 | `event_buffer_max` | `10000` | |
-| `ca_fingerprint` | *(empty)* | Pin the hub CA at join |
+| `ca_fingerprint` | *(empty)* | Pin the hub CA at join (required: `join` refuses to run without it unless `--insecure-skip-ca-pin`) |
+| `update_helper` / `GPUDECK_AGENT_UPDATE_HELPER` | `auto` | Self-update (agent protocol §14): `auto` uses the root-owned update helper the installer adds (systemd `gpudeck-agent-update.path` / launchd `io.github.sur950.gpudeck-agent-update`), else lets the agent replace its own binary when the agent user owns it and a service manager restarts it; `helper` / `self` force one; `off` never (update by re-running the installer). Kubernetes DaemonSets never self-update |
+| `release_public_keys` / `GPUDECK_AGENT_RELEASE_PUBLIC_KEYS` | `[]` | Extra pinned release signing keys (base64 ed25519) besides the ones the signed security policy carries; in the root-owned `agent.toml` they are a trust root of the update helper |
 | `GPUDECK_AGENT_JOIN_TOKEN` | — | Non-interactive join (DaemonSet) |
 | `router_idle_stop_seconds` / `GPUDECK_AGENT_ROUTER_IDLE_STOP_SECONDS` | `120` | Stop a llama.cpp router that has had no instance for this long (`0` keeps empty routers running) |
 | `router_overflow` / `GPUDECK_AGENT_ROUTER_OVERFLOW` | `true` | A model a running llama.cpp router does not know is started as its own `llama-server` while the router hosts other models (a router restart would reload all of them); `false` restarts the router |
@@ -371,6 +412,12 @@ Legend: **R** required (no default), process column = which processes read it (`
 | `AGENT_DIST_DIR` | *(empty)* | A H | Local agent builds, checked first (offline / air-gapped override): `<version>/<target>/` folders or flat release files `gpudeck-agent-<version>-<target>.tar.gz` + `SHA256SUMS` (empty = apps/node-agent/dist/agent in the repo) |
 | `AGENT_RELEASE_URL` | `https://github.com/sur950/gpu-deck/releases/download` | A H | Builds not found locally are fetched from `<url>/v<version>/gpudeck-agent-<version>-<target>.tar.gz`, verified against the release `SHA256SUMS.txt` and cached in `AGENT_CACHE_DIR`; `latest` = this control plane's `APP_VERSION`. Empty = never fetch (air-gapped) |
 | `AGENT_CACHE_DIR` | *(empty)* | A H | Writable directory for builds fetched from `AGENT_RELEASE_URL` (empty = `<tmp>/gpu-deck-agent-cache`; Compose and Helm mount a volume) |
+| `SCHEDULER_LATENCY_AWARE` | `true` | A J | Placement prefers nodes close to the API layers that carry a deployment's traffic; no effect until RTT has been measured |
+| `SCHEDULER_LATENCY_WEIGHT` | `30.0` | A J | Placement score points a node loses when its traffic-weighted RTT is `SCHEDULER_LATENCY_SCALE_MS` (or more) above the nearest candidate's |
+| `SCHEDULER_LATENCY_TOLERANCE_MS` | `5.0` | A J | Traffic-weighted RTT difference placement treats as equal |
+| `SCHEDULER_LATENCY_SCALE_MS` | `50.0` | A J | RTT excess (ms) over the nearest candidate at which the full `SCHEDULER_LATENCY_WEIGHT` applies (linear below) |
+| `SCHEDULER_LINK_COST_WEIGHT` | `10.0` | A J | Score points per unit of link cost between pipeline stages on different nodes (other cluster 3, other zone label 2, other rack label 1, plus hub-RTT difference / `SCHEDULER_LATENCY_SCALE_MS`) |
+| `SCHEDULER_TRAFFIC_WINDOW_HOURS` | `24` | A L J | Hours of per-region request counts placement weighs RTT by (Redis, counted by every API layer) |
 
 
 ## 16. Cloud GPU VMs

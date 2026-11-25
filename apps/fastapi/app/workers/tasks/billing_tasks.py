@@ -3,8 +3,8 @@ Billing tasks (Celery queue ``billing``).
 
 - ``generate_billing_report``: price a report's rollups with the current
   plans (``POST /billing/reports`` and ``/regenerate`` enqueue it).
-- ``billing.monthly_report`` (daily 00:30 UTC): on
-  ``BILLING_MONTHLY_REPORT_DAY`` create + generate last month's report once.
+- ``monthly_report``: on ``BILLING_MONTHLY_REPORT_DAY`` create + generate last month's
+  report once. Not scheduled in v1 (billing is v2).
 """
 
 import asyncio
@@ -12,7 +12,7 @@ from typing import Any, Dict
 
 from app.core.logger import get_logger
 from app.workers.celery_app import celery_app
-from app.workers.scheduler import run_async, scheduled_job
+from app.workers.scheduler import run_async
 from app.workers.tasks.base_task import BaseTaskWithRetry
 
 logger = get_logger(__name__)
@@ -61,7 +61,8 @@ async def _monthly() -> Any:
         return await ensure_monthly_report(session)
 
 
-@scheduled_job("billing.monthly_report", "cron", hour=0, minute=30)
+# v2: billing is not part of v1, so the monthly report is not scheduled. Restore the decorator
+# @scheduled_job("billing.monthly_report", "cron", hour=0, minute=30) with the billing routes.
 def monthly_report() -> None:
     try:
         created = run_async(_monthly())

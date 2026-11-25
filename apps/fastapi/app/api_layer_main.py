@@ -198,6 +198,19 @@ async def health():
             "generated_at": table.generated_at,
         },
     }
+    from app.services.serving.tunnel import get_tunnel_registry, get_tunnel_server
+
+    tunnels = get_tunnel_registry()
+    tserver = get_tunnel_server()
+    payload["checks"]["agent_tunnels"] = {
+        "status": "healthy",
+        "details": {
+            "listening_port": tserver.port if tserver else None,
+            "nodes": len(tunnels.counts()),
+            "connections": sum(tunnels.counts().values()),
+            "rejected": dict(tunnels.rejected_total),
+        },
+    }
     from app.services.serving.hooks import refresher
 
     # Before the lifecycle ran (tests, import-time probes) there is no table to wait for.

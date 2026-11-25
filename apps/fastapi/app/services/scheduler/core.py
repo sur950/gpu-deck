@@ -31,6 +31,25 @@ Rules
 
 ``plan_evictions`` answers "which lower-priority instances would have to go
 for this to fit" (make-room previews); it never evicts ``always_on``.
+
+Network distance (``PlacementRequest.latency``, filled by ``SchedulerService.plan`` from the
+RTT every API layer measures and the requests it served per region):
+
+* **Traffic-weighted RTT.** For a candidate node ``n`` with the replicas already placed or
+  running ``S``, ``cost(n) = sum over regions r of share(r) * min(rtt(r, n), min over s in S
+  of rtt(r, s))``: the expected network round trip of the deployment's traffic once ``n``
+  serves it too (so a second replica goes where it helps the traffic the first one serves
+  worst). ``rtt(r, n)`` is the best RTT of the API layers of region ``r`` to ``n``; a node
+  without a measurement counts as the farthest measured one. The node loses
+  ``SCHEDULER_LATENCY_WEIGHT * min(1, max(0, cost - best - tolerance) / scale)`` points,
+  ``best`` being the lowest cost among the eligible nodes, so nodes within the tolerance are
+  equal and the VRAM rules above decide.
+* **Link cost** of pipeline stages on different nodes, for each stage against the previous
+  one: other cluster 3, other zone label 2, other rack label 1, plus the RTT difference of
+  the two nodes from the hub divided by the scale (a lower bound of their distance);
+  ``SCHEDULER_LINK_COST_WEIGHT`` points per unit.
+* No measurement, or the feature off: no term, the behaviour above is unchanged. The
+  assignment's ``reasons`` say what the term did.
 """
 
 from __future__ import annotations
@@ -112,6 +131,32 @@ class NodeView:
 
 
 @dataclass
+class LatencyContext:
+    """Network input for placement (``app.services.latency.placement``)."""
+
+    #: region -> node id -> RTT in ms from that region's API layers (best layer)
+    rtt_ms: Dict[str, Dict[uuid.UUID, float]] = field(default_factory=dict)
+    #: region -> share of the deployment's requests (sums to 1)
+    shares: Dict[str, float] = field(default_factory=dict)
+    #: where the shares come from: deployment | fleet | uniform
+    source: str = "uniform"
+    #: node id -> agent hub RTT in ms (link-cost estimate between nodes)
+    hub_rtt_ms: Dict[uuid.UUID, float] = field(default_factory=dict)
+    weight: float = 30.0
+    tolerance_ms: float = 5.0
+    scale_ms: float = 50.0
+    link_weight: float = 10.0
+
+    @property
+    def active(self) -> bool:
+        return bool(self.shares) and any(self.rtt_ms.get(r) for r in self.shares)
+
+
+ZONE_LABELS = ("zone", "topology.kubernetes.io/zone", "topology.gpudeck.io/zone")
+RACK_LABELS = ("rack", "topology.gpudeck.io/rack")
+
+
+@dataclass
 class PlacementRequest:
     need_bytes_per_device: int
     replicas: int = 1
@@ -143,6 +188,9 @@ class PlacementRequest:
     fraction_slack_bytes: int = 0
     # Nodes ruled out up front (engine not installable there, ...) with the reason.
     blocked_nodes: Dict[uuid.UUID, str] = field(default_factory=dict)
+    # Traffic-aware placement: whose traffic to weigh RTT by, and the network input.
+    deployment_id: Optional[uuid.UUID] = None
+    latency: Optional[LatencyContext] = None
 
     @property
     def per_device_bytes(self) -> int:
@@ -412,6 +460,8 @@ def _place_one(
     count = max(req.gpu_count, 1)
     best: Optional[Tuple[float, int, str, List[DeviceView], NodeView]] = None
     rejections: List[Rejection] = []
+    eligible = [n for n in nodes if _node_rejection(n, req) is None]
+    network = latency_terms(eligible, req)
     for node in nodes:
         why = _node_rejection(node, req)
         if why is not None:
@@ -419,13 +469,15 @@ def _place_one(
             continue
         cands, rej = _node_candidates(node, req, count)
         rejections.extend(rej)
+        penalty = network[node.id].penalty if node.id in network else 0.0
         for score, free_after, picked in cands:
-            key = (score, free_after, node.name)
+            key = (round(score - penalty, 4), free_after, node.name)
             if best is None or _better(key, best[:3], picked, best[3]):
-                best = (score, free_after, node.name, picked, node)
+                best = (key[0], free_after, node.name, picked, node)
     if best is not None:
         score, free_after, _, picked, node = best
         _apply(picked, node, req)
+        term = network.get(node.id)
         return (
             Assignment(
                 node_id=node.id,
@@ -433,6 +485,7 @@ def _place_one(
                 score=score,
                 free_after_bytes=free_after,
                 slice=_slice_of(req),
+                reasons=[term.reason] if term is not None and term.reason else [],
             ),
             rejections,
         )
@@ -441,6 +494,122 @@ def _place_one(
         if assignment is not None:
             return assignment, rejections
     return None, rejections
+
+
+# ---------------------------------------------------------------- network terms
+
+
+@dataclass
+class NetworkTerm:
+    cost_ms: Optional[float]
+    penalty: float
+    reason: str
+
+
+def _fmt_ms(value: float) -> str:
+    return f"{value:.0f} ms" if value >= 10 else f"{value:.1f} ms"
+
+
+def _region_mix(lat: LatencyContext) -> str:
+    parts = sorted(lat.shares.items(), key=lambda kv: (-kv[1], kv[0]))
+    shown = ", ".join(f"{r} {share * 100:.0f}%" for r, share in parts[:3])
+    origin = {
+        "deployment": "this deployment's traffic",
+        "fleet": "all traffic (no requests for this deployment yet)",
+        "uniform": "every API-layer region equally (no traffic yet)",
+    }.get(lat.source, lat.source)
+    return f"{shown}; weighted by {origin}"
+
+
+def latency_terms(
+    eligible: Sequence[NodeView], req: PlacementRequest
+) -> Dict[uuid.UUID, NetworkTerm]:
+    """Per eligible node: traffic-weighted RTT cost, score penalty and the reason text."""
+    lat = req.latency
+    if lat is None or not lat.active or not eligible:
+        return {}
+    regions = {r: s for r, s in lat.shares.items() if s > 0 and lat.rtt_ms.get(r)}
+    total = sum(regions.values())
+    if total <= 0:
+        return {}
+    shares = {r: s / total for r, s in regions.items()}
+    placed = [n for n, c in req.existing_per_node.items() if c > 0]
+
+    def rtt(region: str, node_id: uuid.UUID) -> float:
+        known = lat.rtt_ms[region]
+        if node_id in known:
+            return known[node_id]
+        return max(known.values())
+
+    measured = {n.id for n in eligible if any(n.id in lat.rtt_ms[r] for r in shares)}
+    if not measured:
+        return {}
+    costs: Dict[uuid.UUID, float] = {}
+    for node in eligible:
+        cost = 0.0
+        for region, share in shares.items():
+            served = min((rtt(region, s) for s in placed), default=None)
+            here = rtt(region, node.id)
+            cost += share * (here if served is None else min(here, served))
+        costs[node.id] = cost
+    best = min(costs.values())
+    mix = _region_mix(LatencyContext(shares=shares, source=lat.source))
+    out: Dict[uuid.UUID, NetworkTerm] = {}
+    for node in eligible:
+        cost = costs[node.id]
+        excess = max(0.0, cost - best - max(lat.tolerance_ms, 0.0))
+        penalty = lat.weight * min(1.0, excess / max(lat.scale_ms, 1e-6)) if excess else 0.0
+        unmeasured = "" if node.id in measured else " (no RTT measured: counted as the farthest)"
+        if penalty <= 0:
+            reason = (
+                f"network: {_fmt_ms(cost)} expected round trip to the API layers ({mix}); "
+                f"within {_fmt_ms(lat.tolerance_ms)} of the nearest candidate{unmeasured}"
+            )
+        else:
+            reason = (
+                f"network: {_fmt_ms(cost)} expected round trip to the API layers ({mix}), "
+                f"{_fmt_ms(cost - best)} more than the nearest candidate: "
+                f"-{penalty:.1f} points{unmeasured}"
+            )
+        out[node.id] = NetworkTerm(cost_ms=round(cost, 3), penalty=round(penalty, 4), reason=reason)
+    return out
+
+
+def _label(node: NodeView, keys: Sequence[str]) -> Optional[str]:
+    for key in keys:
+        value = (node.labels or {}).get(key)
+        if value not in (None, ""):
+            return str(value)
+    return None
+
+
+def link_cost(a: NodeView, b: NodeView, lat: Optional[LatencyContext]) -> Tuple[float, str]:
+    """Inter-node link cost of two pipeline stages and why (0 = same node)."""
+    if a.id == b.id:
+        return 0.0, "same node"
+    cost = 0.0
+    why: List[str] = []
+    if a.cluster_id is not None and b.cluster_id is not None and a.cluster_id != b.cluster_id:
+        cost += 3.0
+        why.append("other cluster")
+    za, zb = _label(a, ZONE_LABELS), _label(b, ZONE_LABELS)
+    if za is not None and zb is not None:
+        if za != zb:
+            cost += 2.0
+            why.append(f"zone {za} vs {zb}")
+        else:
+            why.append(f"same zone {za}")
+    ra, rb = _label(a, RACK_LABELS), _label(b, RACK_LABELS)
+    if ra is not None and rb is not None and ra != rb:
+        cost += 1.0
+        why.append(f"rack {ra} vs {rb}")
+    if lat is not None and a.id in lat.hub_rtt_ms and b.id in lat.hub_rtt_ms:
+        apart = abs(lat.hub_rtt_ms[a.id] - lat.hub_rtt_ms[b.id])
+        extra = min(3.0, apart / max(lat.scale_ms, 1e-6))
+        if extra > 0.01:
+            cost += extra
+            why.append(f"at least {_fmt_ms(apart)} apart (hub RTT)")
+    return round(cost, 4), ", ".join(why) or "same cluster, no topology labels"
 
 
 def _better(
@@ -466,16 +635,28 @@ def _place_cross_node(nodes: List[NodeView], req: PlacementRequest) -> Optional[
     applied: List[Tuple[List[DeviceView], NodeView]] = []
     scores: List[float] = []
     frees: List[int] = []
+    reasons: List[str] = ["pipeline stages span nodes"]
+    lat = req.latency
+    link_weight = lat.link_weight if lat is not None else 10.0
     for rank in range(req.pp_size):
         best = None
-        for node in nodes:
-            if _node_rejection(node, stage_req) is not None:
-                continue
+        eligible = [n for n in nodes if _node_rejection(n, stage_req) is None]
+        # The head stage takes the traffic: the network term applies to it; later stages
+        # pay the link cost to the previous stage.
+        network = latency_terms(eligible, stage_req) if rank == 0 else {}
+        prev = applied[-1][1] if applied else None
+        links: Dict[uuid.UUID, Tuple[float, str]] = {}
+        for node in eligible:
+            if prev is not None:
+                links[node.id] = link_cost(prev, node, lat)
+            penalty = network[node.id].penalty if node.id in network else 0.0
+            if prev is not None:
+                penalty += link_weight * links[node.id][0]
             cands, _ = _node_candidates(node, stage_req, stage_req.gpu_count)
             for score, free_after, picked in cands:
-                key = (score, free_after, node.name)
+                key = (round(score - penalty, 4), free_after, node.name)
                 if best is None or _better(key, best[:3], picked, best[3]):
-                    best = (score, free_after, node.name, picked, node)
+                    best = (key[0], free_after, node.name, picked, node)
         if best is None:
             # roll back the stages placed so far
             for picked, node in applied:
@@ -488,6 +669,13 @@ def _place_cross_node(nodes: List[NodeView], req: PlacementRequest) -> Optional[
                 node.instance_count -= 1
             return None
         score, free_after, _, picked, node = best
+        if rank == 0 and node.id in network and network[node.id].reason:
+            reasons.append(network[node.id].reason)
+        if prev is not None and node.id in links:
+            cost, why = links[node.id]
+            reasons.append(
+                f"stage {rank + 1} on {node.name}: link cost {cost:g} to stage {rank} ({why})"
+            )
         for d in picked:
             d.reserved_bytes += stage_req.need_for(d)
             if d.observed_used_bytes is not None:
@@ -508,7 +696,7 @@ def _place_cross_node(nodes: List[NodeView], req: PlacementRequest) -> Optional[
         free_after_bytes=min(frees),
         slice=_slice_of(req),
         shards=shards,
-        reasons=["pipeline stages span nodes"],
+        reasons=reasons,
     )
 
 

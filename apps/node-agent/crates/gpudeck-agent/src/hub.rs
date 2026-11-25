@@ -86,7 +86,9 @@ async fn connect_once(agent: &Arc<Agent>) -> Result<String> {
         .ok_or_else(|| anyhow!("hub_url not configured"))?;
     let url = ws_url(&hub);
     let identity = agent.identity();
-    let tls = identity.hub_client_config()?;
+    // Chain to the pinned CA + host name, and once a signed policy names them, the hub's key.
+    let tls =
+        identity.hub_client_config_pinned(&crate::security::hub_pins(agent.policy().as_ref()))?;
     let req = url.as_str().into_client_request().context("ws request")?;
     let mut wscfg = WebSocketConfig::default();
     wscfg.max_message_size = Some(gpudeck_protocol::MAX_FRAME_BYTES);
@@ -329,6 +331,30 @@ impl Agent {
             );
             return;
         }
+        // The security section is verified before anything of the push is applied: a push whose
+        // policy does not verify (signature, node, rollback) is refused as a whole.
+        if let Some(signed) = &cp.security {
+            if let Err(e) = self.apply_signed_policy(signed) {
+                warn!(
+                    "config_push v{} rejected: security policy: {e:#}",
+                    cp.config_version
+                );
+                let mut d = serde_json::Map::new();
+                d.insert("config_version".into(), cp.config_version.into());
+                d.insert("error".into(), format!("security policy: {e:#}").into());
+                self.event(
+                    Event::warning(
+                        EventKind::ConfigRejected,
+                        format!(
+                            "config_push v{} rejected: security policy did not verify",
+                            cp.config_version
+                        ),
+                    )
+                    .details(d),
+                );
+                return;
+            }
+        }
         if let Some(pem) = &cp.ca_bundle_pem {
             if crate::pki::parse_cert_bundle(pem).is_err() {
                 let mut d = serde_json::Map::new();
@@ -378,6 +404,9 @@ impl Agent {
                     if cp.model_sources.is_some() {
                         prev.model_sources = cp.model_sources.clone();
                     }
+                    if cp.security.is_some() {
+                        prev.security = cp.security.clone();
+                    }
                     if let Some(s) = &cp.settings {
                         prev.settings.get_or_insert_with(Settings::default).merge(s);
                     }
@@ -397,8 +426,8 @@ impl Agent {
         }
         self.apply_config_local(&merged);
         self.apply_settings();
-        if cp.egress_allowlist.is_some() || cp.model_sources.is_some() {
-            self.apply_egress();
+        if cp.egress_allowlist.is_some() || cp.model_sources.is_some() || cp.security.is_some() {
+            self.apply_firewall();
         }
         let mut d = serde_json::Map::new();
         d.insert("config_version".into(), cp.config_version.into());
@@ -477,6 +506,7 @@ impl Agent {
             ca_bundle_pem: None,
             settings: None,
             model_sources: None,
+            security: None,
         });
         c.settings.get_or_insert_with(Settings::default).merge(s);
         let _ = crate::state::save_config(&self.paths, c);
@@ -517,7 +547,7 @@ impl Agent {
         // Behind a port forward the control plane must dial the forwarded port.
         let proxy_port = self.cfg.proxy_advertise_port.unwrap_or(proxy_port);
         Hello {
-            agent_version: crate::join::AGENT_VERSION.into(),
+            agent_version: crate::update::current_version(),
             protocol_version: PROTOCOL_VERSION,
             os: h.os,
             os_version: h.os_version,
@@ -553,10 +583,23 @@ impl Agent {
                 used_bytes: self.cache.used_bytes(),
                 free_bytes: self.cache.free_bytes(),
             },
-            proxy: ProxyInfo {
-                port: proxy_port,
-                address: self.cfg.proxy_address.clone(),
-                cert_fingerprint_sha256: Some(self.identity().fingerprint()),
+            proxy: {
+                let secure = self.rt().hub_may_have(hub_feature::SECURE_TRANSPORT);
+                let direct = self.serving_mode() == gpudeck_protocol::ServingMode::Direct;
+                ProxyInfo {
+                    port: proxy_port,
+                    address: self.cfg.proxy_address.clone(),
+                    cert_fingerprint_sha256: Some(self.identity().fingerprint()),
+                    mode: secure.then(|| self.serving_mode()),
+                    bind: (secure && direct)
+                        .then(|| {
+                            self.proxy_addr
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .map(|a| a.ip().to_string())
+                        })
+                        .flatten(),
+                }
             },
             config_version: self.rt().config_version,
             labels: self.cfg.labels.clone(),
@@ -568,6 +611,11 @@ impl Agent {
             } else {
                 vec![]
             },
+            // Only to a hub known to take it (older hubs reject unknown hello fields).
+            agent_update: self
+                .rt()
+                .hub_has(hub_feature::AGENT_UPDATES)
+                .then(|| crate::update::status(self)),
         }
     }
 
@@ -642,6 +690,10 @@ impl Agent {
             },
             system: Some(crate::system::system_info()),
             config_version: Some(self.rt().config_version),
+            agent_update: self
+                .rt()
+                .hub_has(hub_feature::AGENT_UPDATES)
+                .then(|| crate::update::status(self)),
         }
     }
 

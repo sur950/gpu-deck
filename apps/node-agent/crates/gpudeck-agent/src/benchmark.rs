@@ -28,13 +28,15 @@ struct Sample {
     in_tokens: u64,
 }
 
-fn synthetic_prompt(tokens: u64, salt: usize) -> String {
+/// `variant` (the request index) only varies the wording so prompts are not identical; it is
+/// not a cryptographic value.
+fn synthetic_prompt(tokens: u64, variant: usize) -> String {
     let words = [
         "alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet",
     ];
-    let mut s = format!("Request {salt}. Summarise the following list in one paragraph: ");
+    let mut s = format!("Request {variant}. Summarise the following list in one paragraph: ");
     for i in 0..tokens.saturating_sub(12) {
-        s.push_str(words[(i as usize + salt) % words.len()]);
+        s.push_str(words[(i as usize + variant) % words.len()]);
         s.push(' ');
     }
     s

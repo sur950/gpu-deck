@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 use anyhow::{anyhow, Context, Result};
 use gpudeck_protocol::{
     ConfigPush, Device, EgressLockKind, EngineCapability, EngineName, EngineRuntime, Event,
-    EventKind, Intervals, LogLevel, Settings, Timestamp,
+    EventKind, Intervals, LogLevel, SecurityPolicy, ServingMode, Settings, SignedPolicy, Timestamp,
 };
 use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
@@ -139,6 +139,21 @@ pub struct Agent {
     pub ssh: crate::ssh::SshManager,
     /// Observed (external) engines from `[[observe]]` (`observe.rs`), read-only.
     pub observer: Arc<crate::observe::Observer>,
+    /// Verified, CA-signed security policy (`security.rs`).
+    pub policy: RwLock<Option<SecurityPolicy>>,
+    /// Signalled when the policy changed (tunnel supervisor).
+    pub policy_changed: tokio::sync::Notify,
+    /// Rejected inbound attempts (direct proxy, SSH forwarders).
+    pub ingress: Arc<crate::ingress::IngressMonitor>,
+    /// Outbound tunnel state.
+    pub tunnels: Arc<crate::tunnel::TunnelStatus>,
+    /// Policy default source CIDRs for SSH instances without their own.
+    pub ssh_defaults: Arc<RwLock<Vec<ipnet::IpNet>>>,
+    /// Serialises firewall updates; the hash of the last programmed plan.
+    pub firewall_lock: tokio::sync::Mutex<()>,
+    pub firewall_hash: Mutex<Option<String>>,
+    /// Self-update mode and state (`update.rs`).
+    pub updates: crate::update::Updates,
 }
 
 pub fn device_key(vendor: &str, index: u32) -> String {
@@ -194,6 +209,16 @@ impl Agent {
         let hub_features: Option<Vec<String>> = crate::state::read_json(&paths.hub_features_json())
             .ok()
             .flatten();
+        // The signed policy is re-verified against the pinned CA on every start.
+        let policy = match std::fs::read_to_string(paths.ca()) {
+            Ok(ca) => {
+                crate::security::load(&paths.security_policy(), &ca, node_id).unwrap_or_else(|e| {
+                    warn!("persisted security policy ignored: {e:#}");
+                    None
+                })
+            }
+            Err(_) => None,
+        };
         let agent = Arc::new(Self {
             commands: CommandRunner::new(&paths, cfg.max_concurrent_commands),
             node_id,
@@ -236,6 +261,14 @@ impl Agent {
             proxy_addr: Mutex::new(None),
             ssh: crate::ssh::SshManager::default(),
             observer: Arc::new(crate::observe::Observer::new(&node_id, &cfg.observe)),
+            policy: RwLock::new(policy),
+            policy_changed: tokio::sync::Notify::new(),
+            ingress: Arc::new(crate::ingress::IngressMonitor::default()),
+            tunnels: Arc::new(crate::tunnel::TunnelStatus::default()),
+            ssh_defaults: Arc::new(RwLock::new(vec![])),
+            firewall_lock: tokio::sync::Mutex::new(()),
+            firewall_hash: Mutex::new(None),
+            updates: crate::update::Updates::new(&cfg),
             paths,
             config_path,
             cfg,
@@ -262,7 +295,79 @@ impl Agent {
             agent.apply_config_local(&c);
         }
         agent.apply_settings();
+        agent.policy_applied();
         Ok(agent)
+    }
+
+    /// Effective serving mode (tests force direct through `RunOptions::proxy_listen`).
+    pub fn serving_mode(&self) -> ServingMode {
+        if self.options.proxy_listen.is_some() {
+            ServingMode::Direct
+        } else {
+            self.cfg.serving_mode()
+        }
+    }
+
+    /// The verified security policy, if any.
+    pub fn policy(&self) -> Option<SecurityPolicy> {
+        self.policy
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+    }
+
+    /// Verify and adopt a signed policy (config_push / join). `Ok(false)` = unchanged.
+    /// Refused: bad signature, another node's policy, a lower serial (rollback).
+    pub fn apply_signed_policy(&self, signed: &SignedPolicy) -> Result<bool> {
+        let ca = std::fs::read_to_string(self.paths.ca()).context("read ca.pem")?;
+        let next = crate::security::verify(signed, &ca, self.node_id)?;
+        let current = self.policy();
+        crate::security::accept_newer(current.as_ref(), &next)?;
+        if current.as_ref() == Some(&next) {
+            return Ok(false);
+        }
+        crate::state::write_json(&self.paths.security_policy(), signed, 0o600)?;
+        info!(
+            serial = next.serial,
+            hub_pins = crate::security::hub_pins(Some(&next)).len(),
+            api_layer_pins = crate::security::api_layer_identity(Some(&next)).0.len(),
+            tunnel_endpoints = ?crate::security::tunnel_endpoints(Some(&next)),
+            "security policy applied"
+        );
+        *self.policy.write().unwrap_or_else(|e| e.into_inner()) = Some(next);
+        self.policy_applied();
+        self.policy_changed.notify_one();
+        Ok(true)
+    }
+
+    /// Push the current policy into the components (proxy identity + sources, SSH defaults).
+    fn policy_applied(&self) {
+        let p = self.policy();
+        self.proxy.apply_policy(p.as_ref());
+        let defaults = p
+            .as_ref()
+            .and_then(|p| p.ssh.as_ref())
+            .map(|s| crate::security::parse_nets(&s.default_allowed_cidrs).0)
+            .unwrap_or_default();
+        *self.ssh_defaults.write().unwrap_or_else(|e| e.into_inner()) = defaults;
+    }
+
+    /// `(interval, burst threshold)` of the rejected-attempt reports.
+    pub fn ingress_report_params(&self) -> (Duration, u64) {
+        let r = self
+            .policy()
+            .and_then(|p| p.ingress_report)
+            .unwrap_or_default();
+        (
+            Duration::from_secs(
+                r.interval_seconds
+                    .unwrap_or(crate::security::DEFAULT_REPORT_INTERVAL_SECONDS)
+                    .max(10),
+            ),
+            r.burst_threshold
+                .unwrap_or(crate::security::DEFAULT_BURST_THRESHOLD)
+                .max(1),
+        )
     }
 
     pub fn rt(&self) -> Runtime {
@@ -407,6 +512,7 @@ impl Agent {
     /// Start every task and block until shutdown.
     pub async fn run(self: &Arc<Self>) -> Result<()> {
         info!(node_id = %self.node_id, hub = ?self.cfg.hub_url, "gpudeck-agent {} starting", crate::join::AGENT_VERSION);
+        crate::update::mark_running(self);
         self.event(Event::info(
             EventKind::AgentStarted,
             format!(
@@ -415,33 +521,47 @@ impl Agent {
                 std::process::id()
             ),
         ));
-        let local_ips = crate::system::ip_addresses();
-        let proxy_addr = match self.options.proxy_listen {
-            Some(a) => a,
-            None => {
-                let host = self.cfg.proxy_bind_addr(&local_ips);
-                let ip: std::net::IpAddr = host
-                    .parse()
-                    .with_context(|| format!("proxy_bind {host:?} is not an IP address"))?;
-                if ip.is_unspecified() {
-                    let public: Vec<&String> = local_ips
-                        .iter()
-                        .filter(|a| a.parse().is_ok_and(is_public_ip))
-                        .collect();
-                    if !public.is_empty() {
-                        warn!(?public, port = self.cfg.proxy_port, "the mTLS proxy listens on every interface, including public addresses; firewall the port to the API layer or set proxy_bind / proxy_address to the private interface");
-                    }
-                }
-                SocketAddr::new(ip, self.cfg.proxy_port)
-            }
-        };
-        let listener = tokio::net::TcpListener::bind(proxy_addr)
-            .await
-            .with_context(|| format!("bind proxy {proxy_addr}"))?;
-        *self.proxy_addr.lock().unwrap_or_else(|e| e.into_inner()) = listener.local_addr().ok();
-        info!("mTLS proxy listening on {}", listener.local_addr()?);
+        let mode = self.serving_mode();
         let mut tasks = tokio::task::JoinSet::new();
-        tasks.spawn(crate::proxy::serve(self.clone(), listener));
+        match mode {
+            ServingMode::Direct => {
+                let local_ips = crate::system::ip_addresses();
+                let proxy_addr = match self.options.proxy_listen {
+                    Some(a) => a,
+                    None => {
+                        let host = self.cfg.proxy_bind_addr(&local_ips);
+                        let ip: std::net::IpAddr = host
+                            .parse()
+                            .with_context(|| format!("proxy_bind {host:?} is not an IP address"))?;
+                        if ip.is_unspecified() || is_public_ip(ip) {
+                            warn!(%ip, port = self.cfg.proxy_port, "direct mode: the mTLS proxy listens on a public / every interface (explicit proxy_bind); only the API layer's source addresses and key are accepted, and the firewall should restrict the port");
+                        }
+                        std::net::SocketAddr::new(ip, self.cfg.proxy_port)
+                    }
+                };
+                let listener = tokio::net::TcpListener::bind(proxy_addr)
+                    .await
+                    .with_context(|| format!("bind proxy {proxy_addr}"))?;
+                *self.proxy_addr.lock().unwrap_or_else(|e| e.into_inner()) =
+                    listener.local_addr().ok();
+                info!(
+                    "serving mode direct: mTLS proxy listening on {} (sources: {})",
+                    listener.local_addr()?,
+                    self.proxy
+                        .allowed_sources()
+                        .iter()
+                        .map(|n| n.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+                tasks.spawn(crate::proxy::serve(self.clone(), listener));
+            }
+            ServingMode::Tunnel => {
+                info!("serving mode tunnel: no inbound listener; requests arrive over outbound tunnels to the API layer");
+                tasks.spawn(crate::tunnel::run(self.clone()));
+            }
+        }
+        tasks.spawn(crate::ingress::report_loop(self.clone()));
         if !self.options.no_prom {
             let a = self.clone();
             tasks.spawn(async move { crate::prom::serve(a).await });
@@ -462,21 +582,39 @@ impl Agent {
                     crate::instances::Restore::default()
                 }
             };
+        // Self-update bookkeeping (protocol.md §14): an update in progress learns that its new
+        // agent re-adopted the engines; results of a finished one are reported to the hub.
+        {
+            let adopted = self
+                .instances
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .len()
+                + self
+                    .engine_procs
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .len();
+            crate::update::on_start(self, adopted, relaunch.procs.len() + relaunch.insts.len());
+        }
         tasks.spawn(crate::hub::run(self.clone()));
         let a = self.clone();
         tokio::spawn(async move { a.relaunch(relaunch).await });
-        // Always render the egress rules; they are only programmed with --apply-egress-lock.
-        self.apply_egress();
-        if self.options.apply_egress_lock {
-            // CDN addresses rotate: re-resolve the allowed host names periodically.
+        // Host firewall: rendered always, programmed unless `firewall = "off"` (and only when
+        // the agent may). Re-asserted every 15 min (rules flushed by hand come back; CDN
+        // addresses of the egress lock are re-resolved).
+        self.apply_firewall();
+        {
             let a = self.clone();
             tasks.spawn(async move {
                 loop {
                     tokio::time::sleep(Duration::from_secs(900)).await;
-                    a.apply_egress();
+                    *a.firewall_hash.lock().unwrap_or_else(|e| e.into_inner()) = None;
+                    a.apply_firewall();
                 }
             });
         }
+        self.startup_self_check();
 
         self.shutdown.cancelled().await;
         info!("shutting down");
@@ -490,6 +628,28 @@ impl Agent {
             self.stop_all_engines().await;
         }
         Ok(())
+    }
+
+    /// Start-up self-check (`security audit` rules): log every GPU Deck listener reachable from
+    /// the network; adopted engines listening off loopback were already stopped by
+    /// `adopt_running`.
+    fn startup_self_check(&self) {
+        let ls = crate::audit::listeners();
+        let range = self.rt().port_range([10240, 10340]);
+        let engine_ports = crate::audit::engine_ports(&self.paths);
+        for f in crate::audit::assess(&self.cfg, range, &engine_ports, &ls) {
+            match f.level {
+                crate::audit::Level::Exposed => warn!(
+                    addr = %f.listener.addr, port = f.listener.port, process = ?f.listener.process,
+                    "security self-check: {}", f.note
+                ),
+                crate::audit::Level::Warning => info!(
+                    addr = %f.listener.addr, port = f.listener.port,
+                    "security self-check: {}", f.note
+                ),
+                _ => {}
+            }
+        }
     }
 
     /// Stop every engine (agent shutdown with `keep_engines_on_exit = false`; normally engines

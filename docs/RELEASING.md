@@ -46,6 +46,10 @@ agent protocol (`libs/contracts/agent-protocol/`) is versioned on its own:
   is not supported.
 - Protocol changes are listed in `libs/contracts/agent-protocol/CHANGELOG.md` and summarised in
   the release's `CHANGELOG.md` section.
+- **Agent self-update** (protocol §14) needs both sides: the hub lists the `agent_updates` feature
+  and agents list `stage_update` / `apply_update`. Agents built before it keep working and show
+  "update manually"; after one manual update they update from the control plane. Agent N and
+  hub N-1 (and the other way round) are covered by tests in both code bases.
 
 ## One version everywhere
 
@@ -113,6 +117,7 @@ release instead.
 | `gpu-deck-api`, `gpu-deck-web`, `gpu-deck-agent` images (linux/amd64 + arm64), tags `X.Y.Z`, `X.Y`, `X`, `latest` | `ghcr.io/sur950/` | cosign keyless (Sigstore, GitHub OIDC), GitHub attestation, BuildKit provenance + SBOM, SPDX SBOM attested and attached to the release |
 | Helm chart `gpu-deck` | `oci://ghcr.io/sur950/charts/gpu-deck` + `.tgz` on the release | cosign keyless |
 | Node agent `gpudeck-agent-X.Y.Z-<target>.tar.gz` for `x86_64`/`aarch64-unknown-linux-gnu` (glibc 2.28+), `x86_64`/`aarch64-unknown-linux-musl` (static), `aarch64`/`x86_64-apple-darwin` | release | `SHA256SUMS.txt` + GitHub attestation |
+| Agent release manifest `gpudeck-agent-X.Y.Z-manifest.json` + `.sig` (per target: archive and binary sha256) | release | ed25519 release signing key (`AGENT_RELEASE_SIGNING_KEY`, when the secret exists); control planes only offer signed releases as agent updates |
 | Desktop: `GPU-Deck_X.Y.Z_universal.dmg`, `_x64_en-US.msi`, `_x64-setup.exe`, `_amd64.AppImage`, `_amd64.deb`, updater archives + `.sig`, `latest.json` | release | Apple Developer ID + notarization, Authenticode, Tauri updater key (each when its secrets exist) |
 | CLI `gpudeck_cli-X.Y.Z-py3-none-any.whl` + sdist | release (+ PyPI when enabled) | PyPI trusted publishing attestations |
 | Terraform provider `terraform-provider-gpudeck_X.Y.Z_<os>_<arch>.zip`, `_SHA256SUMS`, `_SHA256SUMS.sig`, `_manifest.json` | release | GPG (when the key exists) |
@@ -156,6 +161,8 @@ release still succeeds without it and the job prints a warning saying what was s
 | `APPLE_ID`, `APPLE_PASSWORD` (app-specific password), `APPLE_TEAM_ID` | secrets | notarization and stapling |
 | `WINDOWS_CERTIFICATE` (base64 `.pfx`), `WINDOWS_CERTIFICATE_PASSWORD` | secrets | Authenticode signing of the msi and nsis installers |
 | `GPG_PRIVATE_KEY` (ASCII-armored), `GPG_PASSPHRASE` | secrets | signing the Terraform provider `SHA256SUMS` (required by the Terraform Registry) |
+| `AGENT_RELEASE_SIGNING_KEY` | secret | signing the agent release manifest for agent self-update: base64 of the 32-byte ed25519 seed. Create it once on a trusted machine with `python3 scripts/agent_release_manifest.py keygen --out agent-release.key`, paste the file content into the secret and delete the file. Without it the manifest is unsigned and nodes are updated by re-running the installer |
+| `AGENT_RELEASE_PUBLIC_KEY` | variable | the matching public key (printed by `keygen`); the workflow refuses to sign with any other key. Control planes trust it through `AGENT_RELEASE_PUBLIC_KEYS` |
 | `PUBLISH_PYPI` = `true` | variable | publish `gpudeck-cli` to PyPI; first add the repository as a trusted publisher on pypi.org (workflow `release.yml`, environment `pypi`) and create the `pypi` environment |
 
 Images, the chart and the GitHub release use the built-in `GITHUB_TOKEN`; cosign signs keyless,

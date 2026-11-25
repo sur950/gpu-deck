@@ -30,6 +30,12 @@ _METHODS = ("get", "post", "put", "patch", "delete", "head", "options")
 
 # BEGIN GENERATED (method path operationId)
 _TABLE = """
+GET /agent-updates getAgentUpdateOverview
+GET /agent-updates/rollouts listAgentRollouts
+GET /agent-updates/rollouts/{rollout_id} getAgentRollout
+POST /agent-updates/rollouts/{rollout_id}/cancel cancelAgentRollout
+GET /agent-updates/runs listAgentUpdateRuns
+GET /agent-updates/runs/{run_id} getAgentUpdateRun
 GET /agent/downloads listAgentDownloads
 GET /agent/downloads/{version}/{target} downloadAgent
 GET /agent/downloads/{version}/{target}/sha256 downloadAgentSha256
@@ -81,13 +87,6 @@ PATCH /benchmarks/{benchmark_id} updateBenchmark
 POST /benchmarks/{benchmark_id}/auto-tune autoTuneBenchmark
 GET /benchmarks/{benchmark_id}/runs listBenchmarkRuns
 POST /benchmarks/{benchmark_id}/start startBenchmark
-GET /billing/estimate getBillingEstimate
-GET /billing/reports listBillingReports
-POST /billing/reports createBillingReport
-DELETE /billing/reports/{report_id} deleteBillingReport
-GET /billing/reports/{report_id} getBillingReport
-GET /billing/reports/{report_id}/export exportBillingReportCsv
-POST /billing/reports/{report_id}/regenerate regenerateBillingReport
 GET /branding getBranding
 POST /catalog/local/scan scanLocalPath
 GET /catalog/remote-files listRemoteFiles
@@ -97,7 +96,6 @@ POST /cloud/nodes createCloudNodes
 DELETE /cloud/nodes/{cloud_node_id} deleteCloudNode
 GET /cloud/nodes/{cloud_node_id} getCloudNode
 PATCH /cloud/nodes/{cloud_node_id} updateCloudNode
-POST /cloud/nodes/{cloud_node_id}/apply-price-plan applyCloudNodePricePlan
 POST /cloud/nodes/{cloud_node_id}/refresh refreshCloudNode
 POST /cloud/nodes/{cloud_node_id}/start startCloudNode
 POST /cloud/nodes/{cloud_node_id}/stop stopCloudNode
@@ -112,6 +110,9 @@ POST /clusters createCluster
 DELETE /clusters/{cluster_id} deleteCluster
 GET /clusters/{cluster_id} getCluster
 PATCH /clusters/{cluster_id} updateCluster
+GET /clusters/{cluster_id}/agent-update getClusterAgentUpdate
+POST /clusters/{cluster_id}/agent-update startClusterAgentRollout
+PUT /clusters/{cluster_id}/agent-update/policy setClusterAgentUpdatePolicy
 GET /clusters/{cluster_id}/nodes listClusterNodes
 GET /deployments listDeployments
 POST /deployments createDeployment
@@ -184,8 +185,11 @@ GET /logs/stream streamLogs
 GET /metrics/catalog listMetricNames
 GET /metrics/gpu queryGpuMetrics
 GET /metrics/inference queryInferenceMetrics
+GET /metrics/latency queryLatencyHistory
+GET /metrics/latency/live getLiveLatency
 GET /metrics/overview getOverview
 GET /metrics/prometheus getPrometheusExposition
+GET /metrics/request-timing queryRequestTiming
 GET /metrics/sessions querySessionMetrics
 GET /metrics/sessions/live getLiveSessions
 GET /metrics/usage queryUsageMetrics
@@ -216,6 +220,9 @@ DELETE /nodes/join-tokens/{token_id} revokeJoinToken
 DELETE /nodes/{node_id} removeNode
 GET /nodes/{node_id} getNode
 PATCH /nodes/{node_id} updateNode
+GET /nodes/{node_id}/agent-update getNodeAgentUpdate
+POST /nodes/{node_id}/agent-update updateNodeAgent
+POST /nodes/{node_id}/agent-update/stage stageNodeAgentUpdate
 GET /nodes/{node_id}/cache getNodeCache
 GET /nodes/{node_id}/certificates listNodeCertificates
 POST /nodes/{node_id}/certificates/rotate rotateNodeCertificate
@@ -233,11 +240,6 @@ GET /pki/certificates listCertificates
 POST /pki/certificates/{cert_id}/revoke revokeCertificate
 GET /pki/crl getCrl
 POST /pki/service-certificates issueServiceCertificate
-GET /price-plans listPricePlans
-POST /price-plans createPricePlan
-DELETE /price-plans/{plan_id} deletePricePlan
-GET /price-plans/{plan_id} getPricePlan
-PATCH /price-plans/{plan_id} updatePricePlan
 GET /rule-runs listAllRuleRuns
 GET /rule-runs/{run_id} getRuleRun
 GET /rules listRules
@@ -258,11 +260,6 @@ POST /swaps/{swap_id}/cancel cancelSwap
 POST /swaps/{swap_id}/retry retrySwap
 GET /system/info getSystemInfo
 GET /topology getTopology
-GET /traces listTraces
-GET /traces/{trace_id} getTrace
-GET /usage listUsageEvents
-GET /usage/export exportUsageCsv
-GET /usage/summary getUsageSummary
 GET /vault listCredentials
 POST /vault createCredential
 GET /vault/metadata getVaultMetadata

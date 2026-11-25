@@ -44,7 +44,7 @@ export function useOverview() {
 }
 
 export interface OverviewTrends {
-  /** Per-deployment usage (requests, tokens, cost) at the usage step. */
+  /** Per-deployment usage (requests, tokens) at the usage step. */
   usage: MetricsResult | undefined;
   /** Per-instance engine series (sessions, throughput, latency, requests). */
   inference: MetricsResult | undefined;
@@ -81,7 +81,7 @@ export function useOverviewTrends(range: { from: string; to: string; step: Metri
         to: range.to,
         step: range.usageStep,
         groupBy: 'deployment',
-        metrics: ['requests', 'input_tokens', 'output_tokens', 'cached_tokens', 'cost_usd'],
+        metrics: ['requests', 'input_tokens', 'output_tokens', 'cached_tokens'],
       }),
     staleTime: 60_000,
     placeholderData: (prev) => prev,

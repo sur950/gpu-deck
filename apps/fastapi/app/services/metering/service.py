@@ -50,6 +50,13 @@ def build_usage_payload(
     if usage.estimated:
         meta["estimated"] = True
     meta.update(usage.extra)
+    timing = _timing_metadata(ctx)
+    if timing:
+        meta["timing"] = timing
+        from app.services.latency.store import api_layer_identity
+
+        layer_id, region = api_layer_identity()
+        meta["api_layer"] = {"id": layer_id, "region": region}
     return {
         "ts": ctx.started_ts.isoformat(),
         "request_id": ctx.request_id,
@@ -83,6 +90,33 @@ def build_usage_payload(
     }
 
 
+def _timing_metadata(ctx) -> Dict[str, float]:
+    """Where the time went (``app.services.serving.timing``), for the request log."""
+    breakdown = getattr(ctx, "timing_breakdown", None)
+    if breakdown is None:
+        return {}
+    from app.services.serving.timing import record
+
+    try:
+        return record(breakdown(final=True))
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def _annotate_span(timing: Dict[str, Any]) -> None:
+    """Put the breakdown on the request's server span (``gpudeck.timing.*`` attributes)."""
+    if not timing:
+        return
+    try:
+        from opentelemetry import trace
+
+        span = trace.get_current_span()
+        if span.is_recording():
+            span.set_attributes({f"gpudeck.timing.{k}": float(v) for k, v in timing.items()})
+    except Exception:  # noqa: BLE001
+        pass
+
+
 async def record_request(ctx, usage: Usage, status: str, http_status: int, error_code=None) -> None:
     """Enqueue the usage event off the event loop (BackgroundTask / after stream end)."""
     if getattr(ctx, "metered", False):
@@ -95,6 +129,7 @@ async def record_request(ctx, usage: Usage, status: str, http_status: int, error
         return
     from app.services.serving.metrics import observe_usage
 
+    _annotate_span((payload.get("metadata") or {}).get("timing") or {})
     observe_usage(payload)
     try:
         from app.workers.tasks.metering_tasks import enqueue_usage_event
@@ -128,7 +163,7 @@ class MeteringService:
 
     @staticmethod
     async def as_dependency(
-        request: Request, db: AsyncSession = Depends(get_db)
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
     ) -> "MeteringService":
         return MeteringService(UsageEventRepository(db), UsageRollupRepository(db))
 

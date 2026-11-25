@@ -1,0 +1,8 @@
+# Pinned packages for assets/brand/readme_art.py and assets/brand/doc_art.py (the README and docs
+# diagrams; text is outlined with the website fonts).
+#
+#   python3 -m venv /tmp/brand-venv && /tmp/brand-venv/bin/pip install -r scripts/requirements-art.txt
+#   /tmp/brand-venv/bin/python assets/brand/doc_art.py --check
+fonttools==4.68.0
+brotli==1.2.1
+uharfbuzz==0.57.0

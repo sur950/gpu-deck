@@ -47,7 +47,6 @@ variable "gpudeck_password" {
 ## Resources
 
 - [`gpudeck_cluster`](resources/cluster.md)
-- [`gpudeck_price_plan`](resources/price_plan.md)
 - [`gpudeck_join_token`](resources/join_token.md)
 - [`gpudeck_model`](resources/model.md)
 - [`gpudeck_deployment`](resources/deployment.md)

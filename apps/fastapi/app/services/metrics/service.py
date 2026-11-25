@@ -35,7 +35,6 @@ logger = get_logger(__name__)
 
 EPOCH_2000 = datetime(2000, 1, 1, tzinfo=timezone.utc)
 _STEP_RE = re.compile(r"^\s*(\d+)\s*(s|m|h|d)\s*$")
-_REL_RE = re.compile(r"^\s*(?:now)?\s*-\s*(\d+)\s*(s|m|h|d)\s*$")
 _UNITS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
 AGGREGATES = {"sum": "SUM", "avg": "AVG", "max": "MAX"}
 
@@ -74,6 +73,26 @@ def parse_step(step: Optional[str], default: str = "1m") -> Tuple[int, str]:
     return seconds, raw
 
 
+def parse_relative(raw: str) -> Optional[int]:
+    """
+    Seconds of a relative time ``-15m`` / ``now-1h`` / ``now - 2 d``, else None.
+
+    Hand-written (no regex) so the cost stays linear in the input length.
+    """
+    body = raw.strip()
+    if body.startswith("now"):
+        body = body[3:].lstrip()
+    if not body.startswith("-"):
+        return None
+    body = body[1:].strip()
+    if len(body) < 2 or body[-1] not in _UNITS:
+        return None
+    number = body[:-1].rstrip()
+    if not (number.isascii() and number.isdigit()):
+        return None
+    return int(number) * _UNITS[body[-1]]
+
+
 def parse_time(value: Optional[str], default: datetime) -> datetime:
     """ISO 8601 (``Z`` allowed), ``now``, or relative ``-15m`` / ``now-1h``."""
     if value is None or str(value).strip() == "":
@@ -81,11 +100,9 @@ def parse_time(value: Optional[str], default: datetime) -> datetime:
     raw = str(value).strip()
     if raw == "now":
         return datetime.now(timezone.utc)
-    rel = _REL_RE.match(raw)
-    if rel:
-        return datetime.now(timezone.utc) - timedelta(
-            seconds=int(rel.group(1)) * _UNITS[rel.group(2)]
-        )
+    rel = parse_relative(raw)
+    if rel is not None:
+        return datetime.now(timezone.utc) - timedelta(seconds=rel)
     try:
         dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
     except ValueError as exc:
@@ -206,7 +223,7 @@ class MetricsService:
 
     @staticmethod
     async def as_dependency(
-        request: Request, db: AsyncSession = Depends(get_db)
+        request: Request, db: AsyncSession = Depends(get_db, scope="function")
     ) -> "MetricsService":
         return MetricsService(db)
 
@@ -409,11 +426,15 @@ class MetricsService:
             return
         rows = (
             await self.session.execute(
+                # Observed (external) deployments have no catalog model: LEFT JOIN, and the
+                # served model name stands in for the model so their series still get labels.
                 text(
-                    "SELECT i.id::text AS id, d.name AS deployment, m.name AS model, "
-                    "n.name AS node_name FROM instances i "
+                    "SELECT i.id::text AS id, d.name AS deployment, "
+                    "COALESCE(m.name, i.served_model_name) AS model, "
+                    "i.served_model_name AS served_model, n.name AS node_name FROM instances i "
                     "JOIN deployments d ON d.id = i.deployment_id "
-                    "JOIN models m ON m.id = d.model_id JOIN nodes n ON n.id = i.node_id "
+                    "LEFT JOIN models m ON m.id = d.model_id "
+                    "LEFT JOIN nodes n ON n.id = i.node_id "
                     "WHERE i.id::text = ANY(:ids)"
                 ),
                 {"ids": ids},
@@ -423,9 +444,13 @@ class MetricsService:
         for s in series:
             r = info.get(s["labels"].get("instance_id"))
             if r:
-                s["labels"].update(
-                    deployment=r["deployment"], model=r["model"], node=r["node_name"]
-                )
+                extra = {
+                    "deployment": r["deployment"],
+                    "model": r["model"],
+                    "served_model": r["served_model"],
+                    "node": r["node_name"],
+                }
+                s["labels"].update({k: v for k, v in extra.items() if v is not None})
 
     # ---------- sessions ----------
 

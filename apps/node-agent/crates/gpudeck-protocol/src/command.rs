@@ -551,6 +551,34 @@ impl StopSshInstanceArgs {
     }
 }
 
+/// `stage_update` (`protocol.md` §14): download + verify + stage a release binary.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StageUpdateArgs {
+    pub version: String,
+    pub target: String,
+    pub manifest: crate::common::SignedReleaseManifest,
+    pub download_token: String,
+    #[serde(default)]
+    pub allow_downgrade: bool,
+}
+
+/// `apply_update` (`protocol.md` §14): swap to the staged version, restart, health check,
+/// roll back on failure.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ApplyUpdateArgs {
+    pub version: String,
+    #[serde(default = "ApplyUpdateArgs::default_health_timeout")]
+    pub health_timeout_seconds: u64,
+    #[serde(default)]
+    pub run_id: Option<Uuid>,
+}
+
+impl ApplyUpdateArgs {
+    pub fn default_health_timeout() -> u64 {
+        120
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SshHostKey {
     #[serde(rename = "type")]
@@ -615,6 +643,8 @@ pub enum CommandKind {
     HashFiles(HashFilesArgs),
     StartSshInstance(StartSshInstanceArgs),
     StopSshInstance(StopSshInstanceArgs),
+    StageUpdate(StageUpdateArgs),
+    ApplyUpdate(ApplyUpdateArgs),
 }
 
 /// Command names as they appear on the wire (also used in `command_result.command`).
@@ -638,6 +668,8 @@ pub enum CommandName {
     HashFiles,
     StartSshInstance,
     StopSshInstance,
+    StageUpdate,
+    ApplyUpdate,
 }
 
 impl CommandName {
@@ -660,6 +692,8 @@ impl CommandName {
         Self::HashFiles,
         Self::StartSshInstance,
         Self::StopSshInstance,
+        Self::StageUpdate,
+        Self::ApplyUpdate,
     ];
 }
 
@@ -683,6 +717,8 @@ impl CommandKind {
             Self::HashFiles(_) => CommandName::HashFiles,
             Self::StartSshInstance(_) => CommandName::StartSshInstance,
             Self::StopSshInstance(_) => CommandName::StopSshInstance,
+            Self::StageUpdate(_) => CommandName::StageUpdate,
+            Self::ApplyUpdate(_) => CommandName::ApplyUpdate,
         }
     }
 
@@ -722,6 +758,12 @@ impl CommandKind {
         match self {
             Self::LoadModel(a) => Self::LoadModel(a.redacted()),
             Self::PrefetchModel(a) => Self::PrefetchModel(a.redacted()),
+            Self::StageUpdate(a) => {
+                let mut a = a.clone();
+                a.download_token = "***".into();
+                a.manifest.manifest = format!("<{} base64 chars>", a.manifest.manifest.len());
+                Self::StageUpdate(a)
+            }
             other => other.clone(),
         }
     }

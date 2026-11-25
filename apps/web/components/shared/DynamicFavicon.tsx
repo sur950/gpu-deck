@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { DEFAULT_FAVICON, FAVICON_URL } from '@/utils/brand-env';
+import { DEFAULT_FAVICON, FAVICON_URL, versionedIcon } from '@/utils/brand-env';
 
 function setFaviconHref(href: string) {
   let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
@@ -22,14 +22,14 @@ export function DynamicFavicon() {
     const url = FAVICON_URL;
 
     if (url === DEFAULT_FAVICON) {
-      setFaviconHref(DEFAULT_FAVICON);
+      setFaviconHref(versionedIcon(DEFAULT_FAVICON));
       return;
     }
 
     // Probe the URL — fall back to default if it fails to load
     const img = new window.Image();
     img.onload  = () => setFaviconHref(url);
-    img.onerror = () => setFaviconHref(DEFAULT_FAVICON);
+    img.onerror = () => setFaviconHref(versionedIcon(DEFAULT_FAVICON));
     img.src = url;
   }, []);
 

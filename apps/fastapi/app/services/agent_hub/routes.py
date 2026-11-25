@@ -7,6 +7,8 @@ Hub listener routes, mounted by ``app/agent_hub_main.py`` on :8443:
 - ``GET  /agent/v1/ca.pem`` — the same CA as plain PEM (the install one-liner pins its sha256)
 - ``GET  /agent/v1/downloads/{version}/{target}[/sha256]`` — agent builds (join token)
 - ``GET  /agent/v1/install.sh`` — installer for a join token
+- ``GET  /agent/v1/updates/{version}/{target}`` — a staged agent update (download token from
+  ``stage_update``, agent protocol §14)
 
 A GPU machine needs nothing but these (outbound 8443): install script, build,
 checksum, CA, join and the WebSocket.
@@ -97,7 +99,10 @@ async def ca_pem(request: Request, pki: PkiService = Depends(PkiService.as_depen
 )
 @handle_exceptions
 async def hub_download_agent(
-    request: Request, version: str, target: str, db: AsyncSession = Depends(get_db)
+    request: Request,
+    version: str,
+    target: str,
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     from app.services.nodes import agent_downloads as dl
 
@@ -112,7 +117,10 @@ async def hub_download_agent(
 )
 @handle_exceptions
 async def hub_download_agent_sha256(
-    request: Request, version: str, target: str, db: AsyncSession = Depends(get_db)
+    request: Request,
+    version: str,
+    target: str,
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     from app.services.nodes import agent_downloads as dl
 
@@ -129,11 +137,35 @@ async def hub_download_agent_sha256(
 async def hub_install_script(
     request: Request,
     version: Optional[str] = Query(None, max_length=64),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     from app.services.nodes import agent_downloads as dl
 
     return await dl.install_script_response(request, db, version)
+
+
+@router.get(
+    "/agent/v1/updates/{version}/{target}",
+    summary="Agent update binary (stage_update download token)",
+    include_in_schema=False,
+    response_model=None,
+)
+@handle_exceptions
+async def hub_agent_update(request: Request, version: str, target: str):
+    """
+    The ``gpudeck-agent`` binary a node stages (agent protocol §14). Only for the holder of the
+    download token sent in that node's ``stage_update`` (bound to the version and target); the
+    binary was checked against the signed release manifest, and the node checks it again.
+    """
+    from app.core.exceptions import AuthenticationError
+    from app.services.agent_updates import releases, tokens
+
+    node_id = await tokens.check(request.headers.get(tokens.HEADER), version, target)
+    if node_id is None:
+        raise AuthenticationError("a valid update download token is required")
+    path = await releases.binary_for(version, target)
+    logger.info(f"hub: node={node_id} downloads agent {version} ({target})")
+    return releases.binary_response(path, version, target)
 
 
 @router.websocket("/agent/v1/ws")

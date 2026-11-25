@@ -58,7 +58,7 @@ function resourceHref(e: AlertEvent): string | null {
     case 'node':
       return `/nodes/${e.resourceId}`;
     case 'cluster':
-      return '/billing';
+      return `/clusters/${e.resourceId}`;
     default:
       return null;
   }

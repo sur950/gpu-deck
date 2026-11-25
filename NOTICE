@@ -1,20 +1,18 @@
 GPU Deck
 Copyright 2026 Suresh Konakanchi
 
-This product includes ideas and code adapted from GPUStack
-(https://github.com/gpustack/gpustack), Copyright (c) GPUStack authors,
-licensed under the Apache License, Version 2.0 (the "License"). You may obtain
-a copy of the License at
+This product is licensed under the Apache License, Version 2.0. The full text
+of the license is in the LICENSE file at the root of this repository.
 
-    http://www.apache.org/licenses/LICENSE-2.0
+Acknowledgement
 
-GPU Deck does not fork GPUStack. Where a file started from GPUStack code (for
-example accelerator device detection for NVIDIA, AMD, Hygon, MetaX, Moore
-Threads and T-Head, engine compatibility checks, or placement heuristics) the
-file carries a header comment naming the GPUStack source file and version it
-was ported from, and any modifications made. Those portions remain under the
-Apache License 2.0; the NOTICE requirements of Section 4(d) of the License are
-satisfied by this file.
+The design of GPU Deck, in particular accelerator detection and model
+placement, was informed by GPUStack, an open-source project licensed under the
+Apache License, Version 2.0. GPU Deck is a separate code base: at the time of
+writing, no file in this repository is marked as derived from GPUStack source.
+A file that is adapted from GPUStack (or any other project) in the future will
+name its source and the changes made in a header comment, and will be listed
+here.
 
-Third-party Python, Node, Rust and Go dependencies are distributed under
-their own licenses; see each package's metadata.
+Third-party Python, Node, Rust and Go dependencies are distributed under their
+own licenses; see each package's metadata.

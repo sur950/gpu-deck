@@ -18,6 +18,19 @@ What the shell adds on top of a browser tab:
 - Deep links `gpudeck://open?server=<saved-name-or-url>&path=/deployments/<id>`.
 - Single instance; optional signed auto-update.
 
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="../screenshots/desktop-connect-light.svg">
+    <img src="../screenshots/desktop-connect.svg" alt="The desktop app's connect screen: a list of saved GPU Deck control planes, each with a live health check and version, and a form to add another server" width="720">
+  </picture>
+</p>
+
+*The connect screen: saved control planes, each checked live before you connect.*
+
+> [!TIP]
+> The desktop app needs no build of its own per server: it loads each control plane's web UI, so
+> it always matches the server's version.
+
 ## Layout
 
 ```

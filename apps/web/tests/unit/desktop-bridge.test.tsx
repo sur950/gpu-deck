@@ -46,8 +46,6 @@ function overview(over: Partial<Overview> = {}): Overview {
       alertsOpen: 0,
     },
     live: {} as Overview['live'],
-    costTodayUsd: 0,
-    costMonthUsd: 0,
     recentAlerts: [],
     recentSwaps: [],
     recentRuleRuns: [],

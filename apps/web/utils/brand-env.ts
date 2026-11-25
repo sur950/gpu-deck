@@ -29,6 +29,10 @@ export const LOGO_URL = env(process.env.NEXT_PUBLIC_LOGO_URL, '');
 
 /** Favicon URL; defaults to the GPU Deck mark (16/32/48 px, public/favicon.ico). */
 export const DEFAULT_FAVICON = '/favicon.ico';
+/** Content hash of the bundled icons (next.config.ts); busts cached favicons after a brand change. */
+export const ICON_VERSION = process.env.NEXT_PUBLIC_ICON_VERSION ?? '';
+/** Appends the icon version to a bundled icon path. */
+export const versionedIcon = (url: string): string => (ICON_VERSION ? `${url}?v=${ICON_VERSION}` : url);
 export const FAVICON_URL = env(process.env.NEXT_PUBLIC_FAVICON_URL, DEFAULT_FAVICON);
 
 /** Colour mode a browser opens in before the user toggles it. */

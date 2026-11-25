@@ -37,7 +37,7 @@ class SecuritySettings(DomainSettings):
     )
 
     # Seeded admin — the only login. ADMIN_PASSWORD rotation rule: on boot compare
-    # HMAC(SECRET_KEY, ADMIN_PASSWORD) with
+    # scrypt(ADMIN_PASSWORD, salt from SECRET_KEY) with
     # admin_users.env_secret_hash and re-apply the password only when it changed.
     ADMIN_USERNAME: str = Field(default="admin", description="Seeded admin login name")
     ADMIN_PASSWORD: str = Field(..., min_length=8, description="Seeded admin password")

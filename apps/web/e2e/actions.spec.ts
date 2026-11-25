@@ -18,7 +18,6 @@ test.afterAll(async () => {
   await sweep('/clusters', 'e2e-', (id) => `/clusters/${id}`);
   await sweep('/ip-rules', 'e2e', (id) => `/ip-rules/${id}`, 'description');
   await sweep('/alert-channels', 'e2e-', (id) => `/alert-channels/${id}`);
-  await sweep('/price-plans', 'e2e-', (id) => `/price-plans/${id}`);
   await sweep('/layouts', 'e2e-', (id) => `/layouts/${id}`);
   await sweep('/nodes/join-tokens?active_only=true', 'e2e-', (id) => `/nodes/join-tokens/${id}`, 'node_name');
   await sweep('/benchmarks', 'e2e-', (id) => `/benchmarks/${id}`);
@@ -120,23 +119,6 @@ test('alert channel: webhook create, test send, delete', async ({ page }) => {
   await expect(page.getByText(name)).toHaveCount(0);
 });
 
-test('price plan: create and delete', async ({ page }) => {
-  const name = e2eName('plan');
-  await page.goto('/billing?tab=plans');
-  await page.getByRole('button', { name: 'New plan' }).click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByPlaceholder('L40S on-prem').fill(name);
-  await dialog.locator('input[type="number"]').first().fill('0.05');
-  await dialog.getByRole('button', { name: /Create|Save/ }).last().click();
-  await expect(dialog).toBeHidden();
-  await expect(page.getByText(name).first()).toBeVisible();
-  const api = await AdminApi.create();
-  const plan = (await api.get<{ id: string; name: string; usd_per_gpu_minute: number }[]>('/price-plans?page_size=200')).find((p) => p.name === name);
-  expect(Number(plan?.usd_per_gpu_minute)).toBeCloseTo(0.05);
-  await api.remove(`/price-plans/${plan!.id}`);
-  await api.dispose();
-});
-
 test('GPU slice: reserve, resize, hand to an SSH instance, release', async ({ page }) => {
   test.setTimeout(4 * 60_000);
   const api = await AdminApi.create();
@@ -186,11 +168,7 @@ test('GPU slice: reserve, resize, hand to an SSH instance, release', async ({ pa
   await api.dispose();
 });
 
-test('CSV exports download from metering and the audit log', async ({ page }) => {
-  await page.goto('/metering');
-  await page.getByRole('button', { name: 'Export CSV' }).click();
-  const [usage] = await Promise.all([page.waitForEvent('download'), page.getByRole('menuitem', { name: /Request log/ }).click()]);
-  expect(usage.suggestedFilename()).toMatch(/\.csv$/);
+test('CSV export downloads from the audit log', async ({ page }) => {
   await page.goto('/audit-log');
   const [audit] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export CSV' }).click()]);
   expect(audit.suggestedFilename()).toMatch(/\.csv$/);

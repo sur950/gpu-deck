@@ -4,6 +4,117 @@
  * Regenerate with `pnpm gen:api` (apps/web).
  */
 export type paths = {
+    "/agent-updates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Agent update overview
+         * @description Target version (newest signed release, or AGENT_UPDATE_TARGET_VERSION), release keys, pre-staging and how many nodes are up to date, staged, updating or need a manual update (agent protocol §14).
+         */
+        get: operations["getAgentUpdateOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agent-updates/rollouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List rolling agent updates */
+        get: operations["listAgentRollouts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agent-updates/rollouts/{rollout_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a rolling agent update */
+        get: operations["getAgentRollout"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agent-updates/rollouts/{rollout_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a rolling agent update
+         * @description Stops starting further nodes; a node already swapping finishes (it cannot be stopped halfway).
+         */
+        post: operations["cancelAgentRollout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agent-updates/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List agent update runs */
+        get: operations["listAgentUpdateRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agent-updates/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get an agent update run
+         * @description Steps with timestamps: staged, swapping, restarting, readopting, health_check, then succeeded or rolled_back / failed.
+         */
+        get: operations["getAgentUpdateRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agent/downloads": {
         parameters: {
             query?: never;
@@ -748,93 +859,6 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
-    "/billing/estimate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Live cost for the current (or given) period */
-        get: operations["getBillingEstimate"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/billing/reports": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List reports */
-        get: operations["listBillingReports"];
-        put?: never;
-        /** Generate a report (async) */
-        post: operations["createBillingReport"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/billing/reports/{report_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a report with line items */
-        get: operations["getBillingReport"];
-        put?: never;
-        post?: never;
-        /** Delete a report */
-        delete: operations["deleteBillingReport"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/billing/reports/{report_id}/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** CSV export */
-        get: operations["exportBillingReportCsv"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/billing/reports/{report_id}/regenerate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Regenerate with current prices */
-        post: operations["regenerateBillingReport"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/branding": {
         parameters: {
             query?: never;
@@ -947,26 +971,6 @@ export type paths = {
         head?: never;
         /** Update idle auto-terminate / labels */
         patch: operations["updateCloudNode"];
-        trace?: never;
-    };
-    "/cloud/nodes/{cloud_node_id}/apply-price-plan": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Attach a price plan from the provider list price
-         * @description Creates (or reuses) the price plan named price_plan_suggestion.name with usd_per_gpu_minute = list price / 60 / gpu_count and sets it on the node (nodes.price_plan_id). 409 when the provider has no price or the VM has not joined yet.
-         */
-        post: operations["applyCloudNodePricePlan"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/cloud/nodes/{cloud_node_id}/refresh": {
@@ -1187,6 +1191,50 @@ export type paths = {
         head?: never;
         /** Update a cluster */
         patch: operations["updateCluster"];
+        trace?: never;
+    };
+    "/clusters/{cluster_id}/agent-update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Agent updates of a cluster
+         * @description Policy (manual or automatic in a maintenance window), the running or last rolling update and node counts.
+         */
+        get: operations["getClusterAgentUpdate"];
+        put?: never;
+        /**
+         * Rolling agent update of a cluster
+         * @description One node at a time in name order, stopping at the first node that rolls back or fails. Offline nodes, Kubernetes (Helm) nodes, agents that predate self-update and nodes already on the version are skipped with a reason.
+         */
+        post: operations["startClusterAgentRollout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clusters/{cluster_id}/agent-update/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set a cluster's agent update policy
+         * @description Stored in clusters.config.agent_updates (also settable with the cluster config).
+         */
+        put: operations["setClusterAgentUpdatePolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/clusters/{cluster_id}/nodes": {
@@ -2135,6 +2183,51 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/metrics/latency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Network round-trip history per node, source and API layer
+         * @description Per-minute RTT history (`node_latency_samples`, kept `LATENCY_RETENTION_DAYS`): series `rtt_ms` and `jitter_ms` labelled
+         *     `node_id`, `node`, `source` (`hub` | `api_layer`), `api_layer_id`, `region`, `mode` (`tunnel` | `direct`), plus p50 / p95 /
+         *     min / max / avg per series over the range.
+         */
+        get: operations["queryLatencyHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metrics/latency/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current network round trips per node, from the agent hub and every API layer
+         * @description Smoothed round-trip time (EWMA, jitter, min / max / p50 / p95 of the recent probes) of every connected node:
+         *     `hub` = agent hub -> agent (WebSocket ping / pong), `api_layers` = each API layer -> node over the serving path it uses
+         *     (agent tunnel or direct mTLS proxy), probed every `SERVING_RTT_PROBE_SECONDS`. Each API layer reports its own `API_LAYER_ID`
+         *     and `API_LAYER_REGION`. Values older than a few probe intervals are left out.
+         */
+        get: operations["getLiveLatency"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metrics/overview": {
         parameters: {
             query?: never;
@@ -2164,6 +2257,31 @@ export type paths = {
          * @description Protected by PROMETHEUS_SCRAPE_TOKEN (Authorization: Bearer) or an admin session; also served on /metrics of each process for process-level metrics.
          */
         get: operations["getPrometheusExposition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metrics/request-timing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where serving request time went (routing, queue, connect, network, engine, first token)
+         * @description Averages and percentiles of the timing breakdown the API layer stores with every request (`usage_events.metadata.timing`,
+         *     serving.md §10): `route_ms`, `queue_ms`, `connect_ms`, `rtt_ms`, `net_ms`, `engine_ms`, `upstream_ms`, `ttft_ms`, `total_ms`,
+         *     `node_queue_ms`, plus the parts of the time to first byte that add up per request: `part_api_ms` (route + queue + connect),
+         *     `part_network_ms`, `part_engine_ms`, `part_node_ms` (node time outside the engine), `part_unsplit_ms` (node + network of
+         *     agents that report no timing) and `part_first_token_ms` (first byte after the response headers). One series per field, a
+         *     summary and a breakdown per API-layer region.
+         */
+        get: operations["queryRequestTiming"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2512,6 +2630,47 @@ export type paths = {
         patch: operations["updateNode"];
         trace?: never;
     };
+    "/nodes/{node_id}/agent-update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Agent update status of a node */
+        get: operations["getNodeAgentUpdate"];
+        put?: never;
+        /**
+         * Update the agent of a node
+         * @description The Update button: stage the target version unless the node pre-staged it, then swap, restart, re-adopt the running engines and health check; the node rolls back to the previous binary on its own when the new agent does not come up. 409 AGENT_UPDATE_UNSUPPORTED (agent predates self-update: update manually), AGENT_UPDATE_MANAGED (Kubernetes / Helm), AGENT_UPDATES_DISABLED (no release key or signed release), AGENT_UPDATE_IN_PROGRESS, AGENT_ROLLOUT_RUNNING, NODE_NOT_CONNECTED.
+         */
+        post: operations["updateNodeAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nodes/{node_id}/agent-update/stage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stage an agent update on a node
+         * @description Download and verify the target version on the node now (pre-staging does this in the background when AGENT_UPDATE_PRESTAGE is on). Nothing is swapped.
+         */
+        post: operations["stageNodeAgentUpdate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/nodes/{node_id}/cache": {
         parameters: {
             query?: never;
@@ -2842,43 +3001,6 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
-    "/price-plans": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List plans */
-        get: operations["listPricePlans"];
-        put?: never;
-        /** Create a plan */
-        post: operations["createPricePlan"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/price-plans/{plan_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a plan */
-        get: operations["getPricePlan"];
-        put?: never;
-        post?: never;
-        /** Soft-delete (detaches from clusters/nodes) */
-        delete: operations["deletePricePlan"];
-        options?: never;
-        head?: never;
-        /** Update a plan (affects future usage events only) */
-        patch: operations["updatePricePlan"];
-        trace?: never;
-    };
     "/rule-runs": {
         parameters: {
             query?: never;
@@ -3161,91 +3283,6 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
-    "/traces": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Search root spans */
-        get: operations["listTraces"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/traces/{trace_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** All spans of a trace */
-        get: operations["getTrace"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/usage": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Raw usage events (drill-down) */
-        get: operations["listUsageEvents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/usage/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** CSV export of events or summary */
-        get: operations["exportUsageCsv"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/usage/summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Totals grouped by key/model/node/deployment/cluster/format */
-        get: operations["getUsageSummary"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/vault": {
         parameters: {
             query?: never;
@@ -3407,6 +3444,8 @@ export type components = {
         };
         /** @enum {string} */
         agent_command_state: "pending" | "sent" | "accepted" | "running" | "succeeded" | "failed" | "rejected" | "timed_out" | "cancelled";
+        /** @enum {string} */
+        agent_update_state: "pending" | "staging" | "staged" | "swapping" | "restarting" | "readopting" | "health_check" | "succeeded" | "rolled_back" | "failed" | "cancelled";
         AgentBuild: {
             /** @enum {string|null} */
             arch?: "x86_64" | "aarch64" | null;
@@ -3456,6 +3495,145 @@ export type components = {
             state: components["schemas"]["agent_command_state"];
             /** Format: uuid */
             swap_operation_id?: string | null;
+        };
+        /** @description A rolling agent update of a cluster. */
+        AgentRollout: {
+            /** Format: uuid */
+            cluster_id: string;
+            completed_count: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by?: string | null;
+            /** Format: uuid */
+            current_node_id?: string | null;
+            /** Format: uuid */
+            failed_node_id?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            message?: string | null;
+            node_ids: string[];
+            skipped: {
+                /** Format: uuid */
+                node_id: string;
+                node_name?: string | null;
+                reason: string;
+            }[];
+            /** Format: date-time */
+            started_at: string;
+            /** @enum {string} */
+            state: "running" | "succeeded" | "failed" | "cancelled";
+            target_version: string;
+            /** @enum {string} */
+            trigger: "manual" | "auto";
+            /** Format: date-time */
+            updated_at?: string | null;
+        };
+        AgentRolloutRequest: {
+            /** @description Default: the target version */
+            version?: string | null;
+        };
+        AgentStage: {
+            /** Format: uuid */
+            command_id?: string | null;
+            /** Format: uuid */
+            node_id: string;
+            state: string;
+            version: string;
+        };
+        AgentUpdateCounts: {
+            managed: number;
+            manual: number;
+            offline: number;
+            staged: number;
+            total: number;
+            unsupported: number;
+            up_to_date: number;
+            update_available: number;
+            updating: number;
+        };
+        AgentUpdateOverview: {
+            available_versions?: string[];
+            counts: components["schemas"]["AgentUpdateCounts"];
+            enabled: boolean;
+            health_timeout_seconds?: number;
+            prestage?: boolean;
+            reason?: string | null;
+            /** @description Keys in AGENT_RELEASE_PUBLIC_KEYS */
+            release_keys: number;
+            /** @description local (AGENT_DIST_DIR), cache or release (AGENT_RELEASE_URL) */
+            source?: string | null;
+            target_version?: string | null;
+            /** @description Build targets of the target release */
+            targets?: string[];
+        };
+        /** @description clusters.config.agent_updates. manual (default): an admin clicks Update or starts a rolling update. auto: the scheduler starts a rolling update inside the maintenance window once nodes have the target version staged. */
+        AgentUpdatePolicy: {
+            /**
+             * @default manual
+             * @enum {string}
+             */
+            mode: "manual" | "auto";
+            window?: components["schemas"]["AgentUpdateWindow"] | null;
+        };
+        AgentUpdateRequest: {
+            health_timeout_seconds?: number | null;
+            /** @description Default: the target version */
+            version?: string | null;
+        };
+        /** @description One agent update of one node (agent protocol §14). */
+        AgentUpdateRun: {
+            /** Format: uuid */
+            cluster_id?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by?: string | null;
+            /** Format: date-time */
+            deadline_at?: string | null;
+            /** @description rolled_back, timeout, stage_timeout, signature_invalid, update_unsupported, ... */
+            error_code?: string | null;
+            error_message?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            from_version?: string | null;
+            health_timeout_seconds?: number;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            node_id: string;
+            node_name?: string | null;
+            /** Format: uuid */
+            rollout_id?: string | null;
+            /** Format: date-time */
+            started_at: string;
+            state: components["schemas"]["agent_update_state"];
+            steps: components["schemas"]["AgentUpdateStep"][];
+            to_version: string;
+            /** @enum {string} */
+            trigger: "manual" | "auto" | "rollout";
+            /** Format: date-time */
+            updated_at?: string | null;
+        };
+        AgentUpdateStep: {
+            /** Format: date-time */
+            at?: string | null;
+            message?: string | null;
+            phase: string;
+        };
+        AgentUpdateWindow: {
+            days: ("mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun")[];
+            /** @description HH:MM; earlier than start = the window ends the next day */
+            end: string;
+            /** @description HH:MM (24 h) in timezone */
+            start: string;
+            /**
+             * @description IANA time zone
+             * @default UTC
+             */
+            timezone: string;
         };
         /** @enum {string} */
         alert_channel_type: "slack" | "email" | "webhook";
@@ -3628,6 +3806,15 @@ export type components = {
                 [key: string]: unknown;
             };
             name?: string;
+        };
+        ApiLayerLatency: components["schemas"]["LatencyStats"] & {
+            api_layer_id: string;
+            /**
+             * @description Serving path the API layer uses to reach the node
+             * @enum {string|null}
+             */
+            mode?: "tunnel" | "direct" | null;
+            region?: string | null;
         };
         ApplyRecommendationRequest: {
             /** @default true */
@@ -3827,68 +4014,6 @@ export type components = {
             workload?: {
                 [key: string]: unknown;
             };
-        };
-        /** @enum {string} */
-        billing_report_status: "pending" | "generating" | "ready" | "failed";
-        BillingEstimate: {
-            /** Format: date-time */
-            as_of: string;
-            by_api_key?: components["schemas"]["UsageSummaryRow"][];
-            by_model?: components["schemas"]["UsageSummaryRow"][];
-            by_node?: components["schemas"]["UsageSummaryRow"][];
-            /** Format: date-time */
-            period_end: string;
-            /** Format: date-time */
-            period_start: string;
-            /** @description Linear projection to period_end */
-            projected_cost_usd: number;
-            totals: components["schemas"]["UsageTotals"];
-        };
-        BillingLineItem: {
-            cost_breakdown?: {
-                cached_tokens_usd?: number;
-                gpu_time_usd?: number;
-                input_tokens_usd?: number;
-                output_tokens_usd?: number;
-            };
-            group: {
-                [key: string]: string;
-            };
-            labels?: {
-                [key: string]: string;
-            };
-            /** Format: uuid */
-            price_plan_id?: string | null;
-            price_plan_name?: string | null;
-            totals: components["schemas"]["UsageTotals"];
-        };
-        BillingReport: components["schemas"]["BillingReportCreate"] & {
-            /** Format: date-time */
-            created_at: string;
-            currency?: string;
-            error_message?: string | null;
-            /** Format: date-time */
-            generated_at?: string | null;
-            /** Format: uuid */
-            id: string;
-            line_items?: components["schemas"]["BillingLineItem"][];
-            status: components["schemas"]["billing_report_status"];
-            totals?: components["schemas"]["UsageTotals"];
-            /** Format: date-time */
-            updated_at?: string;
-        };
-        BillingReportCreate: {
-            /** @description {api_key_ids[], model_ids[], node_ids[], cluster_ids[]} */
-            filters?: {
-                [key: string]: unknown;
-            };
-            /** @description Default [api_key, model] */
-            group_by?: ("api_key" | "model" | "node" | "cluster" | "deployment")[];
-            name: string;
-            /** Format: date-time */
-            period_end: string;
-            /** Format: date-time */
-            period_start: string;
         };
         Branding: {
             app_byline: string;
@@ -4281,6 +4406,17 @@ export type components = {
         cluster_status: "active" | "disabled";
         /** @enum {string} */
         cluster_type: "bare_metal" | "vm" | "kubernetes" | "cloud_aws" | "cloud_azure" | "cloud_gcp" | "cloud_do";
+        ClusterAgentUpdate: {
+            /** Format: uuid */
+            cluster_id: string;
+            counts: components["schemas"]["AgentUpdateCounts"];
+            in_window: boolean;
+            /** Format: date-time */
+            next_window_at?: string | null;
+            policy: components["schemas"]["AgentUpdatePolicy"];
+            rollout?: components["schemas"]["AgentRollout"] | null;
+            target_version?: string | null;
+        };
         ClusterCounts: {
             devices?: number;
             instances?: number;
@@ -5540,6 +5676,65 @@ export type components = {
             /** @description Plaintext gdj_... token, shown once */
             token: string;
         };
+        LatencyHistory: {
+            /** Format: date-time */
+            from: string;
+            series: components["schemas"]["TimeSeries"][];
+            step: string;
+            summaries: components["schemas"]["LatencySummary"][];
+            /** Format: date-time */
+            to: string;
+        };
+        LatencyLive: {
+            api_layers: {
+                id: string;
+                /** @description Nodes this API layer measured in its last round */
+                nodes?: number | null;
+                probe_seconds?: number | null;
+                region?: string | null;
+                /** Format: date-time */
+                seen_at?: string | null;
+            }[];
+            /** Format: date-time */
+            generated_at: string;
+            nodes: components["schemas"]["NodeLatency"][];
+        };
+        /** @description Round-trip statistics of one path (milliseconds) */
+        LatencyStats: {
+            /** @description Probes that got no answer */
+            failures?: number;
+            /** @description Smoothed absolute difference between consecutive samples */
+            jitter_ms?: number | null;
+            last_ms?: number | null;
+            max_ms?: number | null;
+            min_ms?: number | null;
+            p50_ms?: number | null;
+            p95_ms?: number | null;
+            /** @description Smoothed RTT (EWMA, SERVING_RTT_EWMA_ALPHA) */
+            rtt_ms?: number | null;
+            samples?: number;
+            /** Format: date-time */
+            updated_at?: string | null;
+        };
+        LatencySummary: {
+            api_layer_id?: string | null;
+            avg_ms?: number | null;
+            jitter_ms?: number | null;
+            /** Format: date-time */
+            last_at?: string | null;
+            max_ms?: number | null;
+            min_ms?: number | null;
+            mode?: string | null;
+            /** Format: uuid */
+            node_id: string;
+            node_name?: string | null;
+            p50_ms?: number | null;
+            p95_ms?: number | null;
+            points?: number;
+            region?: string | null;
+            /** @enum {string} */
+            source: "hub" | "api_layer";
+        };
         Layout: {
             /** Format: date-time */
             applied_at?: string | null;
@@ -5911,6 +6106,8 @@ export type components = {
              * @enum {string|null}
              */
             activity?: "detached" | "stale" | "gpu_deck" | "mixed" | "external" | "idle" | null;
+            /** @description Agent self-update status (agent protocol §14) */
+            agent_update?: components["schemas"]["NodeAgentUpdate"] | null;
             agent_version?: string | null;
             arch?: components["schemas"]["node_arch"] | null;
             cache_dir?: string | null;
@@ -5982,6 +6179,27 @@ export type components = {
          * @enum {string}
          */
         node_status: "pending" | "online" | "offline" | "unhealthy" | "draining" | "drained" | "removed";
+        /** @description Update status of a node. mode: helper (root-owned update helper), self (the agent owns its binary), managed (Kubernetes DaemonSet: Managed by Helm, never self-updates), unsupported (cannot replace its binary: reason), manual (agent predates self-update: update manually, see instructions). */
+        NodeAgentUpdate: {
+            active_run?: components["schemas"]["AgentUpdateRun"] | null;
+            can_update: boolean;
+            current_version?: string | null;
+            instructions?: string | null;
+            last_run?: components["schemas"]["AgentUpdateRun"] | null;
+            /** @enum {string} */
+            mode: "helper" | "self" | "managed" | "unsupported" | "manual";
+            previous_version?: string | null;
+            reason?: string | null;
+            /** Format: date-time */
+            staged_at?: string | null;
+            staged_version?: string | null;
+            /** @description Reported by the agent: idle | staging | staged | applying */
+            state?: string | null;
+            /** @enum {string} */
+            status: "disabled" | "up_to_date" | "update_available" | "staging" | "staged" | "updating" | "managed" | "manual" | "unsupported";
+            target_version?: string | null;
+            update_available: boolean;
+        };
         NodeCertificate: {
             fingerprint_sha256: string;
             /** Format: uuid */
@@ -6029,6 +6247,18 @@ export type components = {
             root?: string | null;
             /** @default 30 */
             wait_seconds?: number;
+        };
+        NodeLatency: {
+            /** @description Nearest first */
+            api_layers: components["schemas"]["ApiLayerLatency"][];
+            /** @description Lowest RTT from any API layer */
+            best_rtt_ms?: number | null;
+            /** @description Agent hub -> agent (WebSocket ping / pong) */
+            hub?: components["schemas"]["LatencyStats"] | null;
+            /** Format: uuid */
+            node_id: string;
+            node_name?: string | null;
+            status?: string | null;
         };
         NodeScanRequest: {
             /** @default 4 */
@@ -6150,50 +6380,22 @@ export type components = {
             pin?: boolean;
             pin_reason?: string | null;
         };
-        PricePlan: {
+        RequestTiming: {
             /** Format: date-time */
-            created_at?: string;
-            currency: string;
-            description?: string | null;
-            /** Format: uuid */
-            id: string;
-            is_default: boolean;
-            name: string;
+            from: string;
+            /** @description `region`, `requests` and the averages per API-layer region */
+            regions: {
+                [key: string]: unknown;
+            }[];
+            /** @description One series per timing field (average per bucket, ms) plus `requests` */
+            series: components["schemas"]["TimeSeries"][];
+            step: string;
+            /** @description `requests`, the average of every timing field and `<phase>_p50_ms` / `<phase>_p95_ms` for ttft, total, upstream, net, rtt and engine */
+            summary: {
+                [key: string]: number | null;
+            };
             /** Format: date-time */
-            updated_at?: string;
-            usd_per_1k_cached_tokens: number;
-            usd_per_1k_input_tokens: number;
-            usd_per_1k_output_tokens: number;
-            usd_per_gpu_minute: number;
-        };
-        PricePlanCreate: {
-            description?: string | null;
-            /** @default false */
-            is_default?: boolean;
-            name: string;
-            /** @default 0 */
-            usd_per_1k_cached_tokens?: number;
-            /** @default 0 */
-            usd_per_1k_input_tokens?: number;
-            /** @default 0 */
-            usd_per_1k_output_tokens?: number;
-            /** @default 0 */
-            usd_per_gpu_minute?: number;
-        };
-        /** @description Partial update; every field optional. */
-        PricePlanUpdate: {
-            description?: string | null;
-            /** @default false */
-            is_default?: boolean;
-            name?: string;
-            /** @default 0 */
-            usd_per_1k_cached_tokens?: number;
-            /** @default 0 */
-            usd_per_1k_input_tokens?: number;
-            /** @default 0 */
-            usd_per_1k_output_tokens?: number;
-            /** @default 0 */
-            usd_per_gpu_minute?: number;
+            to: string;
         };
         RevokeRequest: {
             reason?: string | null;
@@ -6577,43 +6779,6 @@ export type components = {
             devices: components["schemas"]["TopologyDevice"][];
             node: components["schemas"]["Node"];
         };
-        Trace: {
-            duration_ms?: number | null;
-            /** @description Deep link into the external tracing UI when OTEL_UI_URL is set */
-            otlp_url?: string | null;
-            root?: components["schemas"]["TraceSpan"] | null;
-            spans: components["schemas"]["TraceSpan"][];
-            trace_id: string;
-        };
-        TraceSpan: {
-            /** Format: uuid */
-            api_key_id?: string | null;
-            attributes?: {
-                [key: string]: unknown;
-            } | null;
-            /** Format: uuid */
-            deployment_id?: string | null;
-            duration_ms?: number | null;
-            endpoint?: string | null;
-            error: boolean;
-            format?: components["schemas"]["usage_format"] | null;
-            /** Format: uuid */
-            instance_id?: string | null;
-            /** Format: uuid */
-            model_id?: string | null;
-            name: string;
-            /** Format: uuid */
-            node_id?: string | null;
-            parent_span_id?: string | null;
-            /** Format: uuid */
-            request_id?: string | null;
-            service: string;
-            span_id: string;
-            status_code?: number | null;
-            trace_id: string;
-            /** Format: date-time */
-            ts: string;
-        };
         TrafficWeightsRequest: {
             /** @enum {string|null} */
             strategy?: "round_robin" | "least_sessions" | "weighted" | null;
@@ -6624,88 +6789,6 @@ export type components = {
         };
         /** @enum {string} */
         usage_format: "openai" | "anthropic" | "ollama";
-        /** @enum {string} */
-        usage_status: "success" | "error" | "timeout" | "cancelled";
-        UsageEvent: {
-            /** Format: uuid */
-            api_key_id?: string | null;
-            api_key_name?: string | null;
-            cached_tokens: number;
-            /** Format: uuid */
-            cluster_id?: string | null;
-            cost_usd: number;
-            /** Format: uuid */
-            deployment_id?: string | null;
-            endpoint: string;
-            error_code?: string | null;
-            format: components["schemas"]["usage_format"];
-            gpu_count?: number;
-            gpu_seconds: number;
-            http_status?: number | null;
-            id: number;
-            input_tokens: number;
-            /** Format: uuid */
-            instance_id?: string | null;
-            ip_address?: string | null;
-            latency_ms?: number | null;
-            media_units?: number;
-            metadata?: {
-                [key: string]: unknown;
-            } | null;
-            /** Format: uuid */
-            model_id?: string | null;
-            model_name: string;
-            /** Format: uuid */
-            node_id?: string | null;
-            node_name?: string | null;
-            output_tokens: number;
-            /** Format: uuid */
-            price_plan_id?: string | null;
-            reasoning_tokens?: number;
-            request_count?: number;
-            /** Format: uuid */
-            request_id: string;
-            status: components["schemas"]["usage_status"];
-            stream?: boolean;
-            /** Format: date-time */
-            ts: string;
-            ttft_ms?: number | null;
-        };
-        UsageSummary: {
-            /** Format: date-time */
-            from: string;
-            group_by: string[];
-            rows: components["schemas"]["UsageSummaryRow"][];
-            /** Format: date-time */
-            to: string;
-            totals: components["schemas"]["UsageTotals"];
-        };
-        UsageSummaryRow: {
-            /** @description group_by key -> id */
-            group: {
-                [key: string]: string;
-            };
-            /** @description group_by key -> display name */
-            labels: {
-                [key: string]: string;
-            };
-            totals: components["schemas"]["UsageTotals"];
-        };
-        UsageTotals: {
-            cached_tokens: number;
-            cost_usd: number;
-            error_count?: number;
-            gpu_minutes?: number;
-            gpu_seconds: number;
-            input_tokens: number;
-            latency_ms_avg?: number | null;
-            media_units?: number;
-            output_tokens: number;
-            reasoning_tokens?: number;
-            request_count: number;
-            success_count?: number;
-            ttft_ms_avg?: number | null;
-        };
         VaultMetadata: {
             categories?: components["schemas"]["CredentialCategory"][];
             defaults?: components["schemas"]["CredentialDefault"][];
@@ -6843,6 +6926,248 @@ export type components = {
 };
 export type $defs = Record<string, never>;
 export interface operations {
+    getAgentUpdateOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AgentUpdateOverview"];
+                        error: null;
+                        meta: Record<string, unknown> | null;
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+        };
+    };
+    listAgentRollouts: {
+        parameters: {
+            query?: {
+                /** @description Filter */
+                cluster_id?: string;
+                /** @description 1-based page */
+                page?: components["parameters"]["page"];
+                /** @description Items per page (max 500) */
+                page_size?: components["parameters"]["page_size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AgentRollout"][];
+                        error: null;
+                        meta: components["schemas"]["ListMeta"];
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+        };
+    };
+    getAgentRollout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource id */
+                rollout_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AgentRollout"];
+                        error: null;
+                        meta: Record<string, unknown> | null;
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+        };
+    };
+    cancelAgentRollout: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token. */
+                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                /** @description Resource id */
+                rollout_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AgentRollout"];
+                        error: null;
+                        meta: Record<string, unknown> | null;
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+        };
+    };
+    listAgentUpdateRuns: {
+        parameters: {
+            query?: {
+                /** @description Filter */
+                cluster_id?: string;
+                /** @description Filter */
+                node_id?: string;
+                /** @description 1-based page */
+                page?: components["parameters"]["page"];
+                /** @description Items per page (max 500) */
+                page_size?: components["parameters"]["page_size"];
+                /** @description Filter */
+                rollout_id?: string;
+                /** @description Filter */
+                state?: components["schemas"]["agent_update_state"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AgentUpdateRun"][];
+                        error: null;
+                        meta: components["schemas"]["ListMeta"];
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+        };
+    };
+    getAgentUpdateRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource id */
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AgentUpdateRun"];
+                        error: null;
+                        meta: Record<string, unknown> | null;
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+        };
+    };
     listAgentDownloads: {
         parameters: {
             query?: never;
@@ -8900,280 +9225,6 @@ export interface operations {
             503: components["responses"]["Error503"];
         };
     };
-    getBillingEstimate: {
-        parameters: {
-            query?: {
-                /** @description Scope */
-                cluster_id?: string;
-                /** @description Default: first of next month */
-                period_end?: string;
-                /** @description Default: first of the month UTC */
-                period_start?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["BillingEstimate"];
-                        error: null;
-                        meta: Record<string, unknown> | null;
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    listBillingReports: {
-        parameters: {
-            query?: {
-                /** @description 1-based page */
-                page?: components["parameters"]["page"];
-                /** @description Items per page (max 500) */
-                page_size?: components["parameters"]["page_size"];
-                /** @description Case-insensitive substring/trigram search on name */
-                search?: components["parameters"]["search"];
-                /** @description Sort field; prefix with - for descending (e.g. -created_at). Default -created_at. */
-                sort?: components["parameters"]["sort"];
-                /** @description Filter */
-                status?: components["schemas"]["billing_report_status"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["BillingReport"][];
-                        error: null;
-                        meta: components["schemas"]["ListMeta"];
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    createBillingReport: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token. */
-                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BillingReportCreate"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["BillingReport"];
-                        error: null;
-                        meta: Record<string, unknown> | null;
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    getBillingReport: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Resource id */
-                report_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["BillingReport"];
-                        error: null;
-                        meta: Record<string, unknown> | null;
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    deleteBillingReport: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token. */
-                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
-            };
-            path: {
-                /** @description Resource id */
-                report_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    exportBillingReportCsv: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Resource id */
-                report_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description CSV attachment */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/csv": string;
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    regenerateBillingReport: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token. */
-                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
-            };
-            path: {
-                /** @description Resource id */
-                report_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["BillingReport"];
-                        error: null;
-                        meta: Record<string, unknown> | null;
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
     getBranding: {
         parameters: {
             query?: never;
@@ -9564,57 +9615,6 @@ export interface operations {
                 "application/json": components["schemas"]["CloudNodeUpdate"];
             };
         };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["CloudNode"];
-                        error: null;
-                        meta: Record<string, unknown> | null;
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            /** @description Cloud provider rejected the credential (CLOUD_AUTH_FAILED) */
-            424: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            502: components["responses"]["Error502"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    applyCloudNodePricePlan: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token. */
-                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
-            };
-            path: {
-                /** @description cloud_instances.id */
-                cloud_node_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
@@ -10329,6 +10329,134 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["Cluster"];
+                        error: null;
+                        meta: Record<string, unknown> | null;
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+        };
+    };
+    getClusterAgentUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource id */
+                cluster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ClusterAgentUpdate"];
+                        error: null;
+                        meta: Record<string, unknown> | null;
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+        };
+    };
+    startClusterAgentRollout: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token. */
+                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                /** @description Resource id */
+                cluster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AgentRolloutRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AgentRollout"];
+                        error: null;
+                        meta: Record<string, unknown> | null;
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+        };
+    };
+    setClusterAgentUpdatePolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token. */
+                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                /** @description Resource id */
+                cluster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentUpdatePolicy"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AgentUpdatePolicy"];
                         error: null;
                         meta: Record<string, unknown> | null;
                         /** @constant */
@@ -13423,6 +13551,80 @@ export interface operations {
             503: components["responses"]["Error503"];
         };
     };
+    queryLatencyHistory: {
+        parameters: {
+            query?: {
+                /** @description Range start (inclusive, RFC 3339). Default now-1h */
+                from?: components["parameters"]["from"];
+                /** @description Nodes (repeatable; default all) */
+                node_id?: string[];
+                /** @description Bucket size (at least 1m) */
+                step?: string;
+                /** @description Range end (exclusive). Default now */
+                to?: components["parameters"]["to"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["LatencyHistory"];
+                        error: null;
+                        meta: Record<string, unknown> | null;
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            422: components["responses"]["Error422"];
+            500: components["responses"]["Error500"];
+        };
+    };
+    getLiveLatency: {
+        parameters: {
+            query?: {
+                /** @description Only this node */
+                node_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["LatencyLive"];
+                        error: null;
+                        meta: Record<string, unknown> | null;
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            422: components["responses"]["Error422"];
+            500: components["responses"]["Error500"];
+        };
+    };
     getOverview: {
         parameters: {
             query?: never;
@@ -13478,6 +13680,56 @@ export interface operations {
             };
             401: components["responses"]["Error401"];
             403: components["responses"]["Error403"];
+            500: components["responses"]["Error500"];
+        };
+    };
+    queryRequestTiming: {
+        parameters: {
+            query?: {
+                /** @description Scope */
+                api_key_id?: string;
+                /** @description Scope */
+                deployment_id?: string;
+                /** @description Range start (inclusive, RFC 3339). Default now-1h */
+                from?: components["parameters"]["from"];
+                /** @description Scope */
+                model_id?: string;
+                /** @description Scope */
+                node_id?: string;
+                /** @description API-layer region (API_LAYER_REGION) */
+                region?: string;
+                /** @description Bucket size (at least 1m) */
+                step?: string;
+                /** @description Only streaming (true) or non-streaming (false) requests */
+                stream?: boolean;
+                /** @description Range end (exclusive). Default now */
+                to?: components["parameters"]["to"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["RequestTiming"];
+                        error: null;
+                        meta: Record<string, unknown> | null;
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            422: components["responses"]["Error422"];
             500: components["responses"]["Error500"];
         };
     };
@@ -14651,6 +14903,134 @@ export interface operations {
             503: components["responses"]["Error503"];
         };
     };
+    getNodeAgentUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource id */
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["NodeAgentUpdate"];
+                        error: null;
+                        meta: Record<string, unknown> | null;
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+        };
+    };
+    updateNodeAgent: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token. */
+                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                /** @description Resource id */
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AgentUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AgentUpdateRun"];
+                        error: null;
+                        meta: Record<string, unknown> | null;
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+        };
+    };
+    stageNodeAgentUpdate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token. */
+                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                /** @description Resource id */
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AgentUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AgentStage"];
+                        error: null;
+                        meta: Record<string, unknown> | null;
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+        };
+    };
     getNodeCache: {
         parameters: {
             query?: never;
@@ -15493,208 +15873,6 @@ export interface operations {
             503: components["responses"]["Error503"];
         };
     };
-    listPricePlans: {
-        parameters: {
-            query?: {
-                /** @description 1-based page */
-                page?: components["parameters"]["page"];
-                /** @description Items per page (max 500) */
-                page_size?: components["parameters"]["page_size"];
-                /** @description Case-insensitive substring/trigram search on name */
-                search?: components["parameters"]["search"];
-                /** @description Sort field; prefix with - for descending (e.g. -created_at). Default -created_at. */
-                sort?: components["parameters"]["sort"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["PricePlan"][];
-                        error: null;
-                        meta: components["schemas"]["ListMeta"];
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    createPricePlan: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token. */
-                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PricePlanCreate"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["PricePlan"];
-                        error: null;
-                        meta: Record<string, unknown> | null;
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    getPricePlan: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Resource id */
-                plan_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["PricePlan"];
-                        error: null;
-                        meta: Record<string, unknown> | null;
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    deletePricePlan: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token. */
-                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
-            };
-            path: {
-                /** @description Resource id */
-                plan_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    updatePricePlan: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Double-submit CSRF token from GET /auth/csrf (also set as the readable cookie gpudeck_csrf). Required on every mutating request made with the session cookie; not required when authenticating with a Bearer session token. */
-                "X-CSRF-Token": components["parameters"]["CsrfHeader"];
-            };
-            path: {
-                /** @description Resource id */
-                plan_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PricePlanUpdate"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["PricePlan"];
-                        error: null;
-                        meta: Record<string, unknown> | null;
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
     listAllRuleRuns: {
         parameters: {
             query?: {
@@ -16518,282 +16696,6 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["Topology"];
-                        error: null;
-                        meta: Record<string, unknown> | null;
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    listTraces: {
-        parameters: {
-            query?: {
-                /** @description Filter */
-                api_key_id?: string;
-                /** @description Filter */
-                deployment_id?: string;
-                /** @description Only errors */
-                error?: boolean;
-                /** @description Filter */
-                format?: components["schemas"]["usage_format"];
-                /** @description Range start (inclusive, RFC 3339). Default now-1h */
-                from?: components["parameters"]["from"];
-                /** @description Filter */
-                instance_id?: string;
-                /** @description Filter */
-                min_duration_ms?: number;
-                /** @description Filter */
-                model_id?: string;
-                /** @description Filter */
-                node_id?: string;
-                /** @description 1-based page */
-                page?: components["parameters"]["page"];
-                /** @description Items per page (max 500) */
-                page_size?: components["parameters"]["page_size"];
-                /** @description Filter */
-                request_id?: string;
-                /** @description Filter */
-                service?: string;
-                /** @description Filter */
-                status_code?: number;
-                /** @description Range end (exclusive). Default now */
-                to?: components["parameters"]["to"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["TraceSpan"][];
-                        error: null;
-                        meta: components["schemas"]["ListMeta"];
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    getTrace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 32-hex trace id */
-                trace_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["Trace"];
-                        error: null;
-                        meta: Record<string, unknown> | null;
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    listUsageEvents: {
-        parameters: {
-            query?: {
-                /** @description Filter */
-                api_key_id?: string;
-                /** @description Filter */
-                cluster_id?: string;
-                /** @description Filter */
-                deployment_id?: string;
-                /** @description Filter */
-                endpoint?: string;
-                /** @description Filter */
-                format?: components["schemas"]["usage_format"];
-                /** @description Range start (inclusive, RFC 3339). Default now-1h */
-                from?: components["parameters"]["from"];
-                /** @description Filter */
-                model_id?: string;
-                /** @description Filter */
-                node_id?: string;
-                /** @description 1-based page */
-                page?: components["parameters"]["page"];
-                /** @description Items per page (max 500) */
-                page_size?: components["parameters"]["page_size"];
-                /** @description Filter */
-                request_id?: string;
-                /** @description Sort field; prefix with - for descending (e.g. -created_at). Default -created_at. */
-                sort?: components["parameters"]["sort"];
-                /** @description Filter */
-                status?: components["schemas"]["usage_status"];
-                /** @description Range end (exclusive). Default now */
-                to?: components["parameters"]["to"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["UsageEvent"][];
-                        error: null;
-                        meta: components["schemas"]["ListMeta"];
-                        /** @constant */
-                        success: true;
-                    };
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    exportUsageCsv: {
-        parameters: {
-            query?: {
-                /** @description Filter */
-                api_key_id?: string;
-                /** @description Filter */
-                cluster_id?: string;
-                /** @description Filter */
-                deployment_id?: string;
-                /** @description Filter */
-                format?: components["schemas"]["usage_format"];
-                /** @description Range start (inclusive, RFC 3339). Default now-1h */
-                from?: components["parameters"]["from"];
-                /** @description For summary */
-                group_by?: string[];
-                /** @description events (raw) or summary */
-                mode?: "events" | "summary";
-                /** @description Filter */
-                model_id?: string;
-                /** @description Filter */
-                node_id?: string;
-                /** @description Filter */
-                status?: components["schemas"]["usage_status"];
-                /** @description Range end (exclusive). Default now */
-                to?: components["parameters"]["to"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description CSV attachment */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/csv": string;
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-        };
-    };
-    getUsageSummary: {
-        parameters: {
-            query?: {
-                /** @description Filter */
-                api_key_id?: string;
-                /** @description Filter */
-                cluster_id?: string;
-                /** @description Filter */
-                deployment_id?: string;
-                /** @description Filter */
-                format?: components["schemas"]["usage_format"];
-                /** @description Range start (inclusive, RFC 3339). Default now-1h */
-                from?: components["parameters"]["from"];
-                /** @description Group keys (repeatable); default api_key */
-                group_by?: ("api_key" | "model" | "node" | "deployment" | "cluster" | "format" | "endpoint" | "day" | "hour")[];
-                /** @description Filter */
-                model_id?: string;
-                /** @description Filter */
-                node_id?: string;
-                /** @description Filter */
-                status?: components["schemas"]["usage_status"];
-                /** @description Range end (exclusive). Default now */
-                to?: components["parameters"]["to"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["UsageSummary"];
                         error: null;
                         meta: Record<string, unknown> | null;
                         /** @constant */

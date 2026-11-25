@@ -7,7 +7,6 @@ import { ArrowLeft, BadgeCheck, CloudUpload, Gauge, KeyRound, Loader2, MapPin, S
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageContainer } from '@/components/shared/PageContainer';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -79,7 +78,6 @@ export function CloudProvision() {
   const [diskGb, setDiskGb] = useState('');
   const [idle, setIdle] = useState(60);
   const [labels, setLabels] = useState<KeyValueRow[]>([]);
-  const [applyPlan, setApplyPlan] = useState(true);
 
   const providerClusters = cloudClusters.filter((c) => providerForClusterType(c.type) === provider);
   // Picking the provider picks its only cluster.
@@ -109,7 +107,6 @@ export function CloudProvision() {
           disk_gb: diskGb ? Number(diskGb) : null,
           labels: rowsToRecord(labels),
           auto_terminate_idle_minutes: idle || null,
-          apply_price_plan: applyPlan,
           dry_run: true,
         }
       : null;
@@ -295,13 +292,6 @@ export function CloudProvision() {
                   </SelectContent>
                 </Select>
               </Field>
-              <label className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2.5 text-xs">
-                <span>
-                  <span className="font-medium">Bill at the list price</span>
-                  <span className="block text-[11px] text-muted-foreground">Attach a price plan from the provider price when the node joins.</span>
-                </span>
-                <Switch checked={applyPlan} onCheckedChange={setApplyPlan} disabled={type?.price_per_hour_usd === null || type?.price_per_hour_usd === undefined} aria-label="Apply list-price plan" />
-              </label>
             </div>
             <Field label="Node labels" hint="Applied through the join token — use them in node selectors and rule targets.">
               <KeyValueEditor rows={labels} onChange={setLabels} keyPlaceholder="pool" valuePlaceholder="burst" addLabel="Add label" />

@@ -10,11 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { KeyValueEditor, recordToRows, rowsToRecord } from '@/components/shared/key-value-editor';
 import { CLUSTER_TYPE_ICONS } from '@/components/fleet/cluster-type-badge';
 import { CredentialPicker } from '@/components/vault/credential-picker';
-import { usePricePlans } from '@/hooks/api/fleet';
 import { useCredentialKinds, useCredentialOptionsAll } from '@/hooks/use-vault';
 import { cn } from '@/lib/utils';
 import { isCompatible } from '@/lib/vault/credential-form';
@@ -39,8 +37,6 @@ const TYPE_HINTS: Record<ClusterType, string> = {
   cloud_do: 'DigitalOcean GPU droplets.',
 };
 
-const NONE = '__none__';
-
 /** Where each cloud launch setting lives in `config.cloud` (read by the cloud provisioner). */
 const CLOUD_KEYS: Partial<Record<ClusterType, { vpc?: string; subnet?: string }>> = {
   cloud_aws: { subnet: 'subnet_id' },
@@ -59,7 +55,6 @@ const schema = z.object({
   description: z.string().max(500, 'At most 500 characters'),
   region: z.string().max(64),
   credentialId: z.string(),
-  pricePlanId: z.string(),
   egressAllowlist: z.string(),
   labels: z.array(z.object({ key: z.string(), value: z.string() })),
   namespace: z.string().max(63),
@@ -68,6 +63,8 @@ const schema = z.object({
   instanceTypes: z.string().max(256),
   resourceGroup: z.string().max(90),
   sshKeyCredentialId: z.string(),
+  proxySourceCidrs: z.string(),
+  sshDefaultCidrs: z.string(),
 });
 
 export type ClusterFormValues = z.infer<typeof schema>;
@@ -78,6 +75,20 @@ function configString(config: Record<string, unknown> | undefined, key: string):
   return typeof value === 'string' ? value : '';
 }
 
+/** `config.node_security` lists (signed into every node's security policy). */
+function securityList(config: Record<string, unknown> | undefined, key: string): string {
+  const sec = config?.node_security as Record<string, unknown> | undefined;
+  const value = sec?.[key];
+  return Array.isArray(value) ? value.join('\n') : '';
+}
+
+function lines(value: string): string[] {
+  return value
+    .split(/[\n,]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function toDefaults(cluster?: Cluster, presetType?: ClusterType): ClusterFormValues {
   return {
     name: cluster?.name ?? '',
@@ -85,7 +96,6 @@ function toDefaults(cluster?: Cluster, presetType?: ClusterType): ClusterFormVal
     description: cluster?.description ?? '',
     region: cluster?.region ?? '',
     credentialId: cluster?.credential_id ?? '',
-    pricePlanId: cluster?.price_plan_id ?? '',
     egressAllowlist: (cluster?.egress_allowlist ?? []).join('\n'),
     labels: recordToRows(cluster?.labels),
     namespace: configString(cluster?.config, 'namespace'),
@@ -94,6 +104,8 @@ function toDefaults(cluster?: Cluster, presetType?: ClusterType): ClusterFormVal
     instanceTypes: configString(cluster?.config, 'instance_types'),
     resourceGroup: configString((cluster?.config?.cloud ?? undefined) as Record<string, unknown> | undefined, 'resource_group'),
     sshKeyCredentialId: configString(cluster?.config, 'ssh_key_credential_id'),
+    proxySourceCidrs: securityList(cluster?.config, 'proxy_allowed_source_cidrs'),
+    sshDefaultCidrs: securityList(cluster?.config, 'ssh_default_allowed_cidrs'),
   };
 }
 
@@ -133,13 +145,19 @@ export function toClusterPayload(values: ClusterFormValues, base: Record<string,
   } else if (base.cloud !== undefined) {
     config.cloud = base.cloud;
   }
+  const proxy = lines(values.proxySourceCidrs);
+  const ssh = lines(values.sshDefaultCidrs);
+  if (proxy.length || ssh.length) {
+    config.node_security = { proxy_allowed_source_cidrs: proxy, ssh_default_allowed_cidrs: ssh };
+  } else {
+    delete config.node_security;
+  }
   return {
     name: values.name.trim(),
     type: values.type,
     description: values.description.trim() || null,
     region: values.region.trim() || null,
     credential_id: values.credentialId || null,
-    price_plan_id: values.pricePlanId || null,
     egress_allowlist: values.egressAllowlist
       .split(/[\n,]/)
       .map((s) => s.trim())
@@ -167,7 +185,6 @@ export function ClusterForm({ cluster, presetType, isPending, submitLabel, onSub
   const accepted = useMemo(() => credentialKindsForCluster(type), [type]);
   const credentials = useCredentialOptionsAll();
   const { kinds, byId } = useCredentialKinds();
-  const pricePlans = usePricePlans();
 
   // Switching the type invalidates a credential picked for another kind.
   useEffect(() => {
@@ -200,7 +217,7 @@ export function ClusterForm({ cluster, presetType, isPending, submitLabel, onSub
                     <FormControl>
                       <Input placeholder="prod-blr" autoComplete="off" className="font-mono text-sm" {...field} />
                     </FormControl>
-                    <FormDescription>Used in the CLI and in billing reports.</FormDescription>
+                    <FormDescription>Used in the CLI and the API.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -283,13 +300,13 @@ export function ClusterForm({ cluster, presetType, isPending, submitLabel, onSub
 
         <Card className="rounded-md shadow-premium">
           <CardHeader>
-            <CardTitle>Access and billing</CardTitle>
+            <CardTitle>Access</CardTitle>
             <CardDescription>
               {type === 'kubernetes'
                 ? 'The kubeconfig lives in the vault; GPU Deck only ever reads it from there.'
                 : cloud
                   ? `${CLUSTER_TYPE_LABELS[type]} credentials come from the vault, encrypted at rest.`
-                  : 'Optional SSH key from the vault for the install helper, and the price plan for GPU-minute billing.'}
+                  : 'Optional SSH key from the vault for the install helper.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -305,38 +322,6 @@ export function ClusterForm({ cluster, presetType, isPending, submitLabel, onSub
                   <FormDescription>
                     {cloud ? `Needed to browse GPU types and launch VMs. Only ${credentialLabel} credentials fit.` : `Optional. Only ${credentialLabel} credentials fit.`}
                   </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="pricePlanId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Price plan</FormLabel>
-                  <Select value={field.value || NONE} onValueChange={(v) => field.onChange(v === NONE ? '' : v)}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue>
-                          {(val: unknown) => {
-                            const plan = (pricePlans.data ?? []).find((p) => p.id === val);
-                            return plan ? `${plan.name} · $${plan.usd_per_gpu_minute}/GPU-min` : 'Default plan';
-                          }}
-                        </SelectValue>
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={NONE}>Default plan</SelectItem>
-                      {(pricePlans.data ?? []).map((plan) => (
-                        <SelectItem key={plan.id} value={plan.id}>
-                          {plan.name} · ${plan.usd_per_gpu_minute}/GPU-min
-                          {plan.is_default ? ' (default)' : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>Nodes can override it. Used for GPU minutes in billing reports.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -477,6 +462,45 @@ export function ClusterForm({ cluster, presetType, isPending, submitLabel, onSub
                     <Textarea rows={5} placeholder={'huggingface.co\ncdn-lfs.huggingface.co\nmirror.internal:443'} className="font-mono" {...field} />
                   </FormControl>
                   <FormDescription>One host per line. The control plane and model sources are always allowed.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-md shadow-premium">
+          <CardHeader>
+            <CardTitle>Node network access</CardTitle>
+            <CardDescription>
+              Signed into every node&apos;s security policy. Nodes in the default outbound-tunnel mode open no inbound port; these lists only matter for direct-mode nodes and SSH GPU instances.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-5 lg:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="proxySourceCidrs"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Direct mode: API layer source addresses</FormLabel>
+                  <FormControl>
+                    <Textarea rows={4} placeholder={'10.20.0.15/32\n10.20.0.16/32'} className="font-mono" {...field} />
+                  </FormControl>
+                  <FormDescription>One CIDR per line. Only these may reach a direct-mode node&apos;s :9443 (closed before TLS otherwise). Empty: private ranges only.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="sshDefaultCidrs"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SSH GPU instances: default source CIDRs</FormLabel>
+                  <FormControl>
+                    <Textarea rows={4} placeholder={'192.168.10.0/24'} className="font-mono" {...field} />
+                  </FormControl>
+                  <FormDescription>For instances started without their own CIDRs. Empty: such instances accept nobody.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

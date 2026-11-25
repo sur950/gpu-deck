@@ -1,21 +1,28 @@
 # GPU Deck architecture
 
-How the pieces fit, what talks to what, and the four flows that matter most: a machine
-joining, a serving request, a swap, and billing. Contracts live in `libs/contracts/`
+How the pieces fit, what talks to what, and the three flows that matter most: a machine
+joining, a serving request and a swap. Contracts live in `libs/contracts/`
 (the source of truth for every name used here); contributor conventions in [DEVELOPMENT.md](DEVELOPMENT.md). Where each part runs, and the
 step-by-step install, is in [DEPLOYMENT.md](DEPLOYMENT.md).
+
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/system-overview-dark.svg">
+    <img src="diagrams/system-overview-light.svg" alt="System overview. Clients (your apps, SDKs or an AI gateway) call the control plane's serving API with an API key; admins use the web UI, desktop app, CLI and Terraform. The GPU Deck control plane runs on one CPU server with Docker Compose or Helm: serving API, agent hub, agent tunnels, jobs and workers, web UI, admin API, PostgreSQL and Redis. Each GPU machine runs the node agent and engines bound to 127.0.0.1; the agent dials out over mutual TLS, so a GPU machine opens no inbound port by default." width="880">
+  </picture>
+</p>
 
 ## 1. Components
 
 | Component | Process / binary | Port | Owns |
 | --- | --- | --- | --- |
 | Web UI | Next.js (`apps/web`) | 3180 | Admin screens; talks only to the admin API |
-| Admin API | `uvicorn app.main:app` | 8180 | `/api/v1/**` (admin.yaml): auth, fleet, models, deployments, rules, billing, audit |
+| Admin API | `uvicorn app.main:app` | 8180 | `/api/v1/**` (admin.yaml): auth, fleet, models, deployments, rules, audit |
 | Serving API (API layer) | `uvicorn app.api_layer_main:app` | 8181 | OpenAI / Anthropic / Ollama formats (serving.md); API-key auth; pass-through to node proxies |
 | Agent hub | `python -m app.agent_hub_main` | 8443 (mTLS) | Join (`/agent/v1/join`), agent WebSocket (`/agent/v1/ws`), CA download, agent binaries |
 | Jobs scheduler | `python -m app.workers.scheduler` | — | APScheduler ticks; Postgres-lease leader election (`jobs-leader`, `rules-evaluator`) |
-| Celery worker + beat | `celery -A app.workers.celery_app` | — | Off-path work: metering writes, rollups, billing, alerts delivery, catalog hashing, benchmarks |
-| Node agent | `gpudeck-agent` (Rust, `apps/node-agent`) | 9443 (mTLS proxy) | Device plugins, engine lifecycle, metrics/log shipping, engine proxy |
+| Celery worker + beat | `celery -A app.workers.celery_app` | — | Off-path work: usage writes and rollups, alerts delivery, catalog hashing, benchmarks |
+| Node agent | `gpudeck-agent` (Rust, `apps/node-agent`) | none by default (dials the API layer's tunnel :8444); 9443 mTLS proxy in direct mode | Device plugins, engine lifecycle, metrics/log shipping, engine proxy, host firewall |
 | Engines | llama.cpp, vLLM, SGLang, MLX, … | localhost only | Inference; reachable only through the agent proxy |
 | PostgreSQL | shared / managed | 5432 | All state (SQL-first migrations, partitioned time series) |
 | Redis | shared / managed | 6379 | Cache, routing table, pub/sub, Celery broker; every name `gpu-deck:<domain>:<event-or-key>` |
@@ -39,7 +46,7 @@ flowchart LR
   PG[(PostgreSQL)]
   RD[(Redis)]
   subgraph GPU[GPU machine]
-    AGENT[Node agent<br/>proxy :9443]
+    AGENT[Node agent<br/>outbound tunnel / proxy :9443]
     ENG[Engines<br/>localhost]
   end
   GW -- API key, TLS --> SERVE
@@ -93,6 +100,10 @@ kinds store the secret verbatim (so `VaultService.get_secret` returns e.g. the H
 Slack URL); AWS and Azure store one JSON object (what the cloud providers parse). Public fields
 and derived facts are mirrored in `extra_data.typed` and returned by the API; secret fields are
 write-only (edit = "replace"). No migration: `type` keeps the category enum.
+
+![The Credentials screen: typed vault entries for cloud accounts, model hubs, alert channels and SSH keys, each with its kind, what uses it and when it was last rotated](screenshots/credentials.svg)
+
+*Credentials: typed entries in the vault, with what uses each one. Secret fields are write-only.*
 
 | Kind | Fields (secret in bold) | Consumers |
 | --- | --- | --- |
@@ -155,6 +166,15 @@ and drops the node from the routing table. Rotation: `rotate_cert` 30 days befor
 
 ## 4. Serving request path
 
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/request-path-dark.svg">
+    <img src="diagrams/request-path-light.svg" alt="The path of a serving request: a client with a gd- API key calls the API layer on port 8181, which checks IP rules, looks the key up in a cache, resolves the model in its in-memory routing table and picks a replica. The request reaches the node agent over its outbound mutual-TLS tunnel (or the 9443 proxy in direct mode) and the engine on 127.0.0.1. Tokens stream back frame by frame; after the last frame a usage event is queued for metering. No database read on the request path, failover before the first byte, engines never reachable from the network." width="880">
+  </picture>
+</p>
+
+In detail:
+
 ```mermaid
 sequenceDiagram
   autonumber
@@ -163,18 +183,19 @@ sequenceDiagram
   participant R as Redis
   participant P as Agent proxy :9443
   participant E as Engine (localhost)
-  participant Q as Celery (metering)
+  participant Q as Celery (usage)
   C->>L: POST /v1/chat/completions (Bearer gd-…)
   L->>L: core middleware (request id, context) → IP rules (scope api_layer, cached)
   L->>L: API key: sha256 → local cache → Redis gpu-deck:apikey:{hash} → DB on miss
-  L->>L: resolve model in routing table, pick instance (least_sessions / round_robin / weighted)
+  L->>L: resolve model in routing table, pick instance (nearest not-busy replica by measured RTT / round_robin / weighted)
   L->>P: POST /instances/{id}/v1/chat/completions (mTLS, served_model_name)
   P->>E: forward on localhost
   E-->>P: SSE frames
   P-->>L: SSE frames
-  L-->>C: frames (model name rewritten, usage chunk only if the client asked)
+  P-->>L: response headers carry the node's timing (x-gpudeck-proxy-timing, removed here)
+  L-->>C: Server-Timing header, then frames (model name rewritten, usage chunk only if the client asked)
   L--)Q: enqueue usage event (after the last frame, never blocks)
-  Q->>Q: write usage_events (token cost, busy-share GPU seconds)
+  Q->>Q: write usage_events (tokens, busy-share GPU seconds)
   Note over L,R: routing table refreshed via pub/sub gpu-deck:routing:updated, poll fallback 5 s
 ```
 
@@ -195,6 +216,20 @@ instance and kept warm with a `/_health` ping (`SERVING_UPSTREAM_KEEPWARM_SECOND
 request over a long link pays one round trip, not a new TCP + TLS handshake. The pools speak
 HTTP/2 to the proxy (ALPN `h2`, `SERVING_UPSTREAM_HTTP2`): concurrent requests to a node
 share one multiplexed connection; a proxy that only offers HTTP/1.1 gets keep-alive HTTP/1.1.
+
+Network latency is measured, not assumed. Each API layer sends one `GET /_health` to every
+connected node every `SERVING_RTT_PROBE_SECONDS` over the path its requests use (the warm
+connection or the agent's tunnel) and keeps the round trip as an EWMA with jitter; replica
+selection reads it from memory, so no request pays an extra round trip. `least_sessions` picks
+the replica with the lowest expected latency (RTT plus a load penalty), lets near-equal replicas
+share the load and spills over to farther ones as the near ones fill up. Each API layer reports
+its RTTs and its request counts per region (`API_LAYER_REGION`) to Redis; the jobs process keeps
+a per-minute history, and placement prefers nodes near the regions that carry a deployment's
+traffic (and, for models split across nodes, nodes with a low link cost to each other). The
+agent hub times its WebSocket pings for the control-plane RTT. Every response carries
+`Server-Timing` (route, queue, connect, rtt, net, engine, upstream, total) and the full
+breakdown is stored with the request. Where to put the API layers:
+[DEPLOYMENT.md](DEPLOYMENT.md#network-latency-keep-the-api-layer-close-to-the-gpus).
 
 ## 5. Swap (rule or layout driven)
 
@@ -224,28 +259,26 @@ sequenceDiagram
 
 Every step is persisted, so a new jobs leader resumes a swap from its last step. Time schedules
 apply layouts on the rules tick (timezone-aware cron, DST-safe); `Rule.next_evaluation_at`
-exposes the next fire time.
+exposes the next fire time. The step-by-step semantics, with a diagram, are in
+[rules.md](../libs/contracts/rules/rules.md#3-swap-safety-sequence).
 
-## 6. Metering and billing
+![The Swaps screen: loads, unloads, moves and restarts with each step's state and timing, and rollbacks](screenshots/swaps.svg)
 
-```mermaid
-flowchart TB
-  REQ[Serving request done] -->|Celery queue metering| UE[usage_events<br/>tokens, cost_usd = token cost,<br/>gpu_seconds = busy share]
-  UP[Instance uptime<br/>metric_rollups_engine_1m] --> ALLOC
-  UE --> ROLL[metering.rollup hourly]
-  ALLOC[Each instance-minute gets its device share<br/>slice fraction / VRAM share, max 1 GPU-minute per GPU-minute<br/>allocated pro-rata by tokens] --> ROLL
-  ROLL --> UR[usage_rollups_hourly<br/>api_key NULL = unallocated bucket]
-  UR --> EST[/billing/estimate/ + /usage/*/]
-  UR --> REP[billing reports<br/>re-priced with current plans, CSV]
-```
+*Swaps: every step of every load, unload, move and restart, with its timing and any rollback.*
 
-- Token cost: `(input − cached)/1000 × input rate + cached/1000 × cached rate + output/1000 ×
-  output rate` from the node's price plan (else cluster, else default).
-- Billable GPU time comes from uptime, not request wall time (see the metering section of `libs/contracts/openapi/serving.md`).
-  On a shared GPU the instances split it: a slice bills its compute share, whole-GPU instances
-  sharing a device split it by VRAM, so one GPU never bills more than one GPU-minute per minute.
-- Costs are shown, not enforced: no budgets, thresholds or budget alerts (by design). Cost per server / cluster / model / API key and the unallocated idle bucket come
-  from the rollups; monthly reports and CSV exports from `/billing/reports`.
+## 6. Usage counters
+
+After the last frame of a serving request the API layer queues a usage event (Celery queue
+`metering`, never on the request path). A worker writes it to `usage_events` (tokens and the
+instance's busy-share GPU seconds per API key, model, node and deployment) and the hourly
+`metering.rollup` job folds the events into `usage_rollups_hourly`. The rollups feed the request
+and token figures on the dashboard and the API key pages (`GET /metrics/usage`). No prompts or
+completions are stored.
+
+> [!NOTE]
+> Usage metering, billing and cost reports from price plans, and request traces in the UI are
+> planned for v2. The tables and jobs behind them already run; v1 exposes no metering, billing,
+> price plan or trace endpoints.
 
 ## 7. High availability
 
@@ -262,6 +295,15 @@ or operator-run). See [operations.md](operations.md) section 6.
 `GET /api/v1/branding` and `GET /api/v1/health`; connecting opens a `main` window on the
 server's own web UI. Because the page is served by the server, cookies, CSRF and every screen
 work exactly as in a browser and the UI is always the server's version.
+
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="screenshots/desktop-connect-light.svg">
+    <img src="screenshots/desktop-connect.svg" alt="The desktop app's connect screen: saved control planes with a live health check of each, and a form to add a server" width="720">
+  </picture>
+</p>
+
+*The desktop app's connect screen: saved control planes, each with a live health check.*
 
 ```mermaid
 sequenceDiagram
